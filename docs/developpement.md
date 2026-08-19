@@ -170,6 +170,40 @@ make fmt         # reformate
 
 ---
 
+## 5 bis. Essayer le parcours de compte
+
+Une fois `make api` lancé :
+
+```bash
+python3 tools/recette/parcours-comptes.py
+```
+
+La recette déroule 55 vérifications : politique de mot de passe, inscription,
+vérification d'adresse par courriel, sessions et rotation des jetons, réinitialisation,
+export et suppression, puis tout le back-office. Elle lit les courriels dans Mailpit, ce
+qui la rend exécutable sans aucun service externe.
+
+Depuis l'interface, avec `make app` :
+
+| Écran | Chemin |
+|---|---|
+| Connexion | `/connexion` |
+| Inscription | `/inscription` |
+| Mot de passe oublié | `/mot-de-passe-oublie` |
+| Profil (accueil) | `/` |
+| Édition du profil | `/profil` |
+| Sécurité et sessions | `/securite` |
+| Mes données | `/mes-donnees` |
+| Gestion des comptes | `/admin/comptes` |
+| Journal d'audit | `/admin/audit` |
+
+Les deux derniers n'apparaissent dans le menu que pour un rôle plateforme. Se connecter
+avec `admin@partyplan.local` / `MotDePasseDeDeveloppement` pour les voir.
+
+Le code de vérification d'adresse arrive dans Mailpit : http://localhost:8025
+
+---
+
 ## 6 bis. Limites inotify du noyau — à régler une fois
 
 `dotnet watch` et `flutter run` surveillent les fichiers par **inotify**. Debian autorise

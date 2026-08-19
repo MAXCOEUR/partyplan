@@ -31,8 +31,13 @@
                sur les journaux de démarrage.
       CA1305 / CA1310 : IFormatProvider explicite — la culture de l'application est
                fixée ; l'imposer partout nuit à la lecture.
+      CA1873 : évaluation d'argument de journalisation. La règle se déclenche sur tout
+               argument non primitif, y compris une valeur déjà en main. Envelopper
+               chaque appel dans un `IsEnabled` triplerait le volume de code sans gain
+               mesurable. Les appels réellement coûteux — concaténation, jointure —
+               restent gardés explicitement.
     -->
-    <NoWarn>$(NoWarn);CS1591;CA1000;CA1062;CA1716;CA1707;CA1848;CA1305;CA1310</NoWarn>
+    <NoWarn>$(NoWarn);CS1591;CA1000;CA1062;CA1716;CA1707;CA1848;CA1305;CA1310;CA1873</NoWarn>
   </PropertyGroup>
 
 </Project>

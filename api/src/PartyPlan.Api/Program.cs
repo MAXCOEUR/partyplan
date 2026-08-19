@@ -30,6 +30,9 @@ builder.Services.AddPartyPlanRateLimiting();
 builder.Services.AddPartyPlanAuthentication(builder.Configuration);
 builder.Services.AddPartyPlanOpenApi();
 
+// Amorçage du premier administrateur, après les migrations (EF-ADM-01, RG-ADM-09).
+builder.Services.AddHostedService<AdminSeedStartupTask>();
+
 // Origines autorisées : l'application web et la vitrine, jamais « * ».
 var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? [];
 builder.Services.AddCors(options =>
@@ -64,6 +67,22 @@ app.UseAuthorization();
 // Le périmètre d'événements est établi après l'authentification et avant tout
 // endpoint : c'est le point unique d'application du cloisonnement (RG-SEC-01).
 app.UseEventScope();
+
+// En développement, l'API sert elle-même les photos de profil : le domaine statique
+// n'existe pas sur un poste. En production, c'est Caddy qui les sert depuis le volume
+// partagé (cdn.partyplan.maxencecoeur.fr).
+if (app.Environment.IsDevelopment())
+{
+    var racineMedias = app.Configuration["Media:RootPath"] ?? "/tmp/partyplan-media";
+    Directory.CreateDirectory(racineMedias);
+
+    app.UseStaticFiles(new StaticFileOptions
+    {
+        FileProvider = new Microsoft.Extensions.FileProviders.PhysicalFileProvider(
+            Path.GetFullPath(racineMedias)),
+        RequestPath = "/media",
+    });
+}
 
 var v1 = app.MapGroup("/v1");
 v1.MapModules(modules);

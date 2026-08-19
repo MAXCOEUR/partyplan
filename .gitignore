@@ -44,6 +44,9 @@ dist/
 .astro/
 .next/
 
+# ---------- Artefacts d'outils ----------
+.playwright-mcp/
+
 # ---------- Outils / IDE ----------
 .idea/
 *.iml

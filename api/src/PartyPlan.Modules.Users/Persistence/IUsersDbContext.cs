@@ -18,5 +18,9 @@ public interface IUsersDbContext
 
     DbSet<GroupMember> GroupMembers { get; }
 
+    DbSet<PasswordResetToken> PasswordResetTokens { get; }
+
+    DbSet<EmailVerificationToken> EmailVerificationTokens { get; }
+
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

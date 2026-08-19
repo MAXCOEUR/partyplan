@@ -3,6 +3,7 @@ namespace PartyPlan.IntegrationTests;
 using Microsoft.EntityFrameworkCore;
 using PartyPlan.IntegrationTests.Infrastructure;
 using PartyPlan.Modules.Administration.Domain;
+using PartyPlan.SharedKernel.Contracts;
 using PartyPlan.SharedKernel.Errors;
 using Shouldly;
 using Xunit;

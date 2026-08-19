@@ -32,18 +32,3 @@ public sealed class AdminAuditEntry
 
     public DateTimeOffset CreatedAt { get; init; }
 }
-
-/// <summary>Codes d'action du journal d'audit. Chaîne stable : ne jamais renommer une valeur existante.</summary>
-public static class AdminAuditActions
-{
-    public const string PasswordResetTriggered = "user.password_reset_triggered";
-    public const string SessionsRevoked = "user.sessions_revoked";
-    public const string Suspended = "user.suspended";
-    public const string Unsuspended = "user.unsuspended";
-    public const string Deleted = "user.deleted";
-    public const string RoleChanged = "user.role_changed";
-    public const string EmailVerifiedByAdmin = "user.email_verified_by_admin";
-    public const string DataExported = "user.data_exported";
-    public const string AvatarRemoved = "user.avatar_removed";
-    public const string AdminSeeded = "admin.seeded";
-}

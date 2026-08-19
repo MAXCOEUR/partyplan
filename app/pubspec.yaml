@@ -19,8 +19,14 @@ dependencies:
   # Appels HTTP
   dio: ^5.9.0
 
-  # Stockage du jeton de session
-  flutter_secure_storage: ^11.0.0
+  # Stockage du jeton de session.
+  #
+  # Volontairement maintenu sous la version 11 : celle-ci se compile contre le SDK
+  # Android 37, dont la seule plateforme disponible se nomme « android-37.0 » alors que
+  # Gradle recherche « android-37 ». Le décalage de nommage des plateformes en
+  # préversion rend la construction impossible. À relever quand android-37 sera
+  # distribué sous ce nom.
+  flutter_secure_storage: ">=10.3.1 <11.0.0"
 
   # Formats français : dates JJ/MM/AAAA, montants en euros
   intl: ^0.20.3

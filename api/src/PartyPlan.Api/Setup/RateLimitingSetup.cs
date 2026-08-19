@@ -14,8 +14,21 @@ public static class RateLimitingSetup
     /// <summary>Résolution d'un code court : RG-INV-03, dix par minute et par adresse.</summary>
     public const string ShortCodePolicy = "short-code";
 
-    /// <summary>Endpoints d'authentification : RG-AUTH-05, cinq par heure et par adresse.</summary>
-    public const string AuthPolicy = "auth";
+    /// <summary>
+    /// Demandes de réinitialisation de mot de passe. RG-AUTH-05 exige cinq par heure et
+    /// par <b>adresse</b> : cette limite-ci porte sur l'adresse IP, et complète le
+    /// décompte par adresse tenu dans le service. Les deux sont nécessaires — la limite
+    /// par IP arrête un balayage d'adresses, la limite par adresse arrête le harcèlement
+    /// d'un compte précis depuis plusieurs sources.
+    /// </summary>
+    public const string PasswordResetPolicy = "password-reset";
+
+    /// <summary>
+    /// Tentatives d'authentification et consommation de jetons. Plus permissive : une
+    /// personne qui se trompe de mot de passe, ou qui recopie mal un code reçu par
+    /// courriel, ne doit pas être bloquée pour une heure.
+    /// </summary>
+    public const string AuthAttemptPolicy = "auth-attempt";
 
     public static IServiceCollection AddPartyPlanRateLimiting(this IServiceCollection services)
     {
@@ -57,13 +70,23 @@ public static class RateLimitingSetup
                         QueueLimit = 0,
                     }));
 
-            options.AddPolicy(AuthPolicy, context =>
+            options.AddPolicy(PasswordResetPolicy, context =>
                 RateLimitPartition.GetFixedWindowLimiter(
                     ClientKey(context),
                     _ => new FixedWindowRateLimiterOptions
                     {
-                        PermitLimit = 5,
+                        PermitLimit = 10,
                         Window = TimeSpan.FromHours(1),
+                        QueueLimit = 0,
+                    }));
+
+            options.AddPolicy(AuthAttemptPolicy, context =>
+                RateLimitPartition.GetFixedWindowLimiter(
+                    ClientKey(context),
+                    _ => new FixedWindowRateLimiterOptions
+                    {
+                        PermitLimit = 20,
+                        Window = TimeSpan.FromMinutes(1),
                         QueueLimit = 0,
                     }));
         });

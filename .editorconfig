@@ -33,25 +33,38 @@ dotnet_style_require_accessibility_modifiers = for_non_interface_members:warning
 dotnet_style_readonly_field = true:warning
 dotnet_diagnostic.IDE0005.severity = warning
 
-# Nommage
-# Champs privés d'instance : _camelCase.
-dotnet_naming_rule.private_instance_fields_underscore.severity = warning
-dotnet_naming_rule.private_instance_fields_underscore.symbols = private_instance_fields
-dotnet_naming_rule.private_instance_fields_underscore.style = underscore_camel
-dotnet_naming_symbols.private_instance_fields.applicable_kinds = field
-dotnet_naming_symbols.private_instance_fields.applicable_accessibilities = private
-dotnet_naming_symbols.private_instance_fields.required_modifiers =
-dotnet_naming_style.underscore_camel.required_prefix = _
-dotnet_naming_style.underscore_camel.capitalization = camel_case
+# Nommage.
+#
+# L'ordre compte : la première règle dont le groupe de symboles correspond s'applique.
+# Les constantes et les champs statiques en lecture seule doivent donc précéder la
+# règle générale sur les champs privés.
 
-# Constantes et champs statiques en lecture seule : PascalCase, sans préfixe. Ce sont
-# des valeurs fixes, pas de l'état d'instance ; le préfixe « _ » y serait trompeur.
+# Constantes : PascalCase, sans préfixe. Une constante n'est pas de l'état d'instance,
+# le préfixe « _ » y serait trompeur.
+dotnet_naming_rule.consts_pascal.severity = warning
+dotnet_naming_rule.consts_pascal.symbols = const_fields
+dotnet_naming_rule.consts_pascal.style = pascal
+dotnet_naming_symbols.const_fields.applicable_kinds = field
+dotnet_naming_symbols.const_fields.applicable_accessibilities = *
+dotnet_naming_symbols.const_fields.required_modifiers = const
+
+# Champs statiques en lecture seule : PascalCase également, même raison.
 dotnet_naming_rule.static_readonly_pascal.severity = warning
 dotnet_naming_rule.static_readonly_pascal.symbols = static_readonly_fields
 dotnet_naming_rule.static_readonly_pascal.style = pascal
 dotnet_naming_symbols.static_readonly_fields.applicable_kinds = field
 dotnet_naming_symbols.static_readonly_fields.applicable_accessibilities = *
 dotnet_naming_symbols.static_readonly_fields.required_modifiers = static, readonly
+
+# Champs privés d'instance : _camelCase.
+dotnet_naming_rule.private_instance_fields_underscore.severity = warning
+dotnet_naming_rule.private_instance_fields_underscore.symbols = private_instance_fields
+dotnet_naming_rule.private_instance_fields_underscore.style = underscore_camel
+dotnet_naming_symbols.private_instance_fields.applicable_kinds = field
+dotnet_naming_symbols.private_instance_fields.applicable_accessibilities = private
+
+dotnet_naming_style.underscore_camel.required_prefix = _
+dotnet_naming_style.underscore_camel.capitalization = camel_case
 dotnet_naming_style.pascal.capitalization = pascal_case
 
 # --- Règles d'analyse ---

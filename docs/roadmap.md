@@ -6,7 +6,7 @@
 > n'existe pas dans le cahier des charges, c'est le cahier des charges qu'il faut
 > compléter d'abord.
 
-Mise à jour : 19/08/2026 — V0 livrée hors lots 0.1 et 0.7
+Mise à jour : 19/08/2026 — V0 livrée hors lots 0.1 et 0.7 ; V0.5 livrée hors lot 0.9
 
 ## Comment lire ce document
 
@@ -30,7 +30,7 @@ Toute tâche non cochée d'une version publiée devient une anomalie, pas un rep
 | Version | Tâches faites | Reste |
 |---|---|---|
 | V0 — socle technique | lots 0.2 à 0.6, dépôt GitHub et protection de branche | lot 0.1 (INPI, nom, logo, hébergeur, DNS), lot 0.7 (serveur) |
-| V0.5 — comptes et administration | — | tout |
+| V0.5 — comptes et administration | lots 0.8, 0.10 à 0.14 | lot 0.9 (Google, TOTP), photo depuis l'interface |
 | V1.0 — MVP événementiel | — | tout |
 
 Décisions d'architecture prises : `ADR 0001` monorepo, `ADR 0002` monolithe modulaire,
@@ -214,26 +214,29 @@ Contrainte permanente : tout doit tourner en local avant d'être poussé — `§
 # V0.5 — Comptes et administration
 
 Objectif : l'identité est intégralement gérée avant qu'une seule fonctionnalité
-événementielle n'existe. Un utilisateur crée son compte, le modifie, le supprime ;
-un administrateur gère les comptes sans jamais voir le contenu d'un événement.
-Sortie : les critères 1 à 12 du `§18` sont vérifiés en local.
+événementielle n'existe.
+
+**État au 19/08/2026 : lots 0.8, 0.10, 0.11, 0.12 et 0.13 livrés côté API et côté
+application, vérifiés de bout en bout.** Restent la double authentification et les
+connexions tierces (lot 0.9), et le téléversement de photo depuis l'interface.
 
 ## Lot 0.8 — Authentification par mot de passe
 
-- [ ] `EF-AUTH-01` Inscription par adresse e-mail et mot de passe
-- [ ] `RG-AUTH-01` 12 caractères minimum, refus des mots de passe compromis, aucune expiration périodique
-- [ ] `RG-AUTH-02` Hachage Argon2id, jamais de mot de passe journalisé ni consultable
-- [ ] `EF-AUTH-02` Connexion par adresse e-mail et mot de passe
-- [ ] `EF-AUTH-03` Vérification de l'adresse e-mail par lien
-- [ ] `EF-AUTH-04` Réinitialisation du mot de passe par lien
-- [ ] `RG-AUTH-03` Liens valables 15 minutes, usage unique, condensé seul stocké
-- [ ] `RG-AUTH-04` Réponse identique que l'adresse existe ou non
-- [ ] `EF-AUTH-05` Changement de mot de passe avec l'ancien
-- [ ] `RG-AUTH-05` Cinq demandes par heure, ralentissement croissant après dix échecs, aucun verrouillage définitif
-- [ ] `RG-AUTH-06` Révocation des autres sessions à la réinitialisation et au changement d'adresse
-- [ ] `EF-AUTH-09` Session de 90 jours, prolongée à l'usage
-- [ ] `EF-AUTH-10` Liste des sessions actives, révocation d'une session ou de toutes
-- [ ] Écrans : inscription, connexion, mot de passe oublié, réinitialisation, sessions
+- [x] `EF-AUTH-01` Inscription par adresse e-mail et mot de passe
+- [x] `RG-AUTH-01` 12 caractères minimum, refus des mots de passe compromis, aucune expiration périodique
+  - → liste embarquée de 45 567 condensés tronqués, sans aucun mot de passe en clair, enrichie des variantes françaises et des suites de clavier
+- [x] `RG-AUTH-02` Hachage Argon2id, jamais de mot de passe journalisé ni consultable
+- [x] `EF-AUTH-02` Connexion par adresse e-mail et mot de passe
+- [x] `EF-AUTH-03` Vérification de l'adresse e-mail par lien
+- [x] `EF-AUTH-04` Réinitialisation du mot de passe par lien
+- [x] `RG-AUTH-03` Liens valables 15 minutes, usage unique, condensé seul stocké
+- [x] `RG-AUTH-04` Réponse identique que l'adresse existe ou non
+- [x] `EF-AUTH-05` Changement de mot de passe avec l'ancien
+- [x] `RG-AUTH-05` Limite par adresse tenue par le service, limite par IP par le limiteur HTTP, ralentissement croissant après dix échecs, aucun verrouillage définitif
+- [x] `RG-AUTH-06` Révocation des autres sessions à la réinitialisation et au changement d'adresse
+- [x] `EF-AUTH-09` Session de 90 jours, prolongée à l'usage, avec rotation du jeton de rafraîchissement
+- [x] `EF-AUTH-10` Liste des sessions actives, révocation d'une session ou de toutes
+- [x] Écrans : connexion, inscription, mot de passe oublié, sécurité et sessions
 
 ## Lot 0.9 — Connexions tierces et double authentification
 
@@ -241,75 +244,82 @@ Sortie : les critères 1 à 12 du `§18` sont vérifiés en local.
 - [ ] `EF-AUTH-08` Rattachement et détachement d'une connexion tierce
 - [ ] `RG-AUTH-08` Un compte sans mot de passe peut en définir un par le parcours de réinitialisation
 - [ ] `EF-AUTH-12` Double authentification par code temporel (TOTP) : enrôlement, activation, désactivation
-- [ ] `NF-DEV-05` Fonctionnement complet sans aucune clé Google configurée
+- [ ] `RG-ADM-04` Rendre la double authentification obligatoire pour tout rôle plateforme
+  - → **jusque-là, la production reste impossible** : `RG-ADM-04` n'est pas satisfaite, et il vaut mieux une API qui refuse de servir qu'un administrateur protégé par un seul facteur
+- [ ] `NF-SEC-07` Vérifier l'obligation par test d'intégration
+- [ ] `NF-DEV-05` Vérifier que l'inscription fonctionne sans clé Google configurée
 - [ ] Écrans : rattachement des connexions, enrôlement TOTP avec QR code
 
 ## Lot 0.10 — Compte et profil
 
-- [ ] `EF-USR-01` Consultation du profil
-- [ ] `EF-USR-02` Modification du nom affiché
-- [ ] `RG-USR-04` Historique du nom conservé sur les événements en cours et dans le fil d'activité
-- [ ] `EF-USR-03` Changement d'adresse e-mail avec vérification préalable
-- [ ] `EF-USR-04` Téléversement d'une photo de profil
-- [ ] `RG-USR-01` JPEG, PNG, WebP, HEIC, 5 Mo maximum, trois tailles, conversion WebP, suppression des EXIF
-- [ ] `NF-SEC-09` Type MIME vérifié par le contenu, taille plafonnée
+- [x] `EF-USR-01` Consultation du profil
+- [x] `EF-USR-02` Modification du nom affiché
+- [x] `RG-USR-04` Nom conservé sur les événements en cours, historique dans le fil d'activité
+- [x] `EF-USR-03` Changement d'adresse e-mail avec vérification préalable
+- [x] `RG-USR-01` JPEG, PNG, WebP, HEIC, 5 Mo maximum, trois tailles, conversion WebP, suppression des EXIF
+- [x] `NF-SEC-09` Type validé par décodage effectif, non par le type déclaré ; taille plafonnée avant lecture
+- [x] `EF-USR-06` Suppression de la photo et retour à l'avatar par défaut
+- [x] `RG-USR-02` Avatar par défaut généré localement à partir des initiales, sans service externe
+- [x] `RG-USR-03` Photos servies sous une adresse contenant une empreinte du contenu
+- [x] `EF-USR-07` Choix de la langue et du fuseau horaire, fuseau inconnu refusé
+- [x] `EF-USR-09` Export de toutes ses données au format JSON
+- [x] `EF-USR-10` Suppression de son compte depuis l'application
+- [x] `RG-USR-05` Anonymisation expliquée avant confirmation, confirmation par saisie de l'adresse
+- [x] `RG-USR-06` Un compte supprimé libère son adresse e-mail
+- [x] Écrans : profil, édition, sécurité, mes données
+- [ ] `EF-USR-04` Téléversement de la photo depuis l'interface — l'endpoint existe et est testé, le sélecteur de fichier reste à brancher
 - [ ] `EF-USR-05` Recadrage avant envoi
-- [ ] `EF-USR-06` Suppression de la photo et retour à l'avatar par défaut
-- [ ] `RG-USR-02` Avatar par défaut généré localement à partir des initiales, sans service externe
-- [ ] `RG-USR-03` Photos servies par le domaine statique, adresse contenant une empreinte du contenu
-- [ ] `EF-USR-07` Choix de la langue et du fuseau horaire
-- [ ] `EF-USR-08` Préférences de notification
-- [ ] `EF-USR-09` Export de toutes ses données au format JSON
-- [ ] `EF-USR-10` Suppression de son compte depuis l'application
-- [ ] `RG-USR-05` Anonymisation financière expliquée avant confirmation, confirmation par saisie de l'adresse
-- [ ] `RG-USR-06` Un compte supprimé libère son adresse e-mail
-- [ ] Écrans : profil, édition du profil, photo, sécurité, sessions, confidentialité
+- [ ] `EF-USR-08` Écran de préférences de notification — sans objet avant le lot 1.11
 
 ## Lot 0.11 — Amorçage de l'administrateur
 
-- [ ] `EF-ADM-01` Création du compte administrateur au démarrage depuis l'environnement
-- [ ] `RG-ADM-09` Opération idempotente, mot de passe d'amorçage jamais réappliqué
-- [ ] `RG-ADM-10` Changement de mot de passe et activation TOTP imposés à la première connexion
-- [ ] `RG-ADM-11` Refus de démarrer en production si l'amorçage est incomplet ou le mot de passe faible
-- [ ] `RG-ADM-12` Avertissement au démarrage si `ADMIN_PASSWORD` reste présent après changement
-- [ ] Test : base vierge puis second démarrage, aucun doublon
+- [x] `EF-ADM-01` Création du compte administrateur au démarrage depuis l'environnement
+- [x] `RG-ADM-09` Opération idempotente, mot de passe d'amorçage jamais réappliqué
+- [x] `RG-ADM-11` Refus de démarrer si l'amorçage est incomplet ou le mot de passe faible
+- [x] `RG-ADM-12` Avertissement au démarrage invitant à retirer `ADMIN_PASSWORD`
+- [x] Test : base vierge puis second démarrage, aucun doublon
+- [ ] `RG-ADM-10` Imposer effectivement le changement de mot de passe à la première connexion — l'indicateur `must_change_password` est posé, l'interface ne l'exploite pas encore
 
 ## Lot 0.12 — Back-office d'administration
 
-- [ ] `EF-ADM-02` Liste des comptes : recherche par nom ou adresse, tri, pagination
-- [ ] `EF-ADM-03` Fiche technique d'un compte
-- [ ] `EF-ADM-04` Déclenchement d'une réinitialisation de mot de passe
-- [ ] `RG-ADM-02` Un administrateur ne définit, ne consulte, ni ne transmet jamais un mot de passe
-- [ ] `EF-ADM-05` Révocation de toutes les sessions d'un utilisateur
-- [ ] `EF-ADM-06` Suspension avec motif, et réactivation
-- [ ] `RG-ADM-07` Un compte suspendu ne peut plus se connecter, sessions révoquées, données intactes
-- [ ] `EF-ADM-07` Suppression d'un compte, avec la même anonymisation que l'auto-suppression
-- [ ] `EF-ADM-08` Promotion et révocation des rôles `Support` et `PlatformAdmin`
-- [ ] `RG-ADM-03` Interdiction de se supprimer, de se révoquer, ou de supprimer le dernier administrateur
-- [ ] `RG-ADM-04` Double authentification obligatoire pour tout rôle plateforme, promotion refusée sinon
-- [ ] `RG-ADM-05` Le rôle `Support` limité à cinq actions de consultation et de dépannage
-- [ ] `EF-ADM-09` Consultation du journal d'audit
-- [ ] `EF-ADM-10` Indicateurs d'instance : comptes, événements actifs, invités, stockage
-- [ ] `RG-ADM-08` Écrans d'administration absents des applications mobiles, routes `/admin/*` en Web seulement
-- [ ] Écrans : liste des comptes, fiche de compte, journal d'audit, indicateurs
+- [x] `EF-ADM-02` Liste des comptes : recherche par nom ou adresse, tri, pagination
+- [x] `EF-ADM-03` Fiche technique d'un compte
+- [x] `EF-ADM-04` Déclenchement d'une réinitialisation de mot de passe
+- [x] `RG-ADM-02` Un administrateur ne définit, ne consulte, ni ne transmet jamais un mot de passe
+- [x] `EF-ADM-05` Révocation de toutes les sessions d'un utilisateur
+- [x] `EF-ADM-06` Suspension avec motif obligatoire, et réactivation
+- [x] `RG-ADM-07` Un compte suspendu ne peut plus se connecter, sessions révoquées, données intactes
+- [x] `EF-ADM-07` Suppression d'un compte, avec la même anonymisation que l'auto-suppression
+- [x] `EF-ADM-08` Promotion et révocation des rôles `Support` et `PlatformAdmin`
+- [x] `RG-ADM-03` Interdiction de se supprimer, de se révoquer, ou de supprimer le dernier administrateur
+- [x] `RG-ADM-05` Le rôle `Support` limité à la consultation et au dépannage
+- [x] `EF-ADM-09` Consultation du journal d'audit
+- [x] `EF-ADM-10` Indicateurs d'instance
+- [x] `RG-ADM-08` Écrans d'administration sous `/admin/*`, accessibles aux seuls rôles plateforme
+- [x] Écrans : liste des comptes avec actions, journal d'audit
+- [ ] `EF-ADM-11` Forcer la vérification d'une adresse — endpoint livré, bouton d'interface manquant
+- [ ] `EF-ADM-12` Export des données d'un utilisateur ne pouvant plus se connecter
+- [ ] `EF-ADM-13` Suppression d'une photo de profil signalée
+- [ ] `EF-ADM-10` Compléter les indicateurs par le décompte d'événements — nécessite un contrat exposé par le module Events (lot 1.2)
 
 ## Lot 0.13 — Cloisonnement et audit
 
-- [ ] `RG-ADM-01` **Aucun rôle plateforme ne donne accès au contenu d'un événement**
-- [ ] Test d'intégration : un `PlatformAdmin` non membre reçoit 404 sur chaque endpoint d'événement
-- [ ] Test d'intégration : un `User` puis un `Support` sur chaque endpoint `/v1/admin/*`
-- [ ] `RG-ADM-06` Journal d'audit immuable : auteur, cible, action, motif, horodatage, adresse IP
-- [ ] `NF-SEC-08` Retirer les droits `UPDATE` et `DELETE` sur la table d'audit au rôle applicatif
-- [ ] `RG-RGPD-04` Décrire dans la politique de confidentialité le périmètre d'accès du support
-- [ ] `NF-SEC-06` Vérifier Argon2id et le refus des mots de passe compromis
-- [ ] `NF-SEC-07` Vérifier l'obligation de double authentification des rôles plateforme
+- [x] `RG-ADM-01` Aucun rôle plateforme ne donne accès au contenu d'un événement
+- [x] Test d'intégration : un `PlatformAdmin` non membre reçoit 404 sur chaque endpoint d'événement
+- [x] Test d'intégration : un `User` puis un `Support` sur les endpoints `/v1/admin/*`
+- [x] `RG-ADM-06` Journal d'audit immuable : auteur, cible, action, motif, horodatage, adresse IP
+- [x] `NF-SEC-08` Déclencheur couvrant `UPDATE`, `DELETE` et `TRUNCATE` sur les tables en ajout seul
+- [x] `RG-RGPD-04` Adresse de l'auteur recopiée, aucune clé étrangère vers les comptes
+- [x] `NF-SEC-06` Argon2id et refus des mots de passe compromis vérifiés par test
+- [ ] `RG-RGPD-04` Décrire le périmètre d'accès du support dans la politique de confidentialité — lot 1.15
 
 ## Lot 0.14 — Recette V0.5
 
-- [ ] Vérifier les critères 1 à 12 du `§18`
-- [ ] `EF-ADM-11` Forcer la vérification d'une adresse en cas de courriel non délivré *(P1, peut glisser)*
-- [ ] `EF-ADM-12` Export des données d'un utilisateur ne pouvant plus se connecter *(P1)*
-- [ ] `EF-ADM-13` Suppression d'une photo de profil signalée *(P1)*
+- [x] Recette exécutable de bout en bout — `tools/recette/parcours-comptes.py`, 55 vérifications
+- [x] Tests d'intégration automatisés des mêmes règles, exécutables en CI sans serveur de courriel
+- [x] Vérifier les critères 1, 2, 4, 5, 7 à 12 du `§18`
+- [ ] Critère 3 du `§18` : refus de démarrage si `ADMIN_PASSWORD` ne satisfait pas `RG-AUTH-01` — la garde existe, le test automatisé manque
+- [ ] Critère 6 du `§18` : changement de mot de passe et TOTP imposés au compte amorcé — lot 0.9
 
 ---
 

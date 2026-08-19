@@ -1,4 +1,4 @@
-namespace PartyPlan.Modules.Auth.Domain;
+namespace PartyPlan.Modules.Users.Domain;
 
 /// <summary>
 /// Jeton à usage unique, valable 15 minutes (RG-AUTH-03). Sert la vérification

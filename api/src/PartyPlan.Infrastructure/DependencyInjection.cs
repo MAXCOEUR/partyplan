@@ -3,11 +3,12 @@ namespace PartyPlan.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using PartyPlan.Infrastructure.Email;
 using PartyPlan.Infrastructure.Identity;
+using PartyPlan.Infrastructure.Media;
 using PartyPlan.Infrastructure.Options;
 using PartyPlan.Infrastructure.Persistence;
 using PartyPlan.Modules.Administration.Persistence;
-using PartyPlan.Modules.Auth.Persistence;
 using PartyPlan.Modules.Events.Persistence;
 using PartyPlan.Modules.Expenses.Persistence;
 using PartyPlan.Modules.Messages.Persistence;
@@ -49,6 +50,18 @@ public static class DependencyInjection
             .ValidateDataAnnotations()
             .ValidateOnStart();
 
+        // --- Courriel et médias ---
+        services.AddOptions<SmtpOptions>()
+            .Bind(configuration.GetSection(SmtpOptions.SectionName))
+            .ValidateOnStart();
+
+        services.AddOptions<MediaOptions>()
+            .Bind(configuration.GetSection(MediaOptions.SectionName))
+            .ValidateOnStart();
+
+        services.AddSingleton<PartyPlan.SharedKernel.Contracts.IEmailSender, SmtpEmailSender>();
+        services.AddSingleton<PartyPlan.SharedKernel.Contracts.IAvatarStorage, AvatarStorage>();
+
         var connectionString = configuration.GetConnectionString("Default")
             ?? throw new InvalidOperationException(
                 "La chaîne de connexion « ConnectionStrings:Default » est absente. "
@@ -86,7 +99,6 @@ public static class DependencyInjection
     private static void AddModuleContracts(IServiceCollection services)
     {
         services.AddScoped<IUsersDbContext>(Resolve);
-        services.AddScoped<IAuthDbContext>(Resolve);
         services.AddScoped<IAdministrationDbContext>(Resolve);
         services.AddScoped<IEventsDbContext>(Resolve);
         services.AddScoped<IShoppingDbContext>(Resolve);

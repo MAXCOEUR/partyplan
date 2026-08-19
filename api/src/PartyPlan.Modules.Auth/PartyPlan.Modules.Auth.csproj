@@ -16,4 +16,16 @@
     <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" />
   </ItemGroup>
 
+
+  <ItemGroup>
+    <PackageReference Include="Konscious.Security.Cryptography.Argon2" />
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Condensés tronqués des mots de passe compromis. Le fichier ne contient aucun
+         mot de passe en clair. -->
+    <EmbeddedResource Include="Resources/mots-de-passe-compromis.txt" />
+  </ItemGroup>
+
 </Project>

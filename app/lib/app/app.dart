@@ -6,22 +6,15 @@ import '../l10n/pp_strings.dart';
 import 'router.dart';
 
 /// Racine de l'application.
-class PartyPlanApp extends ConsumerStatefulWidget {
+class PartyPlanApp extends ConsumerWidget {
   const PartyPlanApp({super.key});
 
   @override
-  ConsumerState<PartyPlanApp> createState() => _PartyPlanAppState();
-}
-
-class _PartyPlanAppState extends ConsumerState<PartyPlanApp> {
-  late final _routeur = creerRouteur();
-
-  @override
-  Widget build(BuildContext context) => MaterialApp.router(
+  Widget build(BuildContext context, WidgetRef ref) => MaterialApp.router(
     title: PpStrings.nomProduit,
     debugShowCheckedModeBanner: false,
     theme: PpTheme.clair(),
     darkTheme: PpTheme.sombre(),
-    routerConfig: _routeur,
+    routerConfig: ref.watch(routeurProvider),
   );
 }

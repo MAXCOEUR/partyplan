@@ -1,0 +1,80 @@
+namespace PartyPlan.SharedKernel.Contracts;
+
+using PartyPlan.SharedKernel.Enums;
+using PartyPlan.SharedKernel.Primitives;
+
+/// <summary>
+/// Contrat public du module Users, seul propriétaire de la table des comptes.
+/// <para>
+/// Placé dans le SharedKernel et non dans le module Users : deux modules ne se
+/// référencent jamais directement (ADR 0002). Le SharedKernel sert de registre de
+/// contrats, ce qui laisse la frontière vérifiable par l'outil
+/// <c>verifier-frontieres-modules.sh</c>. Règle attachée : ce répertoire ne contient
+/// que des interfaces et des types de données, jamais de logique, et chaque contrat
+/// nomme son module propriétaire.
+/// </para>
+/// </summary>
+public interface IUserDirectory
+{
+    /// <summary>Recherche paginée, destinée au back-office (EF-ADM-02).</summary>
+    Task<UserPage> SearchAsync(UserQuery query, CancellationToken cancellationToken);
+
+    /// <summary>Fiche technique d'un compte. Ne contient aucune donnée d'événement (RG-ADM-01).</summary>
+    Task<Result<UserRecord>> GetAsync(Guid userId, CancellationToken cancellationToken);
+
+    Task<Result> SuspendAsync(Guid userId, string reason, CancellationToken cancellationToken);
+
+    Task<Result> UnsuspendAsync(Guid userId, CancellationToken cancellationToken);
+
+    /// <summary>Anonymise le compte plutôt que de l'effacer (RG-RGPD-01, RG-USR-05).</summary>
+    Task<Result> AnonymizeAsync(Guid userId, CancellationToken cancellationToken);
+
+    Task<Result> ChangePlatformRoleAsync(Guid userId, PlatformRole role, CancellationToken cancellationToken);
+
+    Task<Result<int>> RevokeAllSessionsAsync(Guid userId, CancellationToken cancellationToken);
+
+    Task<Result> MarkEmailVerifiedAsync(Guid userId, CancellationToken cancellationToken);
+
+    /// <summary>Nombre de comptes portant un rôle plateforme donné. Support de RG-ADM-03.</summary>
+    Task<int> CountByPlatformRoleAsync(PlatformRole role, CancellationToken cancellationToken);
+
+    /// <summary>Indicateurs d'instance (EF-ADM-10).</summary>
+    Task<InstanceMetrics> GetMetricsAsync(CancellationToken cancellationToken);
+}
+
+public sealed record UserQuery(string? Search, int Page, int PageSize, bool IncludeDeleted = false);
+
+public sealed record UserPage(IReadOnlyList<UserRecord> Items, int Total, int Page, int PageSize);
+
+/// <summary>
+/// Vue d'un compte pour l'administration. Volontairement limitée aux données techniques
+/// nécessaires au support (RG-RGPD-04) : ni contenu d'événement, ni empreinte de mot de
+/// passe, ni secret de double authentification.
+/// </summary>
+public sealed record UserRecord(
+    Guid Id,
+    string? Email,
+    string DisplayName,
+    string? AvatarUrl,
+    PlatformRole PlatformRole,
+    bool EmailVerified,
+    bool HasPassword,
+    bool TotpEnabled,
+    bool GoogleLinked,
+    bool AppleLinked,
+    bool IsSuspended,
+    string? SuspensionReason,
+    DateTimeOffset? LastLoginAt,
+    int EventCount,
+    int ActiveSessionCount,
+    DateTimeOffset CreatedAt,
+    DateTimeOffset? DeletedAt);
+
+public sealed record InstanceMetrics(
+    int TotalUsers,
+    int SuspendedUsers,
+    int PlatformStaff,
+    int VerifiedUsers,
+    int TotalEvents,
+    int ActiveEvents,
+    int GuestMembers);

@@ -6,6 +6,11 @@ Application d'organisation d'événements entre amis (3 à 20 personnes) : prés
 liste de courses collaborative, dépenses et remboursements, planning.
 Remplace le groupe WhatsApp/Snapchat chaotique par un espace structuré.
 
+**État : V0 et V0.5 livrées.** Les comptes fonctionnent de bout en bout — inscription,
+vérification d'adresse, sessions, réinitialisation, export et suppression RGPD — ainsi
+que le back-office d'administration avec journal d'audit. L'événementiel arrive en V1.0 :
+voir [docs/roadmap.md](docs/roadmap.md).
+
 ## Structure du dépôt
 
 Monorepo unique — voir [docs/adr/0001-monorepo.md](docs/adr/0001-monorepo.md).

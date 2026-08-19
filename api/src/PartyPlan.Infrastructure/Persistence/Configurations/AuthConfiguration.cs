@@ -2,7 +2,6 @@ namespace PartyPlan.Infrastructure.Persistence.Configurations;
 
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
-using PartyPlan.Modules.Auth.Domain;
 using PartyPlan.Modules.Users.Domain;
 
 internal sealed class PasswordResetTokenConfiguration : IEntityTypeConfiguration<PasswordResetToken>

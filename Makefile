@@ -20,7 +20,7 @@ API_EMU     := http://10.0.2.2:5080
 
 .PHONY: aide init up down restart logs ps api app web test test-api test-app \
         migration migrate reset-db seed mail openapi frontieres fmt lint verif clean \
-        android emulateur lan devices inotify
+        android emulateur lan devices inotify stop-api
 
 aide: ## Affiche cette aide
 	@echo "PartyPlan — cibles disponibles :"
@@ -43,6 +43,9 @@ up: init ## Démarre la pile complète (base, courriel, API, web, vitrine)
 	@echo "  Courriels     http://localhost:8025   (aucun envoi réel — NF-DEV-03)"
 	@echo "  Administrateur  admin@partyplan.local / MotDePasseDeDeveloppement"
 
+stop-api: ## Termine le processus qui occupe le port 5080
+	@./tools/liberer-port.sh 5080 --tuer || true
+
 down: ## Arrête la pile
 	$(COMPOSE_DEV) down
 
@@ -57,6 +60,9 @@ ps: ## Affiche l'état des conteneurs
 # --- Exécution hors conteneur, pour le rechargement à chaud (NF-DEV-09) ---
 
 api: ## Lance l'API en rechargement à chaud (base et courriel en conteneur)
+	@# Un « dotnet watch » oublié, ou lancé depuis Rider, occupe déjà le port : le
+	@# message de Kestrel ne nomme pas le processus fautif.
+	@./tools/liberer-port.sh 5080
 	$(COMPOSE_DEV) up -d db mail
 	@# Bascule en mode scrutation si les instances inotify du noyau sont saturées :
 	@# sans cela, dotnet watch échoue avec un message qui n'indique pas la cause.

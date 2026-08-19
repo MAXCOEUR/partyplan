@@ -39,6 +39,26 @@ comptes, jamais sur le contenu d'un événement (`RG-ADM-01`).
 - La dépendance va de l'Infrastructure vers les modules, jamais l'inverse. Le contrôle
   est automatisé : `./tools/verifier-frontieres-modules.sh`, exécuté en intégration
   continue.
+- **Contrats inter-modules** : lorsqu'un module doit en solliciter un autre, l'interface
+  est déclarée dans `PartyPlan.SharedKernel/Contracts` et implémentée par le module
+  propriétaire. Deux modules ne se référencent jamais directement. Ce répertoire ne
+  contient que des interfaces et des types de données — aucune logique — et chaque
+  contrat nomme son module propriétaire dans sa documentation.
+
+  Contrats existants : `IUserDirectory` (Users), `IAuditLog` et `AdminAuditActions`
+  (Administration), `IPasswordHasher`, `IPasswordPolicy`, `ITokenService` (Auth),
+  `IPasswordResetTrigger` (Users), `IEmailSender`, `IAvatarStorage` (Infrastructure).
+
+## Amendement du 19/08/2026 — Auth et Users
+
+Le module `Auth` ne possède aucune table. Le compte, les sessions et les jetons à usage
+unique appartiennent à `Users`.
+
+Motif : l'authentification et le compte sont le même agrégat. Les séparer aurait imposé
+un contrat inter-modules à chaque connexion — donc à chaque requête — pour aucun
+bénéfice de découplage. `Auth` conserve les mécanismes purs, sans persistance : hachage
+Argon2id, politique de mot de passe, émission des jetons. Ils sont ainsi testables sans
+base, ce qui est précisément ce que l'on veut d'un composant cryptographique.
 - `Settlements` dépend de `Expenses` en lecture seule via contrat.
 - Aucune référence circulaire entre modules — vérifiée en CI.
 - Les migrations EF Core sont centralisées dans `Infrastructure` (une seule base).

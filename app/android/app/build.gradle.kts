@@ -7,7 +7,10 @@ plugins {
 
 android {
     namespace = "fr.maxencecoeur.partyplan"
-    compileSdk = flutter.compileSdkVersion
+    // Fixé explicitement : la plateforme android-37 n'est distribuée que sous le nom
+    // « android-37.0 », que Gradle ne sait pas résoudre. android-36 est installé et
+    // suffit à toutes les dépendances du projet.
+    compileSdk = 36
     ndkVersion = flutter.ndkVersion
 
     compileOptions {

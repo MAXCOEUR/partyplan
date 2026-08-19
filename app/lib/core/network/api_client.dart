@@ -63,24 +63,96 @@ class ApiClient {
     String? cleIdempotence,
     required T Function(Object? corps) analyser,
   }) async {
-    final reponse = await _dio.post<Object?>(
-      chemin,
-      data: corps,
-      options: Options(
-        headers: cleIdempotence == null
-            ? null
-            // Obligatoire sur les dépenses et les règlements (§8.1) : un double appui
-            // ne doit jamais créer deux dépenses.
-            : {'Idempotency-Key': cleIdempotence},
+    final reponse = await _envoyer(
+      () => _dio.post<Object?>(
+        chemin,
+        data: corps,
+        options: Options(
+          headers: cleIdempotence == null
+              ? null
+              // Obligatoire sur les dépenses et les règlements (§8.1) : un double appui
+              // ne doit jamais créer deux dépenses.
+              : {'Idempotency-Key': cleIdempotence},
+        ),
       ),
     );
-    _verifier(reponse);
+    return analyser(reponse.data);
+  }
+
+  Future<T> patch<T>(
+    String chemin, {
+    Object? corps,
+    required T Function(Object? corps) analyser,
+  }) async {
+    final reponse = await _envoyer(
+      () => _dio.patch<Object?>(chemin, data: corps),
+    );
+    return analyser(reponse.data);
+  }
+
+  Future<T> put<T>(
+    String chemin, {
+    Object? corps,
+    required T Function(Object? corps) analyser,
+  }) async {
+    final reponse = await _envoyer(
+      () => _dio.put<Object?>(chemin, data: corps),
+    );
     return analyser(reponse.data);
   }
 
   Future<void> delete(String chemin) async {
-    final reponse = await _dio.delete<Object?>(chemin);
+    await _envoyer(() => _dio.delete<Object?>(chemin));
+  }
+
+  /// Suppression avec corps. `DELETE /me` exige une confirmation (RG-USR-05).
+  Future<void> deleteWithBody(String chemin, {Object? corps}) async {
+    await _envoyer(() => _dio.delete<Object?>(chemin, data: corps));
+  }
+
+  /// Envoie une requête et retente une fois après rafraîchissement de la session.
+  ///
+  /// Le jeton d'accès ne vit que quinze minutes : sans ce rejeu, l'utilisateur serait
+  /// déconnecté au quart d'heure. La tentative de rafraîchissement n'a lieu qu'une
+  /// fois, pour ne pas boucler quand la session est réellement expirée.
+  Future<Response<Object?>> _envoyer(
+    Future<Response<Object?>> Function() requete,
+  ) async {
+    var reponse = await requete();
+
+    if (reponse.statusCode == 401 && await _rafraichir()) {
+      reponse = await requete();
+    }
+
     _verifier(reponse);
+    return reponse;
+  }
+
+  Future<bool> _rafraichir() async {
+    final jeton = await _sessionStore.lireJetonRafraichissement();
+    if (jeton == null) {
+      return false;
+    }
+
+    final reponse = await _dio.post<Object?>(
+      '/auth/refresh',
+      data: {'refreshToken': jeton},
+    );
+
+    if (reponse.statusCode != 200 || reponse.data is! Map<String, dynamic>) {
+      // La session est définitivement perdue : l'effacer évite de retenter à chaque
+      // appel avec un jeton mort.
+      await _sessionStore.effacerSession();
+      return false;
+    }
+
+    final corps = reponse.data! as Map<String, dynamic>;
+    await _sessionStore.enregistrerSession(
+      jetonAcces: corps['accessToken'] as String,
+      jetonRafraichissement: corps['refreshToken'] as String,
+    );
+
+    return true;
   }
 
   void _verifier(Response<Object?> reponse) {

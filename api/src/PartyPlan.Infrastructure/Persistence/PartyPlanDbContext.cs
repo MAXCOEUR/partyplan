@@ -3,8 +3,6 @@ namespace PartyPlan.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using PartyPlan.Modules.Administration.Domain;
 using PartyPlan.Modules.Administration.Persistence;
-using PartyPlan.Modules.Auth.Domain;
-using PartyPlan.Modules.Auth.Persistence;
 using PartyPlan.Modules.Events.Domain;
 using PartyPlan.Modules.Events.Persistence;
 using PartyPlan.Modules.Expenses.Domain;
@@ -40,7 +38,6 @@ public sealed class PartyPlanDbContext(
     IIdGenerator idGenerator)
     : DbContext(options),
       IUsersDbContext,
-      IAuthDbContext,
       IAdministrationDbContext,
       IEventsDbContext,
       IShoppingDbContext,
@@ -75,7 +72,6 @@ public sealed class PartyPlanDbContext(
 
     public DbSet<GroupMember> GroupMembers => Set<GroupMember>();
 
-    // --- Auth ---
     public DbSet<PasswordResetToken> PasswordResetTokens => Set<PasswordResetToken>();
 
     public DbSet<EmailVerificationToken> EmailVerificationTokens => Set<EmailVerificationToken>();

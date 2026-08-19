@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:partyplan/app/app.dart';
 import 'package:partyplan/app/router.dart';
+import 'package:partyplan/core/providers.dart';
+import 'package:partyplan/core/storage/session_store.dart';
+import 'package:partyplan/features/auth/connexion_page.dart';
 import 'package:partyplan/features/rejoindre/rejoindre_page.dart';
 
 void main() {
@@ -15,27 +17,92 @@ void main() {
       expect(PpRoutes.versEvenement('0198-abcd'), '/events/0198-abcd');
     });
 
+    test('les routes publiques n’exigent aucune session', () {
+      expect(PpRoutes.publiques, contains(PpRoutes.connexion));
+      expect(PpRoutes.publiques, contains(PpRoutes.inscription));
+      // Le profil et l'administration ne doivent jamais y figurer.
+      expect(PpRoutes.publiques, isNot(contains(PpRoutes.adminComptes)));
+      expect(PpRoutes.publiques, isNot(contains(PpRoutes.securite)));
+    });
+
     testWidgets('l’accès direct à un lien d’invitation ouvre le parcours', (
       tester,
     ) async {
-      final routeur = creerRouteur();
-      // Un invité arrive toujours par un lien : cette route doit fonctionner en accès
-      // direct, sans passer par l'accueil (EF-INV-01).
+      final conteneur = _conteneurAnonyme();
+      final routeur = conteneur.read(routeurProvider);
+
+      // Un invité arrive toujours par un lien : la route doit fonctionner en accès
+      // direct, sans session, et sans redirection vers l'écran de connexion —
+      // exiger un compte ici ruinerait l'adoption (EF-INV-04).
       routeur.go('/join/PLAN-8J4K');
 
       await tester.pumpWidget(
-        ProviderScope(child: MaterialApp.router(routerConfig: routeur)),
+        UncontrolledProviderScope(
+          container: conteneur,
+          child: MaterialApp.router(routerConfig: routeur),
+        ),
       );
       await tester.pumpAndSettle();
 
       expect(find.byType(RejoindrePage), findsOneWidget);
     });
 
-    testWidgets('l’application démarre sur l’accueil', (tester) async {
-      await tester.pumpWidget(const ProviderScope(child: PartyPlanApp()));
+    testWidgets('un appelant anonyme est redirigé vers la connexion', (
+      tester,
+    ) async {
+      final conteneur = _conteneurAnonyme();
+
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: conteneur,
+          child: MaterialApp.router(
+            routerConfig: conteneur.read(routeurProvider),
+          ),
+        ),
+      );
       await tester.pumpAndSettle();
 
-      expect(find.text('PartyPlan'), findsOneWidget);
+      // Sans redirection, l'écran de profil s'afficherait pour n'y montrer qu'une
+      // erreur réseau.
+      expect(find.byType(ConnexionPage), findsOneWidget);
     });
   });
+}
+
+ProviderContainer _conteneurAnonyme() {
+  final conteneur = ProviderContainer(
+    overrides: [sessionStoreProvider.overrideWithValue(_StockageVide())],
+  );
+  addTearDown(conteneur.dispose);
+  return conteneur;
+}
+
+/// Stockage de session vide.
+///
+/// Le stockage sécurisé de la plateforme n'existe pas dans un test de widget : le
+/// substituer évite un échec sans rapport avec ce que l'on vérifie.
+class _StockageVide implements SessionStore {
+  @override
+  Future<String?> lireJetonAcces() async => null;
+
+  @override
+  Future<String?> lireJetonRafraichissement() async => null;
+
+  @override
+  Future<String?> lireJetonInvite() async => null;
+
+  @override
+  Future<void> enregistrerSession({
+    required String jetonAcces,
+    required String jetonRafraichissement,
+  }) async {}
+
+  @override
+  Future<void> enregistrerJetonInvite(String jeton) async {}
+
+  @override
+  Future<void> effacerSession() async {}
+
+  @override
+  Future<void> toutEffacer() async {}
 }

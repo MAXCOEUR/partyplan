@@ -218,6 +218,12 @@ Après dix échecs de connexion consécutifs sur un compte, les tentatives sont 
 de façon croissante ; le compte n'est jamais verrouillé définitivement, afin d'éviter un
 déni de service par un tiers.
 
+Deux limites concourantes sont nécessaires, et non une seule : le décompte **par adresse**
+est tenu par le service, celui **par adresse IP** par le limiteur de débit HTTP. La
+première arrête le harcèlement d'un compte précis depuis plusieurs sources, la seconde un
+balayage d'adresses depuis une source unique. Le dépassement de la limite par adresse est
+silencieux, la réponse de l'endpoint étant de toute façon invariable (`RG-AUTH-04`).
+
 **RG-AUTH-06** — La réinitialisation d'un mot de passe et le changement d'adresse e-mail
 révoquent toutes les sessions actives, sauf celle en cours.
 
@@ -789,6 +795,9 @@ au rôle applicatif. `actor_email` est recopié afin que le journal reste lisibl
 suppression du compte auteur.
 
 **password_reset_tokens** et **email_verification_tokens**
+
+Propriété du module Users, et non d'un module Auth distinct : voir l'amendement de
+l'`ADR 0002`.
 
 | Colonne | Type | Contraintes |
 |---|---|---|

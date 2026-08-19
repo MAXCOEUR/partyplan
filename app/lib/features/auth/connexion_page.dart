@@ -1,0 +1,155 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+
+import '../../app/router.dart';
+import '../../core/network/api_exception.dart';
+import '../../core/providers.dart';
+import '../../design/components/pp_form.dart';
+import '../../design/tokens.dart';
+import '../../l10n/pp_strings.dart';
+import '../../l10n/validateurs.dart';
+
+/// Écran de connexion (EF-AUTH-02).
+class ConnexionPage extends ConsumerStatefulWidget {
+  const ConnexionPage({super.key});
+
+  @override
+  ConsumerState<ConnexionPage> createState() => _ConnexionPageState();
+}
+
+class _ConnexionPageState extends ConsumerState<ConnexionPage> {
+  final _formulaire = GlobalKey<FormState>();
+  final _adresse = TextEditingController();
+  final _motDePasse = TextEditingController();
+  bool _enCours = false;
+  String? _erreur;
+
+  @override
+  void dispose() {
+    _adresse.dispose();
+    _motDePasse.dispose();
+    super.dispose();
+  }
+
+  Future<void> _valider() async {
+    if (!_formulaire.currentState!.validate()) {
+      return;
+    }
+
+    setState(() {
+      _enCours = true;
+      _erreur = null;
+    });
+
+    try {
+      await ref
+          .read(sessionProvider.notifier)
+          .connecter(email: _adresse.text.trim(), motDePasse: _motDePasse.text);
+
+      if (mounted) {
+        context.go(PpRoutes.accueil);
+      }
+    } on ApiException catch (erreur) {
+      // Le message vient du serveur : il est déjà rédigé pour l'utilisateur, et ne
+      // distingue pas adresse inconnue de mot de passe erroné (RG-AUTH-04).
+      setState(() => _erreur = erreur.title);
+    } on Exception {
+      setState(() => _erreur = PpStrings.erreurReseau);
+    } finally {
+      if (mounted) {
+        setState(() => _enCours = false);
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) => Scaffold(
+    body: SafeArea(
+      child: Center(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(PpSpacing.xl),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 420),
+            child: Form(
+              key: _formulaire,
+              child: AutofillGroup(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    const PpAuthHeader(
+                      titre: 'Content de te revoir',
+                      sousTitre: 'Connecte-toi pour retrouver tes événements.',
+                    ),
+                    const SizedBox(height: PpSpacing.xxl),
+                    if (_erreur != null) ...[
+                      PpFormError(_erreur!),
+                      const SizedBox(height: PpSpacing.lg),
+                    ],
+                    PpField(
+                      label: 'Adresse e-mail',
+                      controller: _adresse,
+                      hint: 'prenom@exemple.fr',
+                      keyboardType: TextInputType.emailAddress,
+                      autofillHints: const [AutofillHints.email],
+                      textInputAction: TextInputAction.next,
+                      validator: Validateurs.adresse,
+                      enabled: !_enCours,
+                    ),
+                    const SizedBox(height: PpSpacing.lg),
+                    PpField(
+                      label: 'Mot de passe',
+                      controller: _motDePasse,
+                      obscure: true,
+                      autofillHints: const [AutofillHints.password],
+                      textInputAction: TextInputAction.done,
+                      validator: Validateurs.motDePasseExistant,
+                      onSubmitted: (_) => _valider(),
+                      enabled: !_enCours,
+                    ),
+                    const SizedBox(height: PpSpacing.sm),
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: TextButton(
+                        onPressed: _enCours
+                            ? null
+                            : () => context.push(PpRoutes.motDePasseOublie),
+                        child: const Text('Mot de passe oublié ?'),
+                      ),
+                    ),
+                    const SizedBox(height: PpSpacing.lg),
+                    PpPrimaryButton(
+                      label: 'Se connecter',
+                      enCours: _enCours,
+                      onPressed: _valider,
+                    ),
+                    const SizedBox(height: PpSpacing.xl),
+                    // `Wrap` et non `Row` : sur un écran étroit, la ligne débordait
+                    // de plus de cent pixels. Le repli est ici préférable à une
+                    // troncature du libellé.
+                    Wrap(
+                      alignment: WrapAlignment.center,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      children: [
+                        Text(
+                          'Pas encore de compte ?',
+                          style: Theme.of(context).textTheme.bodyMedium,
+                        ),
+                        TextButton(
+                          onPressed: _enCours
+                              ? null
+                              : () => context.push(PpRoutes.inscription),
+                          child: const Text('Créer un compte'),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    ),
+  );
+}
