@@ -20,7 +20,7 @@ API_EMU     := http://10.0.2.2:5080
 
 .PHONY: aide init up down restart logs ps api app web test test-api test-app \
         migration migrate reset-db seed mail openapi frontieres fmt lint verif clean \
-        android emulateur lan devices
+        android emulateur lan devices inotify
 
 aide: ## Affiche cette aide
 	@echo "PartyPlan — cibles disponibles :"
@@ -58,7 +58,14 @@ ps: ## Affiche l'état des conteneurs
 
 api: ## Lance l'API en rechargement à chaud (base et courriel en conteneur)
 	$(COMPOSE_DEV) up -d db mail
+	@# Bascule en mode scrutation si les instances inotify du noyau sont saturées :
+	@# sans cela, dotnet watch échoue avec un message qui n'indique pas la cause.
+	@./tools/verifier-inotify.sh | head -2
+	@# `env` est indispensable ici : le shell analyse les affectations de variables
+	@# avant les substitutions de commande, si bien qu'un $$(...) placé en préfixe
+	@# serait interprété comme un nom de commande et non comme une affectation.
 	ASPNETCORE_ENVIRONMENT=Development ASPNETCORE_URLS=$(API_URLS) \
+	  env $$(./tools/verifier-inotify.sh --env) \
 	  dotnet watch --project $(API_PROJ) run
 
 app: ## Lance l'application Flutter sur Chrome, en rechargement à chaud
@@ -115,6 +122,9 @@ openapi: ## Régénère docs/api/openapi.json et le client Dart depuis l'API loc
 
 frontieres: ## Vérifie les frontières de modules (ADR 0002)
 	./tools/verifier-frontieres-modules.sh
+
+inotify: ## Diagnostique les limites inotify du noyau et donne le correctif
+	@./tools/verifier-inotify.sh
 
 mail: ## Ouvre l'interface de consultation des courriels
 	@echo "http://localhost:8025"

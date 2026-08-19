@@ -170,6 +170,53 @@ make fmt         # reformate
 
 ---
 
+## 6 bis. Limites inotify du noyau — à régler une fois
+
+`dotnet watch` et `flutter run` surveillent les fichiers par **inotify**. Debian autorise
+par défaut **128 instances par utilisateur**, et Rider, Android Studio, VS Code et le
+navigateur en consomment déjà l'essentiel. Une fois la limite atteinte, `dotnet watch`
+échoue au démarrage sur un message qui ne nomme pas la cause réelle :
+
+```
+An unexpected error occurred: System.IO.IOException: The configured user limit (128)
+on the number of inotify instances has been reached
+```
+
+Diagnostic :
+
+```bash
+make inotify
+```
+
+### Correctif permanent
+
+À exécuter une fois. Nécessite les droits d'administration, donc à lancer soi-même :
+
+```bash
+sudo tee /etc/sysctl.d/60-inotify-partyplan.conf > /dev/null <<'CONF'
+# Limites inotify relevées pour un poste de développement équipé d'IDE.
+# La valeur par défaut de Debian (128 instances) est saturée par Rider,
+# Android Studio et le navigateur seuls.
+fs.inotify.max_user_instances = 1024
+fs.inotify.max_user_watches = 524288
+CONF
+sudo sysctl --system
+```
+
+Aucun redémarrage nécessaire. Le coût mémoire est d'environ 1 Ko de mémoire noyau par
+surveillance **effectivement posée**, et non par surveillance autorisée : relever le
+plafond ne consomme rien en soi. Ces valeurs sont celles que recommande JetBrains pour
+ses propres outils.
+
+### Repli automatique
+
+En attendant, `make api` détecte la saturation et bascule `dotnet watch` en mode
+scrutation (`DOTNET_USE_POLLING_FILE_WATCHER=1`). Le rechargement à chaud fonctionne
+alors, au prix d'une consommation de processeur plus élevée et d'une détection des
+modifications un peu plus lente. Le diagnostic est affiché à chaque lancement.
+
+---
+
 ## 7. Problèmes courants
 
 | Symptôme | Cause | Correction |
@@ -181,6 +228,7 @@ make fmt         # reformate
 | Aucun courriel reçu | Ils sont capturés, pas envoyés | http://localhost:8025 |
 | Testcontainers échoue | Docker arrêté | Démarrer Docker |
 | `make up` échoue sur l'image web | Compilation Flutter Web longue, mémoire | Utiliser `make api` et `make app` pour développer |
+| « The configured user limit (128) on the number of inotify instances » | Limite noyau saturée par les IDE | Section 6 bis, puis `make inotify` pour contrôler |
 
 ---
 

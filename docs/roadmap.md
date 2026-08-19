@@ -97,6 +97,8 @@ Contrainte permanente : tout doit tourner en local avant d'être poussé — `§
 - [x] Contrôle avant push : `make verif` (format, analyse, frontières, tests)
 - [x] Guide de développement local — `docs/developpement.md` : Rider, Android Studio, émulateur, problèmes courants
 - [x] Cibles `make android`, `make emulateur`, `make lan`, `make devices` ; l'API écoute sur `0.0.0.0:5080` afin d'être joignable depuis l'émulateur
+- [x] Diagnostic et repli sur les limites inotify du noyau — `make inotify`, saturées par Rider et Android Studio sur le poste de développement
+- [ ] Relever `fs.inotify.max_user_instances` sur le poste (droits d'administration requis) — voir `docs/developpement.md` §6 bis
 - [ ] `NF-DEV-04` Journaliser les notifications poussées en console faute de clé — arrive avec le lot 1.11, aucun émetteur n'existe encore
 - [ ] `NF-DEV-05` Vérifier que l'inscription fonctionne sans clé Google — vérifiable au lot 0.8, aucun endpoint d'authentification n'existe encore
 - [ ] `NF-DEV-06` Amorcer effectivement l'administrateur de développement — lot 0.11 ; les identifiants sont déjà documentés et la garde en place
