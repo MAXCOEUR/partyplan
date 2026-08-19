@@ -1,0 +1,62 @@
+# PartyPlan — reverse proxy
+#
+# Un certificat par nom, obtenu en challenge HTTP-01 (ADR 0003). Les ports 80 et
+# 443 doivent être joignables depuis Internet pour la validation et le renouvellement.
+{
+	email {$ACME_EMAIL}
+	# Décommenter pour valider la configuration sans consommer les quotas Let's Encrypt :
+	# acme_ca https://acme-staging-v02.api.letsencrypt.org/directory
+}
+
+(securite) {
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "DENY"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		-Server
+	}
+}
+
+# ------------------------------------------------- application web (PWA) ----
+{$DOMAIN_APP} {
+	import securite
+	# Aucun événement ne doit être indexé (RG-EVT-01).
+	header X-Robots-Tag "noindex, nofollow"
+	encode zstd gzip
+	reverse_proxy web:80
+}
+
+# ------------------------------------------------------------------ API ----
+{$DOMAIN_API} {
+	import securite
+	header X-Robots-Tag "noindex, nofollow"
+	encode zstd gzip
+
+	# SignalR : pas de sous-domaine dédié, le hub vit sur le domaine de l'API
+	# (ADR 0003). Le transport WebSocket est relayé sans mise en tampon.
+	@hubs path /hubs/*
+	reverse_proxy @hubs api:8080 {
+		flush_interval -1
+	}
+
+	reverse_proxy api:8080
+}
+
+# ---------------------------------------------- fichiers statiques (CDN) ----
+{$DOMAIN_CDN} {
+	import securite
+	root * /srv/media
+	file_server
+	header Cache-Control "public, max-age=31536000, immutable"
+	# Les médias sont servis en lecture seule ; aucune écriture ne passe par ce nom.
+	@ecriture not method GET HEAD
+	respond @ecriture 405
+}
+
+# ------------------------------------------------------- site vitrine ----
+{$DOMAIN_LANDING} {
+	import securite
+	encode zstd gzip
+	reverse_proxy landing:80
+}

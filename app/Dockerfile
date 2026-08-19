@@ -1,0 +1,24 @@
+# syntax=docker/dockerfile:1
+
+# ---------- Étape de compilation Flutter Web ----------
+FROM ghcr.io/cirruslabs/flutter:3.38.9 AS build
+WORKDIR /src
+
+# `API_BASE_URL` est injecté à la compilation : Flutter Web produit des fichiers
+# statiques, la valeur ne peut pas être lue à l'exécution.
+ARG API_BASE_URL=https://api.partyplan.maxencecoeur.fr
+
+COPY pubspec.yaml pubspec.lock ./
+RUN flutter pub get
+
+COPY . .
+RUN flutter build web \
+      --release \
+      --dart-define=API_BASE_URL=${API_BASE_URL}
+
+# ---------- Image d'exécution ----------
+FROM nginx:1.27-alpine AS runtime
+COPY --from=build /src/build/web /usr/share/nginx/html
+COPY nginx.conf /etc/nginx/conf.d/default.conf
+COPY nginx-securite.conf /etc/nginx/nginx-securite.conf
+EXPOSE 80

@@ -1,0 +1,38 @@
+<Project>
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <!-- Un avertissement non traité aujourd'hui est une anomalie demain. -->
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+    <AnalysisLevel>latest-recommended</AnalysisLevel>
+    <InvariantGlobalization>false</InvariantGlobalization>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <!--
+      Règles d'analyse écartées, avec leur motif. Déclarées ici et non dans le
+      .editorconfig de la racine : celui-ci est hors du contexte de construction de
+      l'image Docker (`api/`), si bien que les suppressions y seraient perdues et que
+      la compilation échouerait dans le conteneur alors qu'elle passe en local.
+
+      CS1591 : commentaire XML manquant sur un membre public.
+      CA1000 : membres statiques sur type générique — Result<T>.Success/Failure est la
+               forme retenue, plus lisible au point d'appel que des fabriques non
+               génériques.
+      CA1062 : validation des arguments publics — les entrées sont validées au niveau
+               des endpoints, pas dans chaque méthode interne.
+      CA1716 : nom de type en conflit avec un mot clé réservé d'un autre langage.
+               « Event » est le terme central du domaine et aucune API n'est consommée
+               depuis VB.
+      CA1707 : underscores dans les noms — convention des noms de tests.
+      CA1848 : LoggerMessage à source générée — pertinent sur les chemins chauds, pas
+               sur les journaux de démarrage.
+      CA1305 / CA1310 : IFormatProvider explicite — la culture de l'application est
+               fixée ; l'imposer partout nuit à la lecture.
+    -->
+    <NoWarn>$(NoWarn);CS1591;CA1000;CA1062;CA1716;CA1707;CA1848;CA1305;CA1310</NoWarn>
+  </PropertyGroup>
+
+</Project>

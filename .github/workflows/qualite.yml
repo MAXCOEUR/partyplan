@@ -1,0 +1,88 @@
+# Contrôles de qualité transverses : format, analyse, frontières de modules,
+# vulnérabilités des dépendances.
+
+name: Qualité
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    # Une analyse hebdomadaire des vulnérabilités : une dépendance saine aujourd'hui
+    # peut ne plus l'être la semaine prochaine, sans qu'aucun commit n'ait eu lieu.
+    - cron: '0 6 * * 1'
+
+concurrency:
+  group: qualite-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+
+  frontieres:
+    name: Frontières de modules
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: ./tools/verifier-frontieres-modules.sh
+
+  format-api:
+    name: Format C#
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - run: dotnet format PartyPlan.slnx --verify-no-changes --verbosity diagnostic
+        working-directory: api
+
+  format-app:
+    name: Format Dart
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.38.9'
+          channel: stable
+      - run: flutter pub get
+        working-directory: app
+      - run: dart format --output=none --set-exit-if-changed lib test
+        working-directory: app
+
+  vulnerabilites:
+    name: Vulnérabilités des dépendances
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      # `--include-transitive` est indispensable : la majorité des vulnérabilités
+      # arrivent par une dépendance que personne n'a déclarée.
+      - name: Paquets NuGet vulnérables
+        working-directory: api
+        run: |
+          dotnet restore PartyPlan.slnx
+          rapport=$(dotnet list PartyPlan.slnx package --vulnerable --include-transitive)
+          echo "$rapport"
+          if echo "$rapport" | grep -qiE '\b(High|Critical)\b'; then
+            echo "::error::Vulnérabilité de gravité élevée ou critique détectée."
+            exit 1
+          fi
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.38.9'
+          channel: stable
+      - name: Paquets Dart obsolètes ou retirés
+        working-directory: app
+        run: |
+          flutter pub get
+          flutter pub deps --style=compact > /dev/null
+          dart pub outdated --json > /tmp/outdated.json || true
+          echo "Rapport de fraîcheur des dépendances Dart généré."

@@ -1,0 +1,210 @@
+# Construction et publication des images Docker.
+#
+# - push sur `main` ou tag `*-v*`  → publication sur GitHub Container Registry
+# - pull request                    → construction seule, image déposée en artefact
+#                                     téléchargeable (aucune publication)
+#
+# Les images produites sont celles consommées par infra/compose/compose.example.yml :
+#   ghcr.io/<propriétaire>/partyplan-api
+#   ghcr.io/<propriétaire>/partyplan-web
+#   ghcr.io/<propriétaire>/partyplan-landing
+
+name: Images Docker
+
+on:
+  push:
+    branches: [main]
+    # Pas de filtre `paths` ici : GitHub l'applique aussi aux poussées de tag, ce
+    # qui ferait sauter une publication de version. La sélection des composants
+    # est faite par le job `detection`.
+    tags: ['api-v*', 'app-v*', 'landing-v*']
+  pull_request:
+    paths:
+      - 'api/**'
+      - 'app/**'
+      - 'landing/**'
+      - '.github/workflows/docker.yml'
+  workflow_dispatch:
+    inputs:
+      composants:
+        description: 'Composants à reconstruire (api, app, landing ou tous)'
+        default: 'tous'
+        type: string
+
+concurrency:
+  group: docker-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+
+  # Détermine les composants à reconstruire. Évite de republier trois images
+  # lorsqu'un seul répertoire a changé.
+  detection:
+    runs-on: ubuntu-latest
+    outputs:
+      composants: ${{ steps.calcul.outputs.composants }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - id: calcul
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          tous='[{"nom":"api","contexte":"api","image":"partyplan-api"},{"nom":"app","contexte":"app","image":"partyplan-web"},{"nom":"landing","contexte":"landing","image":"partyplan-landing"}]'
+
+          # Tag, déclenchement manuel, ou modification du workflow : on reconstruit tout.
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] \
+             || [ "${{ startsWith(github.ref, 'refs/tags/') }}" = "true" ]; then
+            echo "composants=$tous" >> "$GITHUB_OUTPUT"
+            echo "Reconstruction complète (tag ou déclenchement manuel)."
+            exit 0
+          fi
+
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            base="${{ github.event.pull_request.base.sha }}"
+          else
+            base="${{ github.event.before }}"
+          fi
+
+          # Première poussée sur une branche : pas de référence de comparaison.
+          if [ -z "$base" ] || [ "$base" = "0000000000000000000000000000000000000000" ] \
+             || ! git cat-file -e "$base^{commit}" 2>/dev/null; then
+            echo "composants=$tous" >> "$GITHUB_OUTPUT"
+            echo "Reconstruction complète (aucune base de comparaison)."
+            exit 0
+          fi
+
+          modifies=$(git diff --name-only "$base" "${{ github.sha }}")
+          echo "Fichiers modifiés :"
+          echo "$modifies"
+
+          if echo "$modifies" | grep -q '^\.github/workflows/docker\.yml$'; then
+            echo "composants=$tous" >> "$GITHUB_OUTPUT"
+            echo "Reconstruction complète (workflow modifié)."
+            exit 0
+          fi
+
+          selection='[]'
+          ajouter() {
+            selection=$(printf '%s' "$selection" | jq -c --argjson e "$1" '. + [$e]')
+          }
+          echo "$modifies" | grep -q '^api/'     && ajouter '{"nom":"api","contexte":"api","image":"partyplan-api"}'         || true
+          echo "$modifies" | grep -q '^app/'     && ajouter '{"nom":"app","contexte":"app","image":"partyplan-web"}'         || true
+          echo "$modifies" | grep -q '^landing/' && ajouter '{"nom":"landing","contexte":"landing","image":"partyplan-landing"}' || true
+
+          echo "composants=$selection" >> "$GITHUB_OUTPUT"
+          echo "Sélection : $selection"
+
+  construction:
+    needs: detection
+    if: needs.detection.outputs.composants != '[]'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        composant: ${{ fromJSON(needs.detection.outputs.composants) }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      # Aucune authentification sur une pull request : rien n'est publié, donc
+      # aucun jeton d'écriture n'est exposé à du code non revu.
+      - name: Authentification GHCR
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # metadata-action met le nom d'image en minuscules, ce que GHCR exige.
+      - name: Étiquettes et métadonnées
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository_owner }}/${{ matrix.composant.image }}
+          tags: |
+            type=raw,value=latest,enable={{is_default_branch}}
+            type=sha,format=long
+            type=ref,event=branch
+            type=ref,event=pr
+            type=match,pattern=api-v(.*),group=1,enable=${{ startsWith(github.ref, 'refs/tags/api-v') && matrix.composant.nom == 'api' }}
+            type=match,pattern=app-v(.*),group=1,enable=${{ startsWith(github.ref, 'refs/tags/app-v') && matrix.composant.nom == 'app' }}
+            type=match,pattern=landing-v(.*),group=1,enable=${{ startsWith(github.ref, 'refs/tags/landing-v') && matrix.composant.nom == 'landing' }}
+          labels: |
+            org.opencontainers.image.title=PartyPlan ${{ matrix.composant.nom }}
+            org.opencontainers.image.description=PartyPlan — ${{ matrix.composant.nom }}
+            org.opencontainers.image.licenses=UNLICENSED
+
+      # Publication (main ou tag).
+      #
+      # Une seule architecture : linux/amd64. La compilation Flutter Web sous
+      # émulation QEMU arm64 multiplie la durée par cinq sans bénéfice, le
+      # serveur cible étant en x86_64. À rouvrir si l'hébergement change.
+      - name: Construction et publication
+        if: github.event_name != 'pull_request'
+        id: publication
+        uses: docker/build-push-action@v6
+        with:
+          context: ${{ matrix.composant.contexte }}
+          platforms: linux/amd64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          build-args: |
+            API_BASE_URL=${{ vars.API_BASE_URL || 'https://api.partyplan.maxencecoeur.fr' }}
+          cache-from: type=gha,scope=${{ matrix.composant.nom }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.composant.nom }}
+
+      # Pull request : l'image est construite puis exportée en archive, déposée
+      # comme artefact du run. Elle se charge localement avec :
+      #   docker load -i partyplan-<composant>.tar
+      - name: Construction et export en artefact
+        if: github.event_name == 'pull_request'
+        uses: docker/build-push-action@v6
+        with:
+          context: ${{ matrix.composant.contexte }}
+          platforms: linux/amd64
+          push: false
+          tags: ${{ matrix.composant.image }}:pr-${{ github.event.pull_request.number }}
+          labels: ${{ steps.meta.outputs.labels }}
+          build-args: |
+            API_BASE_URL=${{ vars.API_BASE_URL || 'https://api.partyplan.maxencecoeur.fr' }}
+          outputs: type=docker,dest=/tmp/${{ matrix.composant.image }}.tar
+          cache-from: type=gha,scope=${{ matrix.composant.nom }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.composant.nom }}
+
+      - name: Dépôt de l'artefact
+        if: github.event_name == 'pull_request'
+        uses: actions/upload-artifact@v4
+        with:
+          name: image-${{ matrix.composant.image }}
+          path: /tmp/${{ matrix.composant.image }}.tar
+          retention-days: 7
+          compression-level: 6
+
+      - name: Récapitulatif
+        if: always()
+        shell: bash
+        run: |
+          {
+            echo "### ${{ matrix.composant.image }}"
+            if [ "${{ github.event_name }}" = "pull_request" ]; then
+              echo "Artefact : \`image-${{ matrix.composant.image }}\` (chargement : \`docker load -i ${{ matrix.composant.image }}.tar\`)"
+            else
+              echo "Empreinte : \`${{ steps.publication.outputs.digest }}\`"
+              echo ""
+              echo "Étiquettes :"
+              echo '```'
+              echo "${{ steps.meta.outputs.tags }}"
+              echo '```'
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"

@@ -1,0 +1,56 @@
+# ---------- Secrets / environnement ----------
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+appsettings.Development.local.json
+secrets.json
+
+# ---------- .NET ----------
+bin/
+obj/
+[Dd]ebug/
+[Rr]elease/
+*.user
+*.suo
+.vs/
+TestResults/
+coverage*.xml
+*.trx
+
+# ---------- Flutter / Dart ----------
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+build/
+*.g.dart
+*.freezed.dart
+app/ios/Pods/
+app/ios/Flutter/Flutter.framework
+app/ios/Flutter/Generated.xcconfig
+app/ios/Flutter/flutter_export_environment.sh
+app/android/.gradle/
+app/android/local.properties
+app/android/key.properties
+app/android/app/upload-keystore.jks
+app/.fvm/
+app/web/version.json
+
+# ---------- Node (landing) ----------
+node_modules/
+dist/
+.astro/
+.next/
+
+# ---------- Outils / IDE ----------
+.idea/
+*.iml
+.DS_Store
+Thumbs.db
+
+# ---------- Données locales ----------
+infra/data/
+*.sqlite
+*.db

@@ -1,0 +1,75 @@
+# PartyPlan — conventions de code
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+indent_style = space
+indent_size = 2
+
+[*.{cs,csx}]
+indent_size = 4
+
+[*.{yml,yaml,json,md}]
+indent_size = 2
+
+[Makefile]
+indent_style = tab
+
+[*.md]
+trim_trailing_whitespace = false
+
+# ---------------------------------------------------------------- C# ----
+[*.cs]
+dotnet_sort_system_directives_first = true
+csharp_using_directive_placement = inside_namespace:suggestion
+csharp_style_namespace_declarations = file_scoped:warning
+csharp_prefer_braces = true:warning
+csharp_style_var_for_built_in_types = false:suggestion
+csharp_style_prefer_primary_constructors = false:suggestion
+dotnet_style_require_accessibility_modifiers = for_non_interface_members:warning
+dotnet_style_readonly_field = true:warning
+dotnet_diagnostic.IDE0005.severity = warning
+
+# Nommage
+# Champs privés d'instance : _camelCase.
+dotnet_naming_rule.private_instance_fields_underscore.severity = warning
+dotnet_naming_rule.private_instance_fields_underscore.symbols = private_instance_fields
+dotnet_naming_rule.private_instance_fields_underscore.style = underscore_camel
+dotnet_naming_symbols.private_instance_fields.applicable_kinds = field
+dotnet_naming_symbols.private_instance_fields.applicable_accessibilities = private
+dotnet_naming_symbols.private_instance_fields.required_modifiers =
+dotnet_naming_style.underscore_camel.required_prefix = _
+dotnet_naming_style.underscore_camel.capitalization = camel_case
+
+# Constantes et champs statiques en lecture seule : PascalCase, sans préfixe. Ce sont
+# des valeurs fixes, pas de l'état d'instance ; le préfixe « _ » y serait trompeur.
+dotnet_naming_rule.static_readonly_pascal.severity = warning
+dotnet_naming_rule.static_readonly_pascal.symbols = static_readonly_fields
+dotnet_naming_rule.static_readonly_pascal.style = pascal
+dotnet_naming_symbols.static_readonly_fields.applicable_kinds = field
+dotnet_naming_symbols.static_readonly_fields.applicable_accessibilities = *
+dotnet_naming_symbols.static_readonly_fields.required_modifiers = static, readonly
+dotnet_naming_style.pascal.capitalization = pascal_case
+
+# --- Règles d'analyse ---
+#
+# Les règles écartées et leurs motifs sont déclarés dans api/Directory.Build.props,
+# et non ici : ce fichier est hors du contexte de construction de l'image Docker, si
+# bien que des suppressions placées ici seraient perdues dans le conteneur.
+
+# Les migrations Entity Framework sont couvertes par un .editorconfig dédié, placé
+# dans leur répertoire afin de rester dans le contexte de construction Docker :
+# api/src/PartyPlan.Infrastructure/Persistence/Migrations/.editorconfig
+
+[**/tests/**/*.cs]
+# Les classes de test sont instanciées par xUnit et ne sont pas destinées à l'héritage.
+dotnet_diagnostic.CA1515.severity = none
+dotnet_diagnostic.CA2007.severity = none
+
+# --------------------------------------------------------------- Dart ----
+[*.dart]
+indent_size = 2
+max_line_length = 100

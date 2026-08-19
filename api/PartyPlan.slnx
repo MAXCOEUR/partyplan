@@ -1,0 +1,25 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/PartyPlan.Api/PartyPlan.Api.csproj" />
+    <Project Path="src/PartyPlan.Infrastructure/PartyPlan.Infrastructure.csproj" />
+    <Project Path="src/PartyPlan.Modules.Administration/PartyPlan.Modules.Administration.csproj" />
+    <Project Path="src/PartyPlan.Modules.Auth/PartyPlan.Modules.Auth.csproj" />
+    <Project Path="src/PartyPlan.Modules.Events/PartyPlan.Modules.Events.csproj" />
+    <Project Path="src/PartyPlan.Modules.Expenses/PartyPlan.Modules.Expenses.csproj" />
+    <Project Path="src/PartyPlan.Modules.Messages/PartyPlan.Modules.Messages.csproj" />
+    <Project Path="src/PartyPlan.Modules.Notifications/PartyPlan.Modules.Notifications.csproj" />
+    <Project Path="src/PartyPlan.Modules.Polls/PartyPlan.Modules.Polls.csproj" />
+    <Project Path="src/PartyPlan.Modules.Settlements/PartyPlan.Modules.Settlements.csproj" />
+    <Project Path="src/PartyPlan.Modules.Shopping/PartyPlan.Modules.Shopping.csproj" />
+    <Project Path="src/PartyPlan.Modules.Tasks/PartyPlan.Modules.Tasks.csproj" />
+    <Project Path="src/PartyPlan.Modules.Users/PartyPlan.Modules.Users.csproj" />
+    <Project Path="src/PartyPlan.SharedKernel/PartyPlan.SharedKernel.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/PartyPlan.IntegrationTests/PartyPlan.IntegrationTests.csproj" />
+    <Project Path="tests/PartyPlan.UnitTests/PartyPlan.UnitTests.csproj" />
+  </Folder>
+  <Folder Name="/tools/">
+    <Project Path="tools/PartyPlan.Seed/PartyPlan.Seed.csproj" />
+  </Folder>
+</Solution>

@@ -1,0 +1,102 @@
+namespace PartyPlan.Infrastructure;
+
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using PartyPlan.Infrastructure.Identity;
+using PartyPlan.Infrastructure.Options;
+using PartyPlan.Infrastructure.Persistence;
+using PartyPlan.Modules.Administration.Persistence;
+using PartyPlan.Modules.Auth.Persistence;
+using PartyPlan.Modules.Events.Persistence;
+using PartyPlan.Modules.Expenses.Persistence;
+using PartyPlan.Modules.Messages.Persistence;
+using PartyPlan.Modules.Notifications.Persistence;
+using PartyPlan.Modules.Polls.Persistence;
+using PartyPlan.Modules.Settlements.Persistence;
+using PartyPlan.Modules.Shopping.Persistence;
+using PartyPlan.Modules.Tasks.Persistence;
+using PartyPlan.Modules.Users.Persistence;
+using PartyPlan.SharedKernel.Abstractions;
+
+public static class DependencyInjection
+{
+    public static IServiceCollection AddInfrastructure(
+        this IServiceCollection services,
+        IConfiguration configuration)
+    {
+        ArgumentNullException.ThrowIfNull(services);
+        ArgumentNullException.ThrowIfNull(configuration);
+
+        services.AddSingleton<IClock, SystemClock>();
+        services.AddSingleton<IIdGenerator, UuidV7Generator>();
+
+        services.AddHttpContextAccessor();
+        services.AddScoped<ICurrentUser, CurrentUser>();
+
+        // Le périmètre est une instance unique par requête : le middleware le calcule,
+        // le DbContext le lit.
+        services.AddScoped<EventScope>();
+        services.AddScoped<IEventScope>(sp => sp.GetRequiredService<EventScope>());
+        services.AddScoped<EventScopePrimer>();
+
+        services.AddOptions<DatabaseOptions>()
+            .Bind(configuration.GetSection(DatabaseOptions.SectionName))
+            .ValidateOnStart();
+
+        services.AddOptions<AdminSeedOptions>()
+            .Bind(configuration.GetSection(AdminSeedOptions.SectionName))
+            .ValidateDataAnnotations()
+            .ValidateOnStart();
+
+        var connectionString = configuration.GetConnectionString("Default")
+            ?? throw new InvalidOperationException(
+                "La chaîne de connexion « ConnectionStrings:Default » est absente. "
+                + "Voir .env.example (RG-DEV-02).");
+
+        services.AddDbContext<PartyPlanDbContext>(options =>
+            options.UseNpgsql(connectionString, npgsql =>
+                {
+                    npgsql.MigrationsAssembly(typeof(PartyPlanDbContext).Assembly.FullName);
+                    npgsql.EnableRetryOnFailure(3);
+                })
+                // Les avertissements de traduction côté client sont des erreurs : une
+                // évaluation en mémoire contournerait silencieusement les filtres de
+                // cloisonnement.
+                .ConfigureWarnings(w => w.Throw(Microsoft.EntityFrameworkCore.Diagnostics
+                    .RelationalEventId.MultipleCollectionIncludeWarning)));
+
+        AddModuleContracts(services);
+
+        services.Add(Microsoft.Extensions.DependencyInjection.ServiceDescriptor.Singleton<
+            Microsoft.Extensions.Hosting.IHostedService,
+            Persistence.DatabaseInitializer>());
+
+        services.AddHealthChecks()
+            .AddDbContextCheck<PartyPlanDbContext>("database", tags: ["ready"]);
+
+        return services;
+    }
+
+    /// <summary>
+    /// Chaque module ne reçoit que son propre contrat de persistance, tous servis par
+    /// le même contexte. C'est ainsi que la frontière de l'ADR 0002 devient une
+    /// contrainte de compilation et non une consigne.
+    /// </summary>
+    private static void AddModuleContracts(IServiceCollection services)
+    {
+        services.AddScoped<IUsersDbContext>(Resolve);
+        services.AddScoped<IAuthDbContext>(Resolve);
+        services.AddScoped<IAdministrationDbContext>(Resolve);
+        services.AddScoped<IEventsDbContext>(Resolve);
+        services.AddScoped<IShoppingDbContext>(Resolve);
+        services.AddScoped<IExpensesDbContext>(Resolve);
+        services.AddScoped<ISettlementsDbContext>(Resolve);
+        services.AddScoped<ITasksDbContext>(Resolve);
+        services.AddScoped<IPollsDbContext>(Resolve);
+        services.AddScoped<IMessagesDbContext>(Resolve);
+        services.AddScoped<INotificationsDbContext>(Resolve);
+
+        static PartyPlanDbContext Resolve(IServiceProvider sp) => sp.GetRequiredService<PartyPlanDbContext>();
+    }
+}

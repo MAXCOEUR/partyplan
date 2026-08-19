@@ -1,0 +1,11 @@
+# Migrations Entity Framework : code généré.
+#
+# Placé ici et non dans le .editorconfig de la racine, qui est hors du contexte de
+# construction de l'image Docker : la compilation dans le conteneur échouerait alors
+# sur des règles de style appliquées à du code que personne n'écrit à la main.
+
+[*.cs]
+generated_code = true
+dotnet_analyzer_diagnostic.severity = none
+dotnet_diagnostic.IDE0005.severity = none
+dotnet_diagnostic.CA1861.severity = none

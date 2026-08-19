@@ -1,0 +1,23 @@
+name: API
+
+on:
+  push:
+    branches: [main]
+    paths: ['api/**', '.github/workflows/api.yml']
+  pull_request:
+    paths: ['api/**', '.github/workflows/api.yml']
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - run: dotnet restore
+        working-directory: api
+      - run: dotnet build --no-restore -c Release
+        working-directory: api
+      - run: dotnet test --no-build -c Release
+        working-directory: api
