@@ -39,3 +39,20 @@ internal sealed class EmailVerificationTokenConfiguration : IEntityTypeConfigura
             .OnDelete(DeleteBehavior.Cascade);
     }
 }
+
+internal sealed class TotpRecoveryCodeConfiguration : IEntityTypeConfiguration<TotpRecoveryCode>
+{
+    public void Configure(EntityTypeBuilder<TotpRecoveryCode> builder)
+    {
+        builder.HasKey(c => c.Id);
+        builder.Property(c => c.CodeHash).HasMaxLength(128).IsRequired();
+
+        builder.HasIndex(c => c.CodeHash).IsUnique();
+        builder.HasIndex(c => new { c.UserId, c.UsedAt });
+
+        builder.HasOne<User>()
+            .WithMany()
+            .HasForeignKey(c => c.UserId)
+            .OnDelete(DeleteBehavior.Cascade);
+    }
+}

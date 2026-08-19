@@ -49,20 +49,37 @@ class SessionCourante extends AsyncNotifier<EtatSession> {
     return EtatSession.anonyme;
   }
 
-  Future<void> connecter({
+  /// Connexion.
+  ///
+  /// Renvoie le jeton de défi lorsqu'un second facteur est exigé ; l'état reste alors
+  /// « anonyme », car aucune session n'est ouverte à ce stade.
+  Future<String?> connecter({
     required String email,
     required String motDePasse,
   }) async {
-    state = const AsyncLoading();
-    try {
-      await ref
-          .read(comptesApiProvider)
-          .connecter(email: email, motDePasse: motDePasse);
-      state = const AsyncData(EtatSession.connecte);
-    } on Exception catch (erreur, pile) {
-      state = AsyncError(erreur, pile);
-      rethrow;
+    final resultat = await ref
+        .read(comptesApiProvider)
+        .connecter(email: email, motDePasse: motDePasse);
+
+    if (resultat.secondFacteurRequis) {
+      return resultat.jetonDefi;
     }
+
+    state = const AsyncData(EtatSession.connecte);
+
+    return null;
+  }
+
+  /// Achève une connexion en attente de second facteur.
+  Future<void> verifierSecondFacteur({
+    required String jetonDefi,
+    required String code,
+  }) async {
+    await ref
+        .read(comptesApiProvider)
+        .verifierSecondFacteur(jetonDefi: jetonDefi, code: code);
+
+    state = const AsyncData(EtatSession.connecte);
   }
 
   Future<void> inscrire({

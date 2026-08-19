@@ -71,6 +71,9 @@ services:
       # n'existe, ou s'il ne satisfait pas RG-AUTH-01.
       Admin__Email: ${ADMIN_EMAIL}
       Admin__Password: ${ADMIN_PASSWORD}
+      # Chiffrement des secrets de double authentification (RG-ADM-04).
+      Security__EncryptionKey: ${SECURITY_ENCRYPTION_KEY}
+      Totp__Name: PartyPlan
       # Origines autorisées : application web et vitrine uniquement.
       Cors__AllowedOrigins__0: https://${DOMAIN_APP}
       Cors__AllowedOrigins__1: https://${DOMAIN_LANDING}

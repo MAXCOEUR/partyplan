@@ -50,16 +50,23 @@ public static class AuthenticationSetup
 
         services.AddAuthorization(options =>
         {
+            // RG-ADM-04 : la double authentification est exigée pour tout rôle
+            // plateforme. La revendication est portée par le jeton, la garde s'évalue
+            // donc sans requête en base. Un compte promu conserve un ancien jeton
+            // dépourvu de la revendication jusqu'à son renouvellement : c'est voulu, la
+            // promotion elle-même est refusée sans second facteur actif.
             options.AddPolicy(PlatformAdminPolicy, policy => policy
                 .RequireAuthenticatedUser()
-                .RequireClaim(PartyPlanClaims.PlatformRole, nameof(PlatformRole.PlatformAdmin)));
+                .RequireClaim(PartyPlanClaims.PlatformRole, nameof(PlatformRole.PlatformAdmin))
+                .RequireClaim(PartyPlanClaims.TotpEnabled, "true"));
 
             options.AddPolicy(PlatformStaffPolicy, policy => policy
                 .RequireAuthenticatedUser()
                 .RequireClaim(
                     PartyPlanClaims.PlatformRole,
                     nameof(PlatformRole.Support),
-                    nameof(PlatformRole.PlatformAdmin)));
+                    nameof(PlatformRole.PlatformAdmin))
+                .RequireClaim(PartyPlanClaims.TotpEnabled, "true"));
         });
 
         return services;

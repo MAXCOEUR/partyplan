@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+
+import '../../app/router.dart';
 
 import '../../core/models/profil.dart';
 import '../../core/network/api_exception.dart';
@@ -160,6 +163,8 @@ class _SecuritePageState extends ConsumerState<SecuritePage> {
             ),
           ),
           const SizedBox(height: PpSpacing.lg),
+          const _EntreeSecondFacteur(),
+          const SizedBox(height: PpSpacing.lg),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -256,6 +261,45 @@ class _LigneSession extends StatelessWidget {
             : 'Déconnecter cet appareil',
         icon: const Icon(Icons.logout_rounded, size: 18),
         onPressed: onRevoquer,
+      ),
+    );
+  }
+}
+
+/// Entrée vers le réglage du second facteur, avec son état courant.
+class _EntreeSecondFacteur extends ConsumerWidget {
+  const _EntreeSecondFacteur();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final profil = ref.watch(profilProvider).value;
+    final theme = Theme.of(context);
+    final active = profil?.doubleAuthentification ?? false;
+    final couleur = active
+        ? PpColors.texteSur(PpColors.vert, theme.brightness)
+        : PpColors.texteSur(PpColors.orange, theme.brightness);
+
+    return PpCard(
+      padding: EdgeInsets.zero,
+      onTap: () => context.push(PpRoutes.secondFacteurReglage),
+      child: ListTile(
+        onTap: () => context.push(PpRoutes.secondFacteurReglage),
+        minVerticalPadding: PpSpacing.md,
+        leading: Icon(
+          active ? Icons.verified_user_rounded : Icons.shield_outlined,
+          color: couleur,
+        ),
+        title: Text(
+          'Double authentification',
+          style: theme.textTheme.titleMedium,
+        ),
+        subtitle: Text(
+          active
+              ? 'Active — un code est demandé à chaque connexion'
+              : 'Inactive — ton mot de passe est ta seule protection',
+          style: theme.textTheme.bodySmall?.copyWith(color: couleur),
+        ),
+        trailing: const Icon(Icons.chevron_right_rounded),
       ),
     );
   }

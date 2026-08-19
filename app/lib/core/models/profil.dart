@@ -11,6 +11,7 @@ class Profil {
     required this.rolePlateforme,
     required this.aUnMotDePasse,
     required this.doubleAuthentification,
+    required this.motDePasseAChanger,
     required this.creeLe,
   });
 
@@ -25,6 +26,7 @@ class Profil {
     rolePlateforme: json['platformRole'] as String? ?? 'User',
     aUnMotDePasse: json['hasPassword'] as bool? ?? false,
     doubleAuthentification: json['totpEnabled'] as bool? ?? false,
+    motDePasseAChanger: json['mustChangePassword'] as bool? ?? false,
     creeLe: DateTime.parse(json['createdAt'] as String),
   );
 
@@ -38,6 +40,11 @@ class Profil {
   final String rolePlateforme;
   final bool aUnMotDePasse;
   final bool doubleAuthentification;
+
+  /// Vrai pour le compte administrateur amorcé, jusqu'au premier changement de mot de
+  /// passe (RG-ADM-10). Aucune autre action n'est permise entre-temps.
+  final bool motDePasseAChanger;
+
   final DateTime creeLe;
 
   /// Vrai pour `Support` et `PlatformAdmin`. N'accorde aucun droit dans un événement
@@ -208,4 +215,47 @@ class EntreeAudit {
     'user.email_verified_by_admin' => 'Adresse vérifiée manuellement',
     _ => action,
   };
+}
+
+/// Résultat d'une connexion : session ouverte, ou second facteur exigé.
+class ResultatConnexion {
+  const ResultatConnexion({
+    required this.secondFacteurRequis,
+    required this.jetonDefi,
+  });
+
+  factory ResultatConnexion.depuisJson(Map<String, dynamic> json) =>
+      ResultatConnexion(
+        secondFacteurRequis: json['requiresSecondFactor'] as bool? ?? false,
+        jetonDefi: json['challengeToken'] as String?,
+      );
+
+  final bool secondFacteurRequis;
+
+  /// Jeton intermédiaire à présenter avec le code. Il n'ouvre aucun accès par lui-même.
+  final String? jetonDefi;
+}
+
+/// Éléments d'enrôlement du second facteur.
+class EnrolementTotp {
+  const EnrolementTotp({required this.secret, required this.uriOtpAuth});
+
+  factory EnrolementTotp.depuisJson(Map<String, dynamic> json) =>
+      EnrolementTotp(
+        secret: json['secret'] as String,
+        uriOtpAuth: json['otpAuthUri'] as String,
+      );
+
+  final String secret;
+  final String uriOtpAuth;
+
+  /// Secret découpé en groupes de quatre : il se recopie à la main quand le QR code ne
+  /// peut pas être scanné.
+  String get secretLisible {
+    final morceaux = <String>[];
+    for (var i = 0; i < secret.length; i += 4) {
+      morceaux.add(secret.substring(i, (i + 4).clamp(0, secret.length)));
+    }
+    return morceaux.join(' ');
+  }
 }

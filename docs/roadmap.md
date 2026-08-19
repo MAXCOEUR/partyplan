@@ -6,7 +6,7 @@
 > n'existe pas dans le cahier des charges, c'est le cahier des charges qu'il faut
 > compléter d'abord.
 
-Mise à jour : 19/08/2026 — V0 livrée hors lots 0.1 et 0.7 ; V0.5 livrée hors lot 0.9
+Mise à jour : 19/08/2026 — V0 livrée hors lots 0.1 et 0.7 ; V0.5 livrée hors connexion Google
 
 ## Comment lire ce document
 
@@ -30,7 +30,7 @@ Toute tâche non cochée d'une version publiée devient une anomalie, pas un rep
 | Version | Tâches faites | Reste |
 |---|---|---|
 | V0 — socle technique | lots 0.2 à 0.6, dépôt GitHub et protection de branche | lot 0.1 (INPI, nom, logo, hébergeur, DNS), lot 0.7 (serveur) |
-| V0.5 — comptes et administration | lots 0.8, 0.10 à 0.14 | lot 0.9 (Google, TOTP), photo depuis l'interface |
+| V0.5 — comptes et administration | lots 0.8 à 0.14 | connexion Google, photo depuis l'interface, QR code |
 | V1.0 — MVP événementiel | — | tout |
 
 Décisions d'architecture prises : `ADR 0001` monorepo, `ADR 0002` monolithe modulaire,
@@ -216,9 +216,10 @@ Contrainte permanente : tout doit tourner en local avant d'être poussé — `§
 Objectif : l'identité est intégralement gérée avant qu'une seule fonctionnalité
 événementielle n'existe.
 
-**État au 19/08/2026 : lots 0.8, 0.10, 0.11, 0.12 et 0.13 livrés côté API et côté
-application, vérifiés de bout en bout.** Restent la double authentification et les
-connexions tierces (lot 0.9), et le téléversement de photo depuis l'interface.
+**État au 19/08/2026 : lots 0.8 à 0.14 livrés côté API et côté application, vérifiés de
+bout en bout.** La production n'est plus bloquée : `RG-ADM-04` est satisfaite. Restent la
+connexion Google, le téléversement de photo depuis l'interface, et le QR code
+d'enrôlement.
 
 ## Lot 0.8 — Authentification par mot de passe
 
@@ -238,17 +239,31 @@ connexions tierces (lot 0.9), et le téléversement de photo depuis l'interface.
 - [x] `EF-AUTH-10` Liste des sessions actives, révocation d'une session ou de toutes
 - [x] Écrans : connexion, inscription, mot de passe oublié, sécurité et sessions
 
-## Lot 0.9 — Connexions tierces et double authentification
+## Lot 0.9 — Double authentification
 
+- [x] `EF-AUTH-12` Double authentification par code temporel : enrôlement, activation, désactivation
+  - → RFC 6238 implémentée dans le dépôt et validée contre les vecteurs officiels de l'annexe B, plutôt qu'empruntée : une dépendance de moins sur un chemin de sécurité, et une preuve de conformité au lieu d'une confiance
+- [x] `EF-AUTH-13` Huit codes de secours, régénérables, à usage unique
+  - → absents du cahier des charges initial : sans eux, un téléphone perdu enferme définitivement dehors, et pour un administrateur rendrait l'instance ingérable
+- [x] `RG-AUTH-09` Connexion en deux temps ; le jeton intermédiaire porte une audience distincte et n'ouvre aucun accès
+- [x] `RG-AUTH-10` Secret chiffré au repos en AES-GCM, clé distincte de celle de signature
+- [x] `RG-AUTH-11` Activation seulement après validation d'un premier code
+- [x] `RG-AUTH-12` Codes de secours affichés une fois, stockés en condensé, lot précédent invalidé à la régénération
+- [x] `RG-AUTH-13` Désactivation exigeant le mot de passe, refusée pour un rôle plateforme
+- [x] `RG-ADM-04` Double authentification obligatoire pour tout rôle plateforme
+  - → garde portée par une revendication du jeton, évaluée sans requête en base ; la promotion est refusée sans second facteur actif
+  - → le premier démarrage n'est pas une impasse : l'enrôlement reste accessible au compte amorcé, vérifié par la recette
+- [x] `RG-ADM-10` Changement de mot de passe imposé au compte amorcé, appliqué par intergiciel
+- [x] `NF-SEC-07` Obligation vérifiée par test d'intégration
+- [x] `NF-SEC-10` Chiffrement des secrets vérifié : altération détectée, clé distincte exigée
+- [x] `NF-SEC-11` Limites de débit paramétrables — les tests partagent une adresse IP et épuisaient une limite pensée pour un utilisateur unique
+- [x] Écrans : saisie du second facteur à la connexion, enrôlement et codes de secours
 - [ ] `EF-AUTH-06` Connexion Google
 - [ ] `EF-AUTH-08` Rattachement et détachement d'une connexion tierce
 - [ ] `RG-AUTH-08` Un compte sans mot de passe peut en définir un par le parcours de réinitialisation
-- [ ] `EF-AUTH-12` Double authentification par code temporel (TOTP) : enrôlement, activation, désactivation
-- [ ] `RG-ADM-04` Rendre la double authentification obligatoire pour tout rôle plateforme
-  - → **jusque-là, la production reste impossible** : `RG-ADM-04` n'est pas satisfaite, et il vaut mieux une API qui refuse de servir qu'un administrateur protégé par un seul facteur
-- [ ] `NF-SEC-07` Vérifier l'obligation par test d'intégration
 - [ ] `NF-DEV-05` Vérifier que l'inscription fonctionne sans clé Google configurée
-- [ ] Écrans : rattachement des connexions, enrôlement TOTP avec QR code
+- [ ] Écran de rattachement des connexions tierces
+- [ ] Afficher le QR code d'enrôlement — le secret est affiché en clair et copiable, ce qui suffit à s'enrôler ; le QR code demande une dépendance graphique
 
 ## Lot 0.10 — Compte et profil
 
@@ -278,7 +293,7 @@ connexions tierces (lot 0.9), et le téléversement de photo depuis l'interface.
 - [x] `RG-ADM-11` Refus de démarrer si l'amorçage est incomplet ou le mot de passe faible
 - [x] `RG-ADM-12` Avertissement au démarrage invitant à retirer `ADMIN_PASSWORD`
 - [x] Test : base vierge puis second démarrage, aucun doublon
-- [ ] `RG-ADM-10` Imposer effectivement le changement de mot de passe à la première connexion — l'indicateur `must_change_password` est posé, l'interface ne l'exploite pas encore
+- [x] `RG-ADM-10` Changement de mot de passe imposé et appliqué : seuls le profil, le changement de mot de passe et la déconnexion restent permis
 
 ## Lot 0.12 — Back-office d'administration
 
@@ -315,11 +330,12 @@ connexions tierces (lot 0.9), et le téléversement de photo depuis l'interface.
 
 ## Lot 0.14 — Recette V0.5
 
-- [x] Recette exécutable de bout en bout — `tools/recette/parcours-comptes.py`, 55 vérifications
+- [x] Recette exécutable de bout en bout — `tools/recette/parcours-comptes.py`, 77 vérifications
 - [x] Tests d'intégration automatisés des mêmes règles, exécutables en CI sans serveur de courriel
 - [x] Vérifier les critères 1, 2, 4, 5, 7 à 12 du `§18`
 - [ ] Critère 3 du `§18` : refus de démarrage si `ADMIN_PASSWORD` ne satisfait pas `RG-AUTH-01` — la garde existe, le test automatisé manque
-- [ ] Critère 6 du `§18` : changement de mot de passe et TOTP imposés au compte amorcé — lot 0.9
+- [x] Critère 6 du `§18` : changement de mot de passe et second facteur imposés au compte amorcé
+- [x] Recette étendue : 77 vérifications, premier démarrage complet compris
 
 ---
 

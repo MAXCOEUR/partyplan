@@ -68,6 +68,27 @@ public static class ProductionGuard
             }
         }
 
+        var cleChiffrement = configuration["Security:EncryptionKey"];
+        if (string.IsNullOrWhiteSpace(cleChiffrement))
+        {
+            problems.Add(
+                "Security:EncryptionKey est absente : les secrets de double "
+                + "authentification ne pourraient pas être chiffrés. "
+                + "Générer une clé : openssl rand -base64 32");
+        }
+        else if (ForbiddenSecrets.Contains(cleChiffrement, StringComparer.Ordinal))
+        {
+            problems.Add("Security:EncryptionKey porte une valeur de développement (RG-DEV-01).");
+        }
+        else if (string.Equals(cleChiffrement, signingKey, StringComparison.Ordinal))
+        {
+            // Une clé unique ferait qu'une compromission donnerait à la fois la capacité
+            // de forger des sessions et celle de lire les seconds facteurs.
+            problems.Add(
+                "Security:EncryptionKey est identique à Jwt:SigningKey : "
+                + "utiliser deux clés distinctes.");
+        }
+
         if (configuration.GetValue<bool>($"{DatabaseOptions.SectionName}:SeedDemoData"))
         {
             problems.Add("Database:SeedDemoData est activé, ce qui est réservé au développement (NF-DEV-07).");

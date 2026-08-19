@@ -37,6 +37,7 @@ public sealed class AuthModule : IModule
             .ValidateOnStart();
 
         services.AddSingleton<ITokenService, TokenService>();
+        services.AddSingleton<ITotpCodes, TotpCodes>();
     }
 
     public void MapEndpoints(IEndpointRouteBuilder routes)

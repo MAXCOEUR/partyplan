@@ -20,6 +20,7 @@ public sealed record MyProfile(
     string PlatformRole,
     bool HasPassword,
     bool TotpEnabled,
+    bool MustChangePassword,
     DateTimeOffset? PremiumUntil,
     DateTimeOffset CreatedAt);
 
@@ -548,6 +549,7 @@ public sealed class AccountService(
         u.PlatformRole.ToString(),
         u.PasswordHash is not null,
         u.TotpEnabledAt is not null,
+        u.MustChangePassword,
         u.PremiumUntil,
         u.CreatedAt);
 }

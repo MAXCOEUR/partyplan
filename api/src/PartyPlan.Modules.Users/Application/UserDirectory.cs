@@ -166,6 +166,16 @@ public sealed class UserDirectory(
             return AccountService.NotFound;
         }
 
+        // RG-ADM-04 : un rôle plateforme exige la double authentification. La refuser
+        // ici plutôt que d'y remédier plus tard évite l'état transitoire où un compte
+        // détient tous les droits sans second facteur.
+        if (role != PlatformRole.User && utilisateur.TotpEnabledAt is null)
+        {
+            return DomainError.Rule(
+                "admin.totp_required",
+                "Ce compte doit d'abord activer la double authentification.");
+        }
+
         // RG-ADM-03 : ne jamais laisser l'instance sans administrateur.
         if (utilisateur.PlatformRole == PlatformRole.PlatformAdmin && role != PlatformRole.PlatformAdmin)
         {

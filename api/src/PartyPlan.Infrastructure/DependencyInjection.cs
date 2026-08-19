@@ -8,6 +8,7 @@ using PartyPlan.Infrastructure.Identity;
 using PartyPlan.Infrastructure.Media;
 using PartyPlan.Infrastructure.Options;
 using PartyPlan.Infrastructure.Persistence;
+using PartyPlan.Infrastructure.Security;
 using PartyPlan.Modules.Administration.Persistence;
 using PartyPlan.Modules.Events.Persistence;
 using PartyPlan.Modules.Expenses.Persistence;
@@ -61,6 +62,14 @@ public static class DependencyInjection
 
         services.AddSingleton<PartyPlan.SharedKernel.Contracts.IEmailSender, SmtpEmailSender>();
         services.AddSingleton<PartyPlan.SharedKernel.Contracts.IAvatarStorage, AvatarStorage>();
+
+        // --- Chiffrement des secrets stockés ---
+        services.AddOptions<SecurityOptions>()
+            .Bind(configuration.GetSection(SecurityOptions.SectionName))
+            .ValidateOnStart();
+
+        services.AddSingleton<PartyPlan.SharedKernel.Contracts.ISecretProtector,
+            AesGcmSecretProtector>();
 
         var connectionString = configuration.GetConnectionString("Default")
             ?? throw new InvalidOperationException(

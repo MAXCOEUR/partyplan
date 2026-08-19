@@ -59,6 +59,9 @@ services:
       Google__ClientSecret: ${GOOGLE_CLIENT_SECRET:-}
       # Notifications poussées journalisées en console faute de clé — NF-DEV-04
       Firebase__ServiceAccountJson: ${FIREBASE_SERVICE_ACCOUNT_JSON:-}
+      # Chiffrement des secrets de double authentification
+      Security__EncryptionKey: ${SECURITY_ENCRYPTION_KEY:-Y2xlLWRlLWNoaWZmcmVtZW50LWRlLWRldi0zMi1vY3Q=}
+      Totp__Name: PartyPlan (dev)
       # Jeu de données de démonstration — NF-DEV-07
       Seed__Demo: ${SEED_DEMO:-true}
     ports:

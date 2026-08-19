@@ -26,7 +26,7 @@ var modules = ModuleRegistry.Discover([.. ModuleAssemblies.All]);
 builder.Services.AddModules(builder.Configuration, modules);
 
 builder.Services.AddPartyPlanProblemDetails();
-builder.Services.AddPartyPlanRateLimiting();
+builder.Services.AddPartyPlanRateLimiting(builder.Configuration);
 builder.Services.AddPartyPlanAuthentication(builder.Configuration);
 builder.Services.AddPartyPlanOpenApi();
 
@@ -63,6 +63,10 @@ app.UseRateLimiter();
 app.UseCors();
 app.UseAuthentication();
 app.UseAuthorization();
+
+// Placé après l'autorisation : la revendication n'existe qu'une fois l'identité
+// établie (RG-ADM-10).
+app.UseMustChangePassword();
 
 // Le périmètre d'événements est établi après l'authentification et avant tout
 // endpoint : c'est le point unique d'application du cloisonnement (RG-SEC-01).

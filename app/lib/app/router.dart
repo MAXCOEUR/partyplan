@@ -8,10 +8,12 @@ import '../features/admin/admin_comptes_page.dart';
 import '../features/auth/connexion_page.dart';
 import '../features/auth/inscription_page.dart';
 import '../features/auth/mot_de_passe_oublie_page.dart';
+import '../features/auth/second_facteur_page.dart';
 import '../features/evenement/coquille_evenement.dart';
 import '../features/profil/confidentialite_page.dart';
 import '../features/profil/profil_edition_page.dart';
 import '../features/profil/profil_page.dart';
+import '../features/profil/second_facteur_reglage_page.dart';
 import '../features/profil/securite_page.dart';
 import '../features/rejoindre/rejoindre_page.dart';
 import '../l10n/pp_strings.dart';
@@ -24,11 +26,13 @@ abstract final class PpRoutes {
   static const connexion = '/connexion';
   static const inscription = '/inscription';
   static const motDePasseOublie = '/mot-de-passe-oublie';
+  static const secondFacteur = '/second-facteur';
 
   // Compte
   static const profilEdition = '/profil';
   static const securite = '/securite';
   static const confidentialite = '/mes-donnees';
+  static const secondFacteurReglage = '/securite/double-authentification';
 
   // Administration. Absente des versions mobiles en production (RG-ADM-08) :
   // la restriction est appliquée à la construction, voir plateforme.dart.
@@ -49,6 +53,9 @@ abstract final class PpRoutes {
     connexion,
     inscription,
     motDePasseOublie,
+    // La seconde étape de connexion est publique : à ce stade, aucune session n'existe
+    // encore, seul un jeton de défi de courte durée a été remis.
+    secondFacteur,
     rejoindreParCode,
   };
 }
@@ -120,6 +127,17 @@ GoRouter creerRouteur(Ref ref) => GoRouter(
     GoRoute(
       path: PpRoutes.securite,
       builder: (context, state) => const SecuritePage(),
+    ),
+    GoRoute(
+      path: PpRoutes.secondFacteurReglage,
+      builder: (context, state) => const SecondFacteurReglagePage(),
+    ),
+    GoRoute(
+      path: PpRoutes.secondFacteur,
+      // Le jeton de défi passe par `extra` et non par l'URL : il ne doit apparaître ni
+      // dans la barre d'adresse, ni dans un historique de navigation.
+      builder: (context, state) =>
+          SecondFacteurPage(jetonDefi: state.extra! as String),
     ),
     GoRoute(
       path: PpRoutes.confidentialite,
