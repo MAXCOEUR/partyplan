@@ -120,6 +120,8 @@ docker load -i partyplan-api.tar
 |---|---|
 | [docs/cahier-des-charges.md](docs/cahier-des-charges.md) | Référence fonctionnelle : exigences numérotées, règles de calcul, modèle de données, API, RGPD, critères d'acceptation |
 | [docs/domaine.md](docs/domaine.md) | Synthèse du modèle de domaine |
+| [docs/developpement.md](docs/developpement.md) | Mise en route, rechargement à chaud, Rider, Android Studio, émulateur, problèmes courants |
 | [docs/roadmap.md](docs/roadmap.md) | **Suivi d’avancement** : toutes les tâches à faire, cochables, groupées par version de publication |
 | [docs/brand/charte.md](docs/brand/charte.md) | Identité visuelle |
+| [docs/exploitation.md](docs/exploitation.md) | Déploiement, retour arrière, sauvegardes, restauration, supervision |
 | [docs/adr/](docs/adr/) | Décisions d'architecture, dont [0005 — identité et administration](docs/adr/0005-identite-et-administration.md) |

@@ -8,10 +8,19 @@ SHELL       := /bin/bash
 COMPOSE_DEV := docker compose --env-file .env -f infra/compose/compose.yml
 API_PROJ    := api/src/PartyPlan.Api
 
+# Écoute sur toutes les interfaces : l'émulateur Android et un téléphone du réseau
+# local doivent pouvoir joindre l'API. Uniquement en développement.
+API_URLS    := http://0.0.0.0:5080
+
+# Depuis l'émulateur Android, « localhost » désigne l'émulateur lui-même. L'hôte est
+# accessible à l'adresse 10.0.2.2, câblée par Android.
+API_EMU     := http://10.0.2.2:5080
+
 .DEFAULT_GOAL := aide
 
 .PHONY: aide init up down restart logs ps api app web test test-api test-app \
-        migration migrate reset-db seed mail openapi frontieres fmt lint verif clean
+        migration migrate reset-db seed mail openapi frontieres fmt lint verif clean \
+        android emulateur lan devices
 
 aide: ## Affiche cette aide
 	@echo "PartyPlan — cibles disponibles :"
@@ -49,10 +58,30 @@ ps: ## Affiche l'état des conteneurs
 
 api: ## Lance l'API en rechargement à chaud (base et courriel en conteneur)
 	$(COMPOSE_DEV) up -d db mail
-	dotnet watch --project $(API_PROJ) run
+	ASPNETCORE_ENVIRONMENT=Development ASPNETCORE_URLS=$(API_URLS) \
+	  dotnet watch --project $(API_PROJ) run
 
 app: ## Lance l'application Flutter sur Chrome, en rechargement à chaud
 	cd app && flutter run -d chrome --dart-define=API_BASE_URL=http://localhost:5080
+
+android: ## Lance l'application sur l'émulateur ou le téléphone Android connecté
+	cd app && flutter run --dart-define=API_BASE_URL=$(API_EMU)
+
+emulateur: ## Démarre l'émulateur Android Pixel_7a
+	flutter emulators --launch Pixel_7a
+
+lan: ## Affiche la commande à utiliser pour un téléphone physique du réseau local
+	@ip=$$(hostname -I | awk '{print $$1}'); \
+	echo "API joignable sur http://$$ip:5080"; \
+	echo "cd app && flutter run --dart-define=API_BASE_URL=http://$$ip:5080"; \
+	echo; \
+	echo "Penser à autoriser cette origine : ajouter http://$$ip:8080 à Cors:AllowedOrigins"; \
+	echo "si l'application est servie en web depuis un autre appareil."
+
+devices: ## Liste les appareils et émulateurs disponibles
+	cd app && flutter devices
+	@echo
+	flutter emulators
 
 web: ## Compile l'application Flutter Web en production, en local
 	cd app && flutter build web --release --dart-define=API_BASE_URL=http://localhost:5080

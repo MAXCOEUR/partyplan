@@ -60,7 +60,7 @@ paiement ou un arbitrage.
 - [ ] Remplacer les icônes par défaut de Flutter par celles de PartyPlan
 - [ ] Choisir l'hébergeur, situé dans l'Union européenne — `RG-RGPD-03`
 - [ ] Créer les enregistrements DNS : `partyplan`, `api.partyplan`, `cdn.partyplan`
-- [ ] Créer le dépôt GitHub distant et pousser le monorepo
+- [x] Dépôt GitHub privé créé et poussé — `MAXCOEUR/partyplan`
 - [ ] Configurer la protection de la branche `main` (revue obligatoire, CI verte)
 
 ## Lot 0.2 — Outillage du dépôt
@@ -91,6 +91,8 @@ Contrainte permanente : tout doit tourner en local avant d'être poussé — `§
 - [x] `RG-DEV-02` `.env.example` comme documentation de référence des variables
 - [x] `RG-DEV-03` Interdiction d'accéder à la base de production depuis un poste — `docs/exploitation.md` §6
 - [x] Contrôle avant push : `make verif` (format, analyse, frontières, tests)
+- [x] Guide de développement local — `docs/developpement.md` : Rider, Android Studio, émulateur, problèmes courants
+- [x] Cibles `make android`, `make emulateur`, `make lan`, `make devices` ; l'API écoute sur `0.0.0.0:5080` afin d'être joignable depuis l'émulateur
 - [ ] `NF-DEV-04` Journaliser les notifications poussées en console faute de clé — arrive avec le lot 1.11, aucun émetteur n'existe encore
 - [ ] `NF-DEV-05` Vérifier que l'inscription fonctionne sans clé Google — vérifiable au lot 0.8, aucun endpoint d'authentification n'existe encore
 - [ ] `NF-DEV-06` Amorcer effectivement l'administrateur de développement — lot 0.11 ; les identifiants sont déjà documentés et la garde en place
