@@ -23,6 +23,10 @@ partyplan/
 └── .github/        CI
 ```
 
+Dépôt : https://github.com/MAXCOEUR/partyplan (privé)
+
+Pour développer et tester en local : [docs/developpement.md](docs/developpement.md).
+
 ## Prérequis
 
 | Outil | Version validée localement |

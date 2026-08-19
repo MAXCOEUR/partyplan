@@ -29,7 +29,7 @@ Toute tâche non cochée d'une version publiée devient une anomalie, pas un rep
 
 | Version | Tâches faites | Reste |
 |---|---|---|
-| V0 — socle technique | lots 0.2 à 0.6 | lot 0.1 (démarches), lot 0.7 (serveur) |
+| V0 — socle technique | lots 0.2 à 0.6, dépôt GitHub et protection de branche | lot 0.1 (INPI, nom, logo, hébergeur, DNS), lot 0.7 (serveur) |
 | V0.5 — comptes et administration | — | tout |
 | V1.0 — MVP événementiel | — | tout |
 
@@ -61,7 +61,11 @@ paiement ou un arbitrage.
 - [ ] Choisir l'hébergeur, situé dans l'Union européenne — `RG-RGPD-03`
 - [ ] Créer les enregistrements DNS : `partyplan`, `api.partyplan`, `cdn.partyplan`
 - [x] Dépôt GitHub privé créé et poussé — `MAXCOEUR/partyplan`
-- [ ] Configurer la protection de la branche `main` (revue obligatoire, CI verte)
+- [x] Protection de la branche `main` : contrôles obligatoires (frontières, format C#, format Dart, vulnérabilités), poussée forcée et suppression interdites
+  - → **revue obligatoire volontairement non activée** : à un seul développeur, GitHub
+    interdit d'approuver sa propre pull request, la règle bloquerait donc toute fusion.
+    À activer le jour où une seconde personne rejoint le projet.
+  - → `enforce_admins` laissé à faux, afin de conserver une issue en cas d'urgence
 
 ## Lot 0.2 — Outillage du dépôt
 
