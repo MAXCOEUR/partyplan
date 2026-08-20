@@ -28,6 +28,16 @@ dependencies:
   # distribué sous ce nom.
   flutter_secure_storage: ">=10.3.1 <11.0.0"
 
+  # Magasin du cache de lecture et de la file d'écritures (NF-OFFLINE-01).
+  # Retenu parce que c'est la seule option identique sur Android, iOS et Web sans
+  # étape de compilation native — et le Web est une cible de publication.
+  shared_preferences: ^2.5.3
+
+  # Feuille de partage native : lien d'invitation et QR code (EF-INV-02).
+  # Version 13 et non 12 : share_plus 12 épingle win32 ^5.5.3, incompatible avec
+  # file_picker 12 qui exige win32 ^6.3.0.
+  share_plus: ^13.3.0
+
   # Formats français : dates JJ/MM/AAAA, montants en euros
   intl: ^0.20.2
 
