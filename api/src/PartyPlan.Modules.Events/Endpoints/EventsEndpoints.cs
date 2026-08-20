@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Configuration;
 using PartyPlan.Modules.Events.Application;
+using PartyPlan.SharedKernel.Contracts;
 using PartyPlan.SharedKernel.Enums;
 using PartyPlan.SharedKernel.Primitives;
 
@@ -73,7 +74,11 @@ internal static class EventsEndpoints
                     cancellationToken)
                 .ConfigureAwait(false)))
             .WithName("CreateEvent")
-            .WithSummary("Crée un événement. Le créateur en devient propriétaire.")
+            .WithSummary("Crée un événement. En-tête Idempotency-Key obligatoire.")
+            // Un double appui sur « créer » produirait deux soirées, que l'organisateur
+            // devrait ensuite supprimer après avoir peut-être déjà partagé le mauvais
+            // lien (§8.1).
+            .RequireIdempotency()
             .Produces<EventSummary>();
 
         groupe.MapGet("/{eventId:guid}", async (

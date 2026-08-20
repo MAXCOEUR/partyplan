@@ -58,12 +58,16 @@ services:
       Google__ClientId: ${GOOGLE_CLIENT_ID:-}
       Google__ClientSecret: ${GOOGLE_CLIENT_SECRET:-}
       # Notifications poussées journalisées en console faute de clé — NF-DEV-04
-      Firebase__ServiceAccountJson: ${FIREBASE_SERVICE_ACCOUNT_JSON:-}
+      Push__FirebaseServiceAccountJson: ${FIREBASE_SERVICE_ACCOUNT_JSON:-}
       # Chiffrement des secrets de double authentification
       Security__EncryptionKey: ${SECURITY_ENCRYPTION_KEY:-Y2xlLWRlLWNoaWZmcmVtZW50LWRlLWRldi0zMi1vY3Q=}
       Totp__Name: PartyPlan (dev)
-      # Jeu de données de démonstration — NF-DEV-07
-      Seed__Demo: ${SEED_DEMO:-true}
+      App__PublicBaseUrl: http://localhost:${WEB_PORT:-8080}
+      Media__RootPath: /tmp/partyplan-media
+      Media__PublicBaseUrl: http://localhost:${API_PORT:-5080}/media
+      Database__MigrateOnStartup: "true"
+      Database__SeedDemoData: ${SEED_DEMO:-true}
+      RateLimiting__Enabled: "true"
     ports:
       - "${API_PORT:-5080}:8080"
 

@@ -76,7 +76,8 @@ paiement ou un arbitrage.
 - [x] Contrôle CI de format : `dotnet format --verify-no-changes` et `dart format --set-exit-if-changed`
 - [x] `NF-OPS-08` Interdiction de construire une image sur le serveur — `ADR 0004` et `docs/exploitation.md` §6
 - [x] `NF-OPS-09` Contrôle que tout secret figure dans les `.env.example` — par revue, via le modèle de pull request
-- [ ] Automatiser `NF-OPS-09` : comparer les clés lues par le code aux clés déclarées dans les `.env.example`
+- [x] `NF-OPS-09` automatisé — `tools/verifier-variables-env.sh`, exécuté par `make lint` et en CI
+  - → a immédiatement trouvé un vrai défaut de production : `Media:PublicBaseUrl` n'était jamais injecté, les adresses des photos de profil auraient pointé vers `localhost`
 
 ## Lot 0.2b — Environnement de développement local
 
@@ -99,10 +100,11 @@ Contrainte permanente : tout doit tourner en local avant d'être poussé — `§
 - [x] Cibles `make android`, `make emulateur`, `make lan`, `make devices` ; l'API écoute sur `0.0.0.0:5080` afin d'être joignable depuis l'émulateur
 - [x] Diagnostic et repli sur les limites inotify du noyau — `make inotify`, saturées par Rider et Android Studio sur le poste de développement
 - [ ] Relever `fs.inotify.max_user_instances` sur le poste (droits d'administration requis) — voir `docs/developpement.md` §6 bis
-- [ ] `NF-DEV-04` Journaliser les notifications poussées en console faute de clé — arrive avec le lot 1.11, aucun émetteur n'existe encore
-- [ ] `NF-DEV-05` Vérifier que l'inscription fonctionne sans clé Google — vérifiable au lot 0.8, aucun endpoint d'authentification n'existe encore
-- [ ] `NF-DEV-06` Amorcer effectivement l'administrateur de développement — lot 0.11 ; les identifiants sont déjà documentés et la garde en place
-- [ ] `NF-DEV-10` Vérifier `make test` réseau coupé — non vérifié : suppose de désactiver le réseau et d'avoir l'image PostgreSQL en cache local
+- [x] `NF-DEV-04` Émetteur de notifications journalisant en console faute de clé, sans faire échouer l'action métier
+- [x] `NF-DEV-05` L'inscription et la connexion fonctionnent sans aucune clé Google configurée — vérifié par la recette et par 64 tests d'intégration qui tournent sans variable `GOOGLE_*`
+- [x] `NF-DEV-06` Administrateur de développement amorcé, identifiants documentés, garde en place
+- [x] `NF-DEV-10` Tests vérifiés sans accès Internet : 177 unitaires dans un espace de noms réseau isolé, 64 d'intégration avec la sortie Internet bloquée
+  - → **limite honnête** : les tests d'intégration exigent la mise en réseau Docker locale — le processus de test dialogue en TCP avec le conteneur PostgreSQL. Ils n'ont besoin d'aucun accès Internet, à condition que l'image `postgres:16-alpine` soit déjà en cache
 
 ## Lot 0.3 — API, squelette
 
@@ -119,7 +121,10 @@ Contrainte permanente : tout doit tourner en local avant d'être poussé — `§
 - [x] Authentification par jeton porteur et politiques d'autorisation des rôles plateforme
 - [x] `NF-SEC-01` En-têtes de sécurité sur toute réponse de l'API, `X-Robots-Tag` compris
 - [x] Image Docker de l'API construite (247 Mo) et démarrage vérifié
-- [ ] `§8.1` Filtre d'idempotence sur les créations — la table `idempotency_keys` et l'entité existent, le filtre HTTP reste à écrire (nécessaire au lot 1.7)
+- [x] `§8.1` Idempotence des créations, appliquée à la création d'événement
+  - → intergiciel et non filtre d'endpoint : un filtre s'exécute après le liage des arguments, donc après consommation du corps, et l'empreinte était calculée sur une chaîne vide — deux requêtes différentes portaient la même empreinte
+  - → la réponse rejouée est sérialisée aux conventions de l'hôte : les options par défaut produisent du PascalCase là où l'hôte émet du camelCase, et le client casserait au rejeu
+  - → seules les réussites sont mémorisées : rejouer un échec empêcherait de corriger une requête et de la renvoyer avec la même clé
 
 ## Lot 0.4 — Base de données
 
@@ -148,8 +153,8 @@ Contrainte permanente : tout doit tourner en local avant d'être poussé — `§
 - [x] Manifeste PWA, `index.html` en `noindex`, service worker Flutter
 - [x] Script de génération du client Dart depuis l'OpenAPI — `tools/generate-api-client.sh`
 - [x] Image Docker web construite (80 Mo), route profonde et en-têtes de sécurité vérifiés en service
-- [ ] Rafraîchissement automatique de session à l'expiration du jeton — lot 0.8, aucun endpoint de rafraîchissement n'existe
-- [ ] Générer effectivement le client Dart — lot 0.8, le contrat ne décrit qu'un endpoint
+- [x] Rafraîchissement automatique de session à l'expiration du jeton d'accès — sans lui, l'utilisateur serait déconnecté tous les quarts d'heure
+- [x] **Décision** : le client Dart reste écrit à la main. Le générateur produit un paquet séparé et une chaîne de compilation supplémentaire, disproportionnés pour une quarantaine d'endpoints. `tools/generate-api-client.sh` reste disponible le jour où la surface le justifiera.
 
 ## Lot 0.6 — Design system Flutter
 
@@ -260,8 +265,8 @@ d'enrôlement.
 - [x] Écrans : saisie du second facteur à la connexion, enrôlement et codes de secours
 - [ ] `EF-AUTH-06` Connexion Google — suppose des identifiants Google Cloud, voir `docs/comptes-externes.md` §1
 - [ ] `EF-AUTH-08` Rattachement et détachement d'une connexion tierce
-- [ ] `RG-AUTH-08` Un compte sans mot de passe peut en définir un par le parcours de réinitialisation
-- [ ] `NF-DEV-05` Vérifier que l'inscription fonctionne sans clé Google configurée
+- [x] `RG-AUTH-08` Un compte sans mot de passe en définit un par le parcours de réinitialisation — le lui refuser l'enfermerait dans une dépendance au fournisseur tiers
+- [x] `NF-DEV-05` Inscription et connexion vérifiées sans aucune clé Google — voir lot 0.2b
 - [ ] Écran de rattachement des connexions tierces
 - [ ] Afficher le QR code d'enrôlement — le secret est affiché en clair et copiable, ce qui suffit à s'enrôler ; le QR code demande une dépendance graphique
 
@@ -313,9 +318,9 @@ d'enrôlement.
 - [x] `RG-ADM-08` Écrans d'administration sous `/admin/*`, accessibles aux seuls rôles plateforme
 - [x] Écrans : liste des comptes avec actions, journal d'audit
 - [ ] `EF-ADM-11` Forcer la vérification d'une adresse — endpoint livré, bouton d'interface manquant
-- [ ] `EF-ADM-12` Export des données d'un utilisateur ne pouvant plus se connecter
-- [ ] `EF-ADM-13` Suppression d'une photo de profil signalée
-- [ ] `EF-ADM-10` Compléter les indicateurs par le décompte d'événements — nécessite un contrat exposé par le module Events (lot 1.2)
+- [x] `EF-ADM-12` Export des données d'un utilisateur ne pouvant plus se connecter — même contenu que l'export en libre-service, journalisé car c'est un accès à des données personnelles
+- [x] `EF-ADM-13` Suppression d'une photo de profil signalée, idempotente
+- [x] `EF-ADM-10` Indicateurs complétés par les décomptes d'événements, via le contrat `IEventStatistics` — des nombres, jamais de contenu (`RG-ADM-01`), vérifié par test
 
 ## Lot 0.13 — Cloisonnement et audit
 
@@ -333,7 +338,7 @@ d'enrôlement.
 - [x] Recette exécutable de bout en bout — `tools/recette/parcours-comptes.py`, 77 vérifications
 - [x] Tests d'intégration automatisés des mêmes règles, exécutables en CI sans serveur de courriel
 - [x] Vérifier les critères 1, 2, 4, 5, 7 à 12 du `§18`
-- [ ] Critère 3 du `§18` : refus de démarrage si `ADMIN_PASSWORD` ne satisfait pas `RG-AUTH-01` — la garde existe, le test automatisé manque
+- [x] Critère 3 du `§18` : refus de démarrage sur amorçage incomplet, couvert par huit cas dont la frontière exacte de douze caractères
 - [x] Critère 6 du `§18` : changement de mot de passe et second facteur imposés au compte amorcé
 - [x] Recette étendue : 77 vérifications, premier démarrage complet compris
 

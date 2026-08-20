@@ -20,6 +20,8 @@ using PartyPlan.SharedKernel.Primitives;
 public sealed class UserDirectory(
     IUsersDbContext db,
     AccountDeletionService deletion,
+    AccountService accounts,
+    IEventStatistics events,
     IClock clock) : IUserDirectory
 {
     public const int MaxPageSize = 100;
@@ -260,15 +262,23 @@ public sealed class UserDirectory(
             .FirstOrDefaultAsync(cancellationToken)
             .ConfigureAwait(false);
 
+        var evenements = await events.CountAsync(cancellationToken).ConfigureAwait(false);
+
         return new InstanceMetrics(
             comptes?.Total ?? 0,
             comptes?.Suspendus ?? 0,
             comptes?.Personnel ?? 0,
             comptes?.Verifies ?? 0,
-            0,
-            0,
-            0);
+            evenements.Total,
+            evenements.Active,
+            evenements.GuestMembers);
     }
+
+    public Task<Result<string>> ExportAsync(Guid userId, CancellationToken cancellationToken) =>
+        deletion.ExportAsync(userId, cancellationToken);
+
+    public Task<Result> RemoveAvatarAsync(Guid userId, CancellationToken cancellationToken) =>
+        accounts.DeleteAvatarAsync(userId, cancellationToken);
 
     private IQueryable<User> Vivant(Guid userId) =>
         db.Users.Where(u => u.Id == userId && u.DeletedAt == null);

@@ -5,6 +5,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using PartyPlan.Modules.Events.Application;
 using PartyPlan.Modules.Events.Endpoints;
+using PartyPlan.SharedKernel.Contracts;
 using PartyPlan.SharedKernel.Modules;
 
 public sealed class EventsModule : IModule
@@ -18,6 +19,11 @@ public sealed class EventsModule : IModule
         services.AddScoped<EventService>();
         services.AddScoped<JoinService>();
         services.AddScoped<AttendanceService>();
+
+        // Contrat public consommé par l'administration : des décomptes, jamais de
+        // contenu (RG-ADM-01).
+        services.AddScoped<EventStatistics>();
+        services.AddScoped<IEventStatistics>(sp => sp.GetRequiredService<EventStatistics>());
     }
 
     public void MapEndpoints(IEndpointRouteBuilder routes) => EventsEndpoints.Map(routes);

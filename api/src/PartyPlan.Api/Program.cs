@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.HttpOverrides;
 using PartyPlan.Api.Setup;
 using PartyPlan.Infrastructure;
 using PartyPlan.Infrastructure.Http;
+using PartyPlan.Infrastructure.Idempotency;
 using PartyPlan.SharedKernel.Modules;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -67,6 +68,12 @@ app.UseAuthorization();
 // Placé après l'autorisation : la revendication n'existe qu'une fois l'identité
 // établie (RG-ADM-10).
 app.UseMustChangePassword();
+
+// Idempotence (§8.1). Intergiciel et non filtre d'endpoint : un filtre s'exécute après
+// le liage des arguments, donc après consommation du corps, et l'empreinte serait
+// calculée sur une chaîne vide. Il ne s'active que sur les endpoints qui déclarent
+// l'exigence.
+app.UseIdempotency();
 
 // Le périmètre d'événements est établi après l'authentification et avant tout
 // endpoint : c'est le point unique d'application du cloisonnement (RG-SEC-01).

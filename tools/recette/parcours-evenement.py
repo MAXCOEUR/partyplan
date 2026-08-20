@@ -18,11 +18,13 @@ API = "http://127.0.0.1:5080/v1"
 resultats: list[tuple[bool, str]] = []
 
 
-def appel(methode, chemin, corps=None, jeton=None):
+def appel(methode, chemin, corps=None, jeton=None, cle_idempotence=None):
     requete = urllib.request.Request(f"{API}{chemin}", method=methode)
     requete.add_header("Content-Type", "application/json")
     if jeton:
         requete.add_header("Authorization", f"Bearer {jeton}")
+    if cle_idempotence:
+        requete.add_header("Idempotency-Key", cle_idempotence)
     donnees = json.dumps(corps).encode() if corps is not None else None
     try:
         with urllib.request.urlopen(requete, donnees) as reponse:
@@ -53,26 +55,46 @@ print("\n--- Création d'un événement (EF-EVT-01, EF-EVT-02) ---")
 organisateur = compte("Maxence")
 verifier("un compte organisateur est créé", organisateur is not None)
 
-statut, evenement = appel("POST", "/events", {
+def creer(corps, jeton, cle=None):
+    """Crée un événement. L'en-tête d'idempotence est obligatoire (§8.1)."""
+    return appel("POST", "/events", corps, jeton=jeton,
+                 cle_idempotence=cle or uuid.uuid4().hex)
+
+
+statut, corps = appel("POST", "/events", {
+    "name": "Sans clé", "startsAt": "2026-08-29T18:00:00Z"}, jeton=organisateur)
+verifier("la clé d'idempotence est obligatoire sur la création",
+         statut == 400 and corps.get("code") == "idempotency.key_required", f"{statut}")
+
+cle_partagee = uuid.uuid4().hex
+corps_soiree = {
     "name": "Anniversaire de Maxence",
     "description": "Barbecue puis soirée.",
     "startsAt": "2026-08-29T18:00:00Z",
     "address": "Replonges",
-}, jeton=organisateur)
+}
+
+statut, evenement = creer(corps_soiree, organisateur, cle_partagee)
 verifier("la création aboutit", statut == 200, f"{statut}")
+
+statut, rejeu = creer(corps_soiree, organisateur, cle_partagee)
+verifier("une réémission rejoue la réponse sans créer de doublon",
+         statut == 200 and rejeu["id"] == evenement["id"], f"{statut}")
+
+statut, conflit = creer({**corps_soiree, "name": "Autre nom"}, organisateur, cle_partagee)
+verifier("la même clé avec un corps différent est un conflit",
+         statut == 409 and conflit.get("code") == "idempotency.key_reused", f"{statut}")
 verifier("le créateur est compté présent",
          evenement["presentCount"] == 1 and evenement["memberCount"] == 1)
 
 evenement_id = evenement["id"]
 
-statut, corps = appel("POST", "/events", {"name": "  ", "startsAt": "2026-08-29T18:00:00Z"},
-                      jeton=organisateur)
+statut, corps = creer({"name": "  ", "startsAt": "2026-08-29T18:00:00Z"}, organisateur)
 verifier("un nom vide est refusé",
          statut == 400 and corps.get("code") == "event.name_required", f"{statut}")
 
-statut, corps = appel("POST", "/events", {
-    "name": "Incohérent", "startsAt": "2026-08-29T18:00:00Z",
-    "endsAt": "2026-08-28T18:00:00Z"}, jeton=organisateur)
+statut, corps = creer({"name": "Incohérent", "startsAt": "2026-08-29T18:00:00Z",
+                       "endsAt": "2026-08-28T18:00:00Z"}, organisateur)
 verifier("une fin antérieure au début est refusée",
          statut == 400 and corps.get("code") == "event.end_before_start", f"{statut}")
 
@@ -130,8 +152,7 @@ if jetons_invites:
     statut, _ = appel("GET", f"/events/{evenement_id}", jeton=jeton_lucas)
     verifier("un invité voit l'événement qu'il a rejoint", statut == 200, f"{statut}")
 
-    statut, autre = appel("POST", "/events", {"name": "Autre", "startsAt": "2026-09-01T18:00:00Z"},
-                          jeton=organisateur)
+    statut, autre = creer({"name": "Autre", "startsAt": "2026-09-01T18:00:00Z"}, organisateur)
     statut, _ = appel("GET", f"/events/{autre['id']}", jeton=jeton_lucas)
     verifier("un invité ne voit aucun autre événement (EF-INV-04)", statut == 404, f"{statut}")
 

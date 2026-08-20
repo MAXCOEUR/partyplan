@@ -6,6 +6,7 @@ using Microsoft.Extensions.DependencyInjection;
 using PartyPlan.Infrastructure.Email;
 using PartyPlan.Infrastructure.Identity;
 using PartyPlan.Infrastructure.Media;
+using PartyPlan.Infrastructure.Notifications;
 using PartyPlan.Infrastructure.Options;
 using PartyPlan.Infrastructure.Persistence;
 using PartyPlan.Infrastructure.Security;
@@ -63,6 +64,15 @@ public static class DependencyInjection
         services.AddSingleton<PartyPlan.SharedKernel.Contracts.IEmailSender, SmtpEmailSender>();
         services.AddSingleton<PartyPlan.SharedKernel.Contracts.IAvatarStorage, AvatarStorage>();
 
+        // Notifications poussées. L'émetteur de développement journalise au lieu
+        // d'envoyer (NF-DEV-04) ; l'implémentation Firebase le remplacera au lot 1.11,
+        // derrière le même contrat.
+        services.AddOptions<PushOptions>()
+            .Bind(configuration.GetSection(PushOptions.SectionName))
+            .ValidateOnStart();
+
+        services.AddSingleton<PartyPlan.SharedKernel.Contracts.IPushSender, ConsolePushSender>();
+
         // --- Chiffrement des secrets stockés ---
         services.AddOptions<SecurityOptions>()
             .Bind(configuration.GetSection(SecurityOptions.SectionName))
@@ -70,6 +80,8 @@ public static class DependencyInjection
 
         services.AddSingleton<PartyPlan.SharedKernel.Contracts.ISecretProtector,
             AesGcmSecretProtector>();
+
+
 
         var connectionString = configuration.GetConnectionString("Default")
             ?? throw new InvalidOperationException(

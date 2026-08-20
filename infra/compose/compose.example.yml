@@ -79,6 +79,19 @@ services:
       Cors__AllowedOrigins__1: https://${DOMAIN_LANDING}
       App__PublicBaseUrl: https://${DOMAIN_APP}
       App__CdnBaseUrl: https://${DOMAIN_CDN}
+      # Médias : sans cette injection, la valeur par défaut du code renverrait des
+      # adresses de photos pointant vers localhost — invisible en développement, cassé
+      # en production.
+      Media__RootPath: /var/lib/partyplan/media
+      Media__PublicBaseUrl: https://${DOMAIN_CDN}
+      # Migrations appliquées au démarrage (§13.3), limitation de débit active.
+      Database__MigrateOnStartup: "true"
+      Database__SeedDemoData: "false"
+      RateLimiting__Enabled: "true"
+      RateLimiting__GlobalPerMinute: "300"
+      RateLimiting__ShortCodePerMinute: "10"
+      RateLimiting__PasswordResetPerHour: "10"
+      RateLimiting__AuthAttemptsPerMinute: "20"
       # Courriel transactionnel (liens magiques, repli de notification)
       Smtp__Host: ${SMTP_HOST}
       Smtp__Port: ${SMTP_PORT}
@@ -86,7 +99,7 @@ services:
       Smtp__Password: ${SMTP_PASSWORD}
       Smtp__From: ${SMTP_FROM}
       # Notifications poussées
-      Firebase__ServiceAccountJson: ${FIREBASE_SERVICE_ACCOUNT_JSON}
+      Push__FirebaseServiceAccountJson: ${FIREBASE_SERVICE_ACCOUNT_JSON}
     volumes:
       # Pièces jointes et images de couverture, servies ensuite par le proxy sur le CDN.
       - media:/var/lib/partyplan/media

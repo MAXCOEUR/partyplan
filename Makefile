@@ -20,7 +20,7 @@ API_EMU     := http://10.0.2.2:5080
 
 .PHONY: aide init up down restart logs ps api app web test test-api test-app \
         migration migrate reset-db seed mail openapi frontieres fmt lint verif clean \
-        android emulateur lan devices inotify stop-api
+        android emulateur lan devices inotify stop-api variables
 
 aide: ## Affiche cette aide
 	@echo "PartyPlan — cibles disponibles :"
@@ -129,6 +129,9 @@ openapi: ## Régénère docs/api/openapi.json et le client Dart depuis l'API loc
 frontieres: ## Vérifie les frontières de modules (ADR 0002)
 	./tools/verifier-frontieres-modules.sh
 
+variables: ## Vérifie que toute clé lue par le code est déclarée (NF-OPS-09)
+	@./tools/verifier-variables-env.sh
+
 inotify: ## Diagnostique les limites inotify du noyau et donne le correctif
 	@./tools/verifier-inotify.sh
 
@@ -149,10 +152,11 @@ fmt: ## Formate le code
 	dotnet format api/PartyPlan.slnx
 	cd app && dart format lib test
 
-lint: ## Analyse statique et frontières de modules
+lint: ## Analyse statique, frontières de modules, variables d'environnement
 	dotnet build api/PartyPlan.slnx
 	cd app && flutter analyze
 	./tools/verifier-frontieres-modules.sh
+	./tools/verifier-variables-env.sh
 
 verif: fmt lint test ## À exécuter avant tout push : format, analyse, tests
 	@echo ""

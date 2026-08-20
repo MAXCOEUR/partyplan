@@ -169,3 +169,58 @@ public sealed class ProductionGuardTests
     private static Microsoft.Extensions.Hosting.Internal.HostingEnvironment Environment(string name) =>
         new() { EnvironmentName = name };
 }
+
+/// <summary>
+/// Critère 3 du §18 : refus de démarrage lorsque l'amorçage de l'administrateur est
+/// incomplet.
+/// <para>
+/// Vérifié séparément de <see cref="ProductionGuardTests"/> : la garde de configuration
+/// s'exécute au démarrage, tandis que celle-ci ne s'applique qu'au moment de l'amorçage,
+/// c'est-à-dire lorsque aucun administrateur n'existe encore en base.
+/// </para>
+/// </summary>
+public sealed class AdminSeedGuardTests
+{
+    [Theory]
+    [InlineData(null, "UnMotDePasseSolide2026")]
+    [InlineData("", "UnMotDePasseSolide2026")]
+    [InlineData("admin@partyplan.fr", null)]
+    [InlineData("admin@partyplan.fr", "")]
+    [InlineData("admin@partyplan.fr", "court")]
+    [InlineData("admin@partyplan.fr", "onzecarac.")]
+    public void Un_amorcage_incomplet_refuse_le_demarrage(string? adresse, string? motDePasse)
+    {
+        // Sans ce refus, l'instance démarrerait sans administrateur — ou, pire, avec un
+        // identifiant par défaut connu (RG-ADM-11).
+        Should.Throw<InvalidOperationException>(() => ProductionGuard.ValidateAdminSeed(
+                Env("Production"),
+                new AdminSeedOptions { Email = adresse, Password = motDePasse }))
+            .Message.ShouldContain("RG-ADM-11");
+    }
+
+    [Fact]
+    public void Un_mot_de_passe_de_douze_caracteres_exactement_est_accepte()
+    {
+        // Frontière de la règle RG-AUTH-01 : douze caractères suffisent.
+        Should.NotThrow(() => ProductionGuard.ValidateAdminSeed(
+            Env("Production"),
+            new AdminSeedOptions
+            {
+                Email = "admin@partyplan.fr",
+                Password = new string('a', AdminSeedOptions.MinPasswordLength),
+            }));
+    }
+
+    [Fact]
+    public void La_garde_s_applique_aussi_en_developpement()
+    {
+        // Un développeur qui vide ADMIN_PASSWORD doit être averti tout de suite, et non
+        // découvrir l'absence d'administrateur en cherchant à se connecter.
+        Should.Throw<InvalidOperationException>(() => ProductionGuard.ValidateAdminSeed(
+            Env("Development"),
+            new AdminSeedOptions { Email = "admin@partyplan.local", Password = null }));
+    }
+
+    private static Microsoft.Extensions.Hosting.Internal.HostingEnvironment Env(string nom) =>
+        new() { EnvironmentName = nom };
+}

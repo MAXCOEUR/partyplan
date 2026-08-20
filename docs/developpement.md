@@ -277,6 +277,28 @@ modifications un peu plus lente. Le diagnostic est affiché à chaque lancement.
 
 ---
 
+## 6 ter. Travailler hors ligne
+
+Aucun accès Internet n'est nécessaire une fois les dépendances restaurées et les images
+Docker en cache. Vérifié :
+
+```bash
+# Tests unitaires, réseau externe totalement coupé
+unshare -rn sh -c 'ip link set lo up; dotnet test api/tests/PartyPlan.UnitTests --no-restore'
+
+# Tests d'intégration, sortie Internet bloquée mais réseau local conservé
+HTTPS_PROXY=http://127.0.0.1:9 dotnet test api/tests/PartyPlan.IntegrationTests --no-restore
+```
+
+Les tests d'intégration ont besoin de la mise en réseau Docker locale : le processus de
+test dialogue en TCP avec le conteneur PostgreSQL. Un espace de noms réseau isolé les
+coupe donc de la base, ce qui n'a rien à voir avec un accès Internet.
+
+Prérequis à préparer une fois, connexion disponible : `make init` pour restaurer les
+dépendances, et `docker pull postgres:16-alpine` pour l'image utilisée par les tests.
+
+---
+
 ## 7. Problèmes courants
 
 | Symptôme | Cause | Correction |

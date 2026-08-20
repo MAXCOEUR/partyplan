@@ -208,6 +208,65 @@ internal static class AdminEndpoints
             .WithSummary("Force la vérification d'une adresse, en cas de courriel non délivré.")
             .RequireAuthorization(StaffPolicy);
 
+        groupe.MapGet("/users/{userId:guid}/export", async (
+                Guid userId,
+                IUserDirectory users,
+                IAuditLog audit,
+                CancellationToken cancellationToken) =>
+            {
+                var resultat = await users.ExportAsync(userId, cancellationToken)
+                    .ConfigureAwait(false);
+
+                if (resultat.IsFailure)
+                {
+                    return Problem(resultat.Error!);
+                }
+
+                // L'export est journalisé : c'est un accès à des données personnelles,
+                // même effectué à la demande de la personne concernée (RG-ADM-06).
+                await audit.RecordAsync(
+                    AdminAuditActions.DataExported,
+                    userId,
+                    null,
+                    null,
+                    cancellationToken).ConfigureAwait(false);
+
+                return Results.File(
+                    System.Text.Encoding.UTF8.GetBytes(resultat.Value),
+                    "application/json",
+                    $"partyplan-donnees-{userId}.json");
+            })
+            .WithName("AdminExportUser")
+            .WithSummary("Export des données d'un compte qui ne peut plus se connecter.")
+            .RequireAuthorization(StaffPolicy);
+
+        groupe.MapDelete("/users/{userId:guid}/avatar", async (
+                Guid userId,
+                IUserDirectory users,
+                IAuditLog audit,
+                CancellationToken cancellationToken) =>
+            {
+                var resultat = await users.RemoveAvatarAsync(userId, cancellationToken)
+                    .ConfigureAwait(false);
+
+                if (resultat.IsFailure)
+                {
+                    return Problem(resultat.Error!);
+                }
+
+                await audit.RecordAsync(
+                    AdminAuditActions.AvatarRemoved,
+                    userId,
+                    null,
+                    null,
+                    cancellationToken).ConfigureAwait(false);
+
+                return Results.NoContent();
+            })
+            .WithName("AdminRemoveAvatar")
+            .WithSummary("Supprime une photo de profil signalée comme inappropriée.")
+            .RequireAuthorization(StaffPolicy);
+
         // --- Actions réservées à PlatformAdmin (RG-ADM-05) ---
 
         groupe.MapPost("/users/{userId:guid}/suspend", async (

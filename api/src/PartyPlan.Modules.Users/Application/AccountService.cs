@@ -199,6 +199,10 @@ public sealed class AccountService(
             return;
         }
 
+        // RG-AUTH-08 : un compte créé par connexion tierce n'a pas de mot de passe. Le
+        // parcours de réinitialisation est précisément son moyen d'en définir un — il ne
+        // doit donc pas exiger qu'il en ait déjà un.
+
         // RG-AUTH-05 : cinq demandes par adresse et par heure. Le décompte est tenu ici,
         // et non par le limiteur de débit HTTP : celui-ci partitionne sur l'adresse IP et
         // ne protégerait pas un compte harcelé depuis plusieurs sources. Le dépassement

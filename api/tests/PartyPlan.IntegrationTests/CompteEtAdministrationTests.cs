@@ -326,6 +326,91 @@ public sealed class CompteEtAdministrationTests(PartyPlanApiFixture fixture)
         reinscription.StatusCode.ShouldBe(HttpStatusCode.OK);
     }
 
+    [Fact]
+    public async Task Les_indicateurs_d_instance_comptent_les_evenements()
+    {
+        using var client = fixture.CreateClient();
+        var adresse = Adresse();
+        var jetons = await Inscrire(client, adresse);
+        var identifiant = await IdentifiantDe(adresse);
+
+        // Un événement et un invité sans compte, pour que les décomptes soient non nuls.
+        using var organisateur = fixture.CreateClient();
+        organisateur.DefaultRequestHeaders.Authorization =
+            new AuthenticationHeaderValue("Bearer", jetons!.Value.acces);
+
+        var creation = await EvenementsTests.CreerBrutAsync(organisateur, new
+        {
+            name = "Pour les indicateurs",
+            startsAt = DateTimeOffset.UtcNow.AddDays(5),
+        });
+
+        creation.StatusCode.ShouldBe(HttpStatusCode.OK);
+
+        var secret = await PromouvoirAsync(identifiant, PlatformRole.PlatformAdmin, avecTotp: true);
+        var acces = await ConnecterEnDeuxTempsAsync(client, adresse, secret!);
+
+        using var admin = fixture.CreateClient();
+        admin.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", acces);
+
+        var indicateurs = await admin.GetFromJsonAsync<JsonDocument>("/v1/admin/metrics");
+
+        indicateurs!.RootElement.GetProperty("totalUsers").GetInt32().ShouldBeGreaterThan(0);
+        indicateurs.RootElement.GetProperty("totalEvents").GetInt32().ShouldBeGreaterThan(0);
+        indicateurs.RootElement.GetProperty("activeEvents").GetInt32().ShouldBeGreaterThan(0);
+
+        // RG-ADM-01 : des nombres, jamais de contenu. Aucun nom d'événement ne doit
+        // apparaître dans les indicateurs.
+        indicateurs.RootElement.GetRawText().ShouldNotContain("Pour les indicateurs");
+    }
+
+    [Fact]
+    public async Task L_administrateur_exporte_les_donnees_d_un_compte_et_supprime_une_photo()
+    {
+        using var client = fixture.CreateClient();
+        var adresseAdmin = Adresse();
+        await Inscrire(client, adresseAdmin);
+        var identifiantAdmin = await IdentifiantDe(adresseAdmin);
+
+        var cible = Adresse();
+        await Inscrire(client, cible);
+        var identifiantCible = await IdentifiantDe(cible);
+
+        var secret = await PromouvoirAsync(identifiantAdmin, PlatformRole.Support, avecTotp: true);
+        var acces = await ConnecterEnDeuxTempsAsync(client, adresseAdmin, secret!);
+
+        using var support = fixture.CreateClient();
+        support.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", acces);
+
+        var export = await support.GetAsync(
+            new Uri($"/v1/admin/users/{identifiantCible}/export", UriKind.Relative));
+
+        export.StatusCode.ShouldBe(HttpStatusCode.OK);
+
+        var contenu = await export.Content.ReadAsStringAsync();
+        contenu.ShouldContain(cible);
+
+        // Même contenu que l'export en libre-service : l'administrateur n'a pas accès à
+        // davantage, en particulier pas à l'empreinte du mot de passe.
+        contenu.ShouldNotContain("argon2");
+
+        // La suppression de photo aboutit même en l'absence de photo : l'action est
+        // idempotente, un signalement peut arriver après un retrait volontaire.
+        (await support.DeleteAsync(
+                new Uri($"/v1/admin/users/{identifiantCible}/avatar", UriKind.Relative)))
+            .StatusCode.ShouldBe(HttpStatusCode.NoContent);
+
+        var journal = await support.GetFromJsonAsync<JsonDocument>("/v1/admin/audit?pageSize=20");
+        var actions = journal!.RootElement.EnumerateArray()
+            .Select(e => e.GetProperty("action").GetString())
+            .ToList();
+
+        // Un accès à des données personnelles est journalisé, même à la demande de la
+        // personne concernée (RG-ADM-06).
+        actions.ShouldContain("user.data_exported");
+        actions.ShouldContain("user.avatar_removed");
+    }
+
     private static string Adresse() => $"test-{Guid.CreateVersion7():N}@partyplan.test";
 
     private static async Task<string?> Code(HttpResponseMessage reponse)
@@ -457,5 +542,86 @@ public sealed class CompteEtAdministrationTests(PartyPlanApiFixture fixture)
 
         return (await seconde.Content.ReadFromJsonAsync<JsonDocument>())!
             .RootElement.GetProperty("accessToken").GetString()!;
+    }
+}
+
+/// <summary>
+/// Comptes dépourvus de mot de passe (RG-AUTH-08).
+/// <para>
+/// Un compte créé par connexion tierce n'a pas d'empreinte. Le parcours de
+/// réinitialisation est son seul moyen d'en définir une : le lui refuser l'enfermerait
+/// dans une dépendance au fournisseur tiers.
+/// </para>
+/// </summary>
+[Collection(ApiTestSuite.Name)]
+public sealed class CompteSansMotDePasseTests(PartyPlanApiFixture fixture)
+{
+    [Fact]
+    public async Task Un_compte_sans_mot_de_passe_peut_en_definir_un_par_reinitialisation()
+    {
+        var adresse = $"tiers-{Guid.CreateVersion7():N}@partyplan.test";
+
+        // Compte créé sans empreinte, comme le ferait une connexion tierce.
+        await fixture.WithDatabaseAsync(async db =>
+        {
+            db.Users.Add(new PartyPlan.Modules.Users.Domain.User
+            {
+                Id = Guid.CreateVersion7(),
+                Email = adresse,
+                DisplayName = "Compte tiers",
+                EmailVerifiedAt = DateTimeOffset.UtcNow,
+                GoogleSubject = $"google-{Guid.CreateVersion7():N}",
+            });
+
+            await db.SaveChangesAsync();
+        });
+
+        using var client = fixture.CreateClient();
+
+        var demande = await client.PostAsJsonAsync("/v1/auth/password/forgot", new { email = adresse });
+
+        // La réponse est de toute façon invariable (RG-AUTH-04) ; ce qui compte est
+        // qu'un jeton ait bien été créé.
+        demande.StatusCode.ShouldBe(HttpStatusCode.Accepted);
+
+        var jetonCree = false;
+
+        await fixture.WithDatabaseAsync(async db =>
+        {
+            jetonCree = await db.PasswordResetTokens
+                .AnyAsync(t => db.Users.Any(u => u.Id == t.UserId && u.Email == adresse));
+        });
+
+        jetonCree.ShouldBeTrue();
+    }
+
+    [Fact]
+    public async Task Un_compte_sans_mot_de_passe_ne_se_connecte_pas_par_mot_de_passe()
+    {
+        var adresse = $"tiers2-{Guid.CreateVersion7():N}@partyplan.test";
+
+        await fixture.WithDatabaseAsync(async db =>
+        {
+            db.Users.Add(new PartyPlan.Modules.Users.Domain.User
+            {
+                Id = Guid.CreateVersion7(),
+                Email = adresse,
+                DisplayName = "Compte tiers",
+            });
+
+            await db.SaveChangesAsync();
+        });
+
+        using var client = fixture.CreateClient();
+
+        var connexion = await client.PostAsJsonAsync("/v1/auth/login", new
+        {
+            email = adresse,
+            password = "Trombone-Nuage-42x",
+        });
+
+        // Une empreinte nulle ne doit jamais valider, quel que soit le mot de passe
+        // présenté.
+        connexion.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
     }
 }

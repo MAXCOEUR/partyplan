@@ -28,6 +28,15 @@ jobs:
       - uses: actions/checkout@v4
       - run: ./tools/verifier-frontieres-modules.sh
 
+  variables:
+    name: Variables d'environnement
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      # NF-OPS-09 : une clé lue par le code sans être déclarée se découvre au premier
+      # démarrage en production.
+      - run: ./tools/verifier-variables-env.sh
+
   format-api:
     name: Format C#
     runs-on: ubuntu-latest

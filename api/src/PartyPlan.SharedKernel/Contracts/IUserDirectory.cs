@@ -40,6 +40,16 @@ public interface IUserDirectory
 
     /// <summary>Indicateurs d'instance (EF-ADM-10).</summary>
     Task<InstanceMetrics> GetMetricsAsync(CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Export des données d'un compte, à sa demande, lorsqu'il ne peut plus se connecter
+    /// (EF-ADM-12). Même contenu que l'export en libre-service : l'administrateur n'a pas
+    /// accès à davantage.
+    /// </summary>
+    Task<Result<string>> ExportAsync(Guid userId, CancellationToken cancellationToken);
+
+    /// <summary>Supprime une photo de profil signalée comme inappropriée (EF-ADM-13).</summary>
+    Task<Result> RemoveAvatarAsync(Guid userId, CancellationToken cancellationToken);
 }
 
 public sealed record UserQuery(string? Search, int Page, int PageSize, bool IncludeDeleted = false);

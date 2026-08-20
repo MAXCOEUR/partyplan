@@ -25,7 +25,7 @@ public sealed class EvenementsTests(PartyPlanApiFixture fixture)
     {
         var organisateur = await CompteAsync();
 
-        var reponse = await organisateur.PostAsJsonAsync("/v1/events", new
+        var reponse = await CreerBrutAsync(organisateur, new
         {
             name = "Anniversaire de test",
             description = "Barbecue puis soirée.",
@@ -54,7 +54,7 @@ public sealed class EvenementsTests(PartyPlanApiFixture fixture)
     {
         var organisateur = await CompteAsync();
 
-        var sansNom = await organisateur.PostAsJsonAsync("/v1/events", new
+        var sansNom = await CreerBrutAsync(organisateur, new
         {
             name = "   ",
             startsAt = DateTimeOffset.UtcNow.AddDays(1),
@@ -63,7 +63,7 @@ public sealed class EvenementsTests(PartyPlanApiFixture fixture)
         sansNom.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
         (await Code(sansNom)).ShouldBe("event.name_required");
 
-        var finAvantDebut = await organisateur.PostAsJsonAsync("/v1/events", new
+        var finAvantDebut = await CreerBrutAsync(organisateur, new
         {
             name = "Incohérent",
             startsAt = DateTimeOffset.UtcNow.AddDays(2),
@@ -501,11 +501,29 @@ public sealed class EvenementsTests(PartyPlanApiFixture fixture)
         return client;
     }
 
+    /// <summary>
+    /// Crée un événement. L'en-tête d'idempotence est obligatoire (§8.1) : un assistant
+    /// évite de le répéter dans chaque test, et surtout de l'oublier.
+    /// </summary>
+    internal static Task<HttpResponseMessage> CreerBrutAsync(HttpClient client, object corps)
+    {
+        var requete = new HttpRequestMessage(
+            HttpMethod.Post,
+            new Uri("/v1/events", UriKind.Relative))
+        {
+            Content = JsonContent.Create(corps),
+        };
+
+        requete.Headers.Add("Idempotency-Key", Guid.CreateVersion7().ToString());
+
+        return client.SendAsync(requete);
+    }
+
     private static async Task<(string eventId, string token, string shortCode)> CreerAsync(
         HttpClient client,
         string nom)
     {
-        var creation = await client.PostAsJsonAsync("/v1/events", new
+        var creation = await CreerBrutAsync(client, new
         {
             name = nom,
             startsAt = DateTimeOffset.UtcNow.AddDays(7),
@@ -527,6 +545,198 @@ public sealed class EvenementsTests(PartyPlanApiFixture fixture)
     }
 
     private static async Task<string?> Code(HttpResponseMessage reponse)
+    {
+        var corps = await reponse.Content.ReadFromJsonAsync<JsonDocument>();
+
+        return corps!.RootElement.TryGetProperty("code", out var code) ? code.GetString() : null;
+    }
+}
+
+/// <summary>
+/// Idempotence des créations (§8.1).
+/// <para>
+/// Sur réseau mobile, un double envoi est courant. Sans idempotence, l'organisateur se
+/// retrouve avec deux soirées et a peut-être déjà partagé le mauvais lien.
+/// </para>
+/// </summary>
+[Collection(ApiTestSuite.Name)]
+public sealed class IdempotenceTests(PartyPlanApiFixture fixture)
+{
+    [Fact]
+    public async Task La_cle_d_idempotence_est_obligatoire_sur_la_creation()
+    {
+        var client = await CompteAsync();
+
+        var sansCle = await client.PostAsJsonAsync("/v1/events", new
+        {
+            name = "Sans clé",
+            startsAt = DateTimeOffset.UtcNow.AddDays(3),
+        });
+
+        // L'en-tête est obligatoire et non facultatif : le rendre optionnel ne
+        // protégerait pas les clients qui l'omettent, c'est-à-dire ceux qui en ont besoin.
+        sansCle.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
+        (await CodeDe(sansCle)).ShouldBe("idempotency.key_required");
+    }
+
+    [Fact]
+    public async Task Une_meme_cle_avec_le_meme_corps_rejoue_la_reponse()
+    {
+        var client = await CompteAsync();
+        var cle = Guid.CreateVersion7().ToString();
+        var corps = new
+        {
+            name = "Soirée unique",
+            startsAt = DateTimeOffset.Parse("2026-09-12T18:00:00Z", null),
+        };
+
+        var premiere = await Envoyer(client, cle, corps);
+        var seconde = await Envoyer(client, cle, corps);
+
+        premiere.StatusCode.ShouldBe(HttpStatusCode.OK);
+        seconde.StatusCode.ShouldBe(HttpStatusCode.OK);
+
+        seconde.Headers.Contains("Idempotency-Replayed").ShouldBeTrue();
+
+        // Même identifiant : la réponse d'origine est rejouée, aucune seconde soirée
+        // n'est créée.
+        var premierId = await IdDe(premiere);
+        (await IdDe(seconde)).ShouldBe(premierId);
+
+        var liste = await client.GetFromJsonAsync<JsonDocument>("/v1/events");
+        liste!.RootElement.EnumerateArray()
+            .Count(e => e.GetProperty("name").GetString() == "Soirée unique")
+            .ShouldBe(1);
+    }
+
+    [Fact]
+    public async Task Une_meme_cle_avec_un_corps_different_est_un_conflit()
+    {
+        var client = await CompteAsync();
+        var cle = Guid.CreateVersion7().ToString();
+
+        var premiere = await Envoyer(client, cle, new
+        {
+            name = "Première",
+            startsAt = DateTimeOffset.Parse("2026-09-12T18:00:00Z", null),
+        });
+
+        // Sans cette assertion, un échec de la première requête ferait passer la seconde
+        // pour une clé neuve, et le test échouerait pour une raison trompeuse.
+        premiere.StatusCode.ShouldBe(HttpStatusCode.OK, await premiere.Content.ReadAsStringAsync());
+
+        var conflit = await Envoyer(client, cle, new
+        {
+            name = "Seconde",
+            startsAt = DateTimeOffset.Parse("2026-09-13T18:00:00Z", null),
+        });
+
+        // C'est une erreur du client. La traiter comme une réémission créerait la soirée
+        // que l'idempotence est censée empêcher.
+        conflit.StatusCode.ShouldBe(HttpStatusCode.Conflict);
+        (await CodeDe(conflit)).ShouldBe("idempotency.key_reused");
+    }
+
+    [Fact]
+    public async Task Deux_cles_differentes_creent_deux_evenements()
+    {
+        var client = await CompteAsync();
+        var corps = new
+        {
+            name = "Série",
+            startsAt = DateTimeOffset.Parse("2026-09-12T18:00:00Z", null),
+        };
+
+        var premiere = await Envoyer(client, Guid.CreateVersion7().ToString(), corps);
+        var seconde = await Envoyer(client, Guid.CreateVersion7().ToString(), corps);
+
+        // L'idempotence ne doit pas empêcher deux créations volontaires identiques.
+        (await IdDe(premiere)).ShouldNotBe(await IdDe(seconde));
+    }
+
+    [Fact]
+    public async Task Un_echec_n_est_pas_memorise()
+    {
+        var client = await CompteAsync();
+        var cle = Guid.CreateVersion7().ToString();
+
+        var invalide = await Envoyer(client, cle, new
+        {
+            name = "  ",
+            startsAt = DateTimeOffset.Parse("2026-09-12T18:00:00Z", null),
+        });
+
+        invalide.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
+
+        // Mémoriser l'échec empêcherait de corriger la requête et de la renvoyer avec la
+        // même clé — ce que fait naturellement un client après un message d'erreur.
+        var corrigee = await Envoyer(client, cle, new
+        {
+            name = "Corrigée",
+            startsAt = DateTimeOffset.Parse("2026-09-12T18:00:00Z", null),
+        });
+
+        corrigee.StatusCode.ShouldBe(HttpStatusCode.OK);
+    }
+
+    [Fact]
+    public async Task Deux_comptes_peuvent_reutiliser_la_meme_cle()
+    {
+        var cle = "une-cle-partagee-par-megarde";
+        var corps = new
+        {
+            name = "Indépendant",
+            startsAt = DateTimeOffset.Parse("2026-09-12T18:00:00Z", null),
+        };
+
+        var premier = await Envoyer(await CompteAsync(), cle, corps);
+        var second = await Envoyer(await CompteAsync(), cle, corps);
+
+        // La clé est propre à un appelant : deux utilisateurs ne doivent pas se gêner.
+        premier.StatusCode.ShouldBe(HttpStatusCode.OK);
+        second.StatusCode.ShouldBe(HttpStatusCode.OK);
+        (await IdDe(premier)).ShouldNotBe(await IdDe(second));
+    }
+
+    private static Task<HttpResponseMessage> Envoyer(HttpClient client, string cle, object corps)
+    {
+        var requete = new HttpRequestMessage(
+            HttpMethod.Post,
+            new Uri("/v1/events", UriKind.Relative))
+        {
+            Content = JsonContent.Create(corps),
+        };
+
+        requete.Headers.Add("Idempotency-Key", cle);
+
+        return client.SendAsync(requete);
+    }
+
+    private async Task<HttpClient> CompteAsync()
+    {
+        using var anonyme = fixture.CreateClient();
+
+        var inscription = await anonyme.PostAsJsonAsync("/v1/auth/register", new
+        {
+            email = $"idem-{Guid.CreateVersion7():N}@partyplan.test",
+            password = "Trombone-Nuage-42x",
+            displayName = "Organisateur",
+        });
+
+        var acces = (await inscription.Content.ReadFromJsonAsync<JsonDocument>())!
+            .RootElement.GetProperty("accessToken").GetString();
+
+        var client = fixture.CreateClient();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", acces);
+
+        return client;
+    }
+
+    private static async Task<string?> IdDe(HttpResponseMessage reponse) =>
+        (await reponse.Content.ReadFromJsonAsync<JsonDocument>())!
+            .RootElement.GetProperty("id").GetString();
+
+    private static async Task<string?> CodeDe(HttpResponseMessage reponse)
     {
         var corps = await reponse.Content.ReadFromJsonAsync<JsonDocument>();
 
