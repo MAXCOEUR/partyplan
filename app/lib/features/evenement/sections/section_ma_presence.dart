@@ -115,9 +115,11 @@ class _Choix extends StatelessWidget {
     key: ValueKey('statut-${statut.versApi}'),
     onTap: onChoisir,
     borderRadius: BorderRadius.circular(PpRadius.pill),
+    // Pas d'`alignment` : il ferait occuper à la boîte toute la largeur disponible,
+    // et la pastille sélectionnée s'étirerait sur la ligne entière.
     child: Container(
       constraints: const BoxConstraints(minHeight: 44),
-      alignment: Alignment.center,
+      padding: const EdgeInsets.all(PpSpacing.xs),
       decoration: BoxDecoration(
         border: Border.all(
           color: choisi ? PpColors.violet : Colors.transparent,

@@ -63,8 +63,9 @@
 
   "accueilChargementErreur": "Impossible de charger tes événements.",
   "accueilReessayer": "Réessayer",
-  "presencesSurInvites": "{presents} présents sur {invites} invités",
+  "presencesSurInvites": "{presents, plural, =0{Personne n’a encore confirmé} =1{1 présent sur {invites} invités} other{{presents} présents sur {invites} invités}}",
   "@presencesSurInvites": {
+    "description": "L’accord doit être juste : « 1 présents » se remarque immédiatement et donne une impression de brouillon.",
     "placeholders": { "presents": { "type": "int" }, "invites": { "type": "int" } }
   },
   "peutEtreSuffixe": "{nombre} peut-être",
@@ -72,7 +73,7 @@
     "description": "RG-PRES-03 : les peut-être sont comptés à part, jamais dans les présents.",
     "placeholders": { "nombre": { "type": "int" } }
   },
-  "tetesAPrevoir": "{nombre} têtes à prévoir",
+  "tetesAPrevoir": "{nombre, plural, =1{1 tête à prévoir} other{{nombre} têtes à prévoir}}",
   "@tetesAPrevoir": {
     "description": "RG-PRES-04 : les têtes comptent les accompagnants, contrairement aux présents. Les confondre fausserait toutes les quantités de courses.",
     "placeholders": { "nombre": { "type": "int" } }
