@@ -1,10 +1,18 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
+import 'models/evenement.dart';
+import 'models/invitation.dart';
+import 'models/membre.dart';
 import 'models/moyens_connexion.dart';
 import 'models/profil.dart';
 import 'network/api_client.dart';
 import 'network/comptes_api.dart';
+import 'network/evenements_api.dart';
+import 'offline/cache_lecture.dart';
+import 'offline/etat_reseau.dart';
+import 'offline/file_ecritures.dart';
+import 'storage/magasin_local.dart';
 import 'storage/session_store.dart';
 
 /// Dépendances partagées de l'application.
@@ -16,8 +24,37 @@ final sessionStoreProvider = Provider<SessionStore>(
   (ref) => SessionStore(ref.watch(secureStorageProvider)),
 );
 
+/// Magasin du cache et de la file (NF-OFFLINE-01). Distinct du stockage sécurisé :
+/// ce qui transite ici est du contenu applicatif, pas un secret.
+final magasinLocalProvider = Provider<MagasinLocal>((ref) => MagasinPreferences());
+
+final cacheLectureProvider = Provider<CacheLecture>(
+  (ref) => CacheLecture(ref.watch(magasinLocalProvider)),
+);
+
+final fileEcrituresProvider = Provider<FileEcritures>(
+  (ref) => FileEcritures(ref.watch(magasinLocalProvider)),
+);
+
 final apiClientProvider = Provider<ApiClient>(
-  (ref) => ApiClient(ref.watch(sessionStoreProvider)),
+  (ref) => ApiClient(
+    ref.watch(sessionStoreProvider),
+    cache: ref.watch(cacheLectureProvider),
+    file: ref.watch(fileEcrituresProvider),
+  ),
+);
+
+/// État réseau observable par les écrans : en ligne, hors ligne, rejeu, fraîcheur.
+///
+/// Les écrans ne connaissent que cet objet — ni le cache, ni la file. C'est ce qui
+/// permettra d'ajouter un module sans qu'aucun de ses écrans n'ait à savoir comment le
+/// hors ligne fonctionne.
+/// Exposé comme simple `Provider` : `EtatReseau` est un `ChangeNotifier` de Flutter,
+/// que les écrans observent par `ListenableBuilder`. Passer par l'ancien
+/// `ChangeNotifierProvider` de Riverpod ajouterait une dépendance à son paquet hérité
+/// pour un gain nul.
+final etatReseauProvider = Provider<EtatReseau>(
+  (ref) => ref.watch(apiClientProvider).etat,
 );
 
 final comptesApiProvider = Provider<ComptesApi>(
@@ -106,8 +143,34 @@ class SessionCourante extends AsyncNotifier<EtatSession> {
 
   Future<void> deconnecter() async {
     await ref.read(comptesApiProvider).deconnecter();
+
+    // Le cache contient le contenu d'événements privés. Le laisser en place après une
+    // déconnexion démentirait la promesse d'événement privé sur un appareil partagé.
+    await ref.read(cacheLectureProvider).purger();
+
     ref.invalidate(profilProvider);
+    ref.invalidate(mesEvenementsProvider);
     state = const AsyncData(EtatSession.anonyme);
+  }
+
+  /// Rattache au compte les participations rejointes sans compte (EF-AUTH-11).
+  ///
+  /// Appelée après toute ouverture de session. Un échec n'est pas propagé : perdre le
+  /// rattachement est fâcheux, mais bloquer une connexion réussie pour cette raison le
+  /// serait davantage.
+  Future<void> reclamerParticipations() async {
+    try {
+      final rattachees = await ref
+          .read(evenementsApiProvider)
+          .reclamerParticipations();
+
+      if (rattachees > 0) {
+        ref.invalidate(mesEvenementsProvider);
+      }
+    } on Exception {
+      // Silencieux à dessein : le jeton d'invité reste sur l'appareil et la prochaine
+      // ouverture de session retentera.
+    }
   }
 }
 
@@ -140,3 +203,46 @@ final moyensConnexionProvider = FutureProvider<MoyensConnexion>(
 final sessionsProvider = FutureProvider<List<SessionActive>>(
   (ref) => ref.watch(comptesApiProvider).sessions(),
 );
+
+// ---------------------------------------------------------------- événements ----
+
+final evenementsApiProvider = Provider<EvenementsApi>(
+  (ref) => EvenementsApi(
+    ref.watch(apiClientProvider),
+    ref.watch(sessionStoreProvider),
+  ),
+);
+
+/// Événements de la personne connectée, à venir puis passés (EF-EVT-05).
+final mesEvenementsProvider = FutureProvider<List<EvenementDeLaListe>>(
+  (ref) => ref.watch(evenementsApiProvider).lister(),
+);
+
+final evenementProvider = FutureProvider.family<ResumeEvenement, String>(
+  (ref, id) => ref.watch(evenementsApiProvider).lire(id),
+);
+
+final membresProvider = FutureProvider.family<List<Membre>, String>(
+  (ref, id) => ref.watch(evenementsApiProvider).membres(id),
+);
+
+final invitationProvider = FutureProvider.family<Invitation, String>(
+  (ref, id) => ref.watch(evenementsApiProvider).invitation(id),
+);
+
+/// Membre correspondant à l'appelant dans un événement.
+///
+/// Dérivé de la liste des membres plutôt que d'un appel dédié : l'API marque déjà la
+/// ligne de l'appelant par `isMe`, et un second appel donnerait deux sources de vérité
+/// sur le rôle.
+final monMembreProvider = FutureProvider.family<Membre?, String>((ref, id) async {
+  final membres = await ref.watch(membresProvider(id).future);
+
+  for (final membre in membres) {
+    if (membre.cestMoi) {
+      return membre;
+    }
+  }
+
+  return null;
+});
