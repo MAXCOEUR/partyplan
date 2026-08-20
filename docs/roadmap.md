@@ -183,10 +183,20 @@ Contrainte permanente : tout doit tourner en local avant d'être poussé — `§
 ## Lot 0.7 — Déploiement initial
 
 - [x] Documenter la procédure de déploiement, de retour arrière, de sauvegarde et de restauration — `docs/exploitation.md`
-- [ ] Provisionner le serveur
+- [x] Pile prête à coller pour un NAS UGREEN derrière Nginx Proxy Manager — `infra/compose/compose.nas.example.yml`
+  - → Caddy retiré : le NAS a déjà un reverse proxy, en conserver deux ferait deux
+    autorités concurrentes sur le TLS et les en-têtes
+  - → un service `cdn` reprend le service des photos : en production l'API ne sert
+    pas les fichiers statiques, c'est Caddy qui le faisait
+  - → HSTS est le seul en-tête que les images ne portent pas ; il revient au proxy
+    qui termine le TLS, donc à NPM
+  - → l'adresse de l'API est inscrite dans l'image web à la compilation : changer de
+    domaine impose de republier l'image, pas de modifier le compose
+- [ ] Provisionner le serveur — premier déploiement sur NAS UGREEN
 - [ ] Installer Docker et Compose
-- [ ] Déployer la pile `compose.example.yml`
-- [ ] Vérifier l'obtention des certificats sur les trois domaines
+- [ ] Déployer la pile `compose.nas.example.yml`
+- [ ] Rendre publics les trois paquets GHCR, faute de quoi le NAS ne peut pas les tirer
+- [ ] Vérifier l'obtention des certificats sur les quatre domaines
 - [ ] `NF-SEC-01` Vérifier HSTS et les en-têtes en production
 - [ ] Brancher la copie des sauvegardes hors du serveur — une sauvegarde restée sur la machine ne protège pas de sa perte
 

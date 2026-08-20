@@ -1,0 +1,301 @@
+# PartyPlan — pile pour NAS UGREEN (UGOS Pro), derrière Nginx Proxy Manager
+#
+# ============================================================================
+#  À COLLER TEL QUEL dans : Docker → Projet → Créer → « Coller le compose »
+# ============================================================================
+#
+# Ce fichier est autonome : aucun fichier `.env`, aucun chemin relatif, aucune
+# configuration à déposer sur le NAS. Il diffère de `compose.example.yml` sur
+# un seul point d'architecture : le reverse proxy Caddy est absent, parce que
+# Nginx Proxy Manager tient déjà ce rôle sur le NAS. Chaque service publie donc
+# un port sur l'hôte, que NPM va chercher.
+#
+# ---------------------------------------------------------------------------
+#  1. AVANT DE DÉMARRER
+# ---------------------------------------------------------------------------
+#
+#  a) Rendre les trois paquets GHCR publics, sinon le NAS ne pourra pas les
+#     télécharger : https://github.com/MAXCOEUR?tab=packages
+#     → partyplan-api, partyplan-web, partyplan-landing
+#     → chacun : Package settings → Change visibility → Public
+#
+#  b) Remplacer les huit marqueurs `REMPLACER_...` ci-dessous. Les commandes de
+#     génération sont indiquées au-dessus de chacun.
+#
+#  c) Vérifier que les ports 8091 à 8094 sont libres sur le NAS.
+#
+# ---------------------------------------------------------------------------
+#  2. APRÈS LE DÉMARRAGE — configuration de Nginx Proxy Manager
+# ---------------------------------------------------------------------------
+#
+#  Créer quatre hôtes proxy. `IP_DU_NAS` est l'adresse locale du NAS
+#  (par exemple 192.168.1.20) : ne pas mettre `localhost`, NPM tourne dans son
+#  propre conteneur et ne verrait pas ces services.
+#
+#  ┌──────────────────────────────────────┬──────────────┬─────────────────────┐
+#  │ Domaine                              │ Destination  │ Options à cocher    │
+#  ├──────────────────────────────────────┼──────────────┼─────────────────────┤
+#  │ partyplan.maxencecoeur.fr            │ IP_DU_NAS    │ SSL, Force SSL,     │
+#  │                                      │ :8092        │ HTTP/2, HSTS        │
+#  ├──────────────────────────────────────┼──────────────┼─────────────────────┤
+#  │ api.partyplan.maxencecoeur.fr        │ IP_DU_NAS    │ SSL, Force SSL,     │
+#  │                                      │ :8091        │ HTTP/2, HSTS,       │
+#  │                                      │              │ **Websockets**      │
+#  ├──────────────────────────────────────┼──────────────┼─────────────────────┤
+#  │ cdn.partyplan.maxencecoeur.fr        │ IP_DU_NAS    │ SSL, Force SSL,     │
+#  │                                      │ :8094        │ HTTP/2, HSTS        │
+#  ├──────────────────────────────────────┼──────────────┼─────────────────────┤
+#  │ www.maxencecoeur.fr                  │ IP_DU_NAS    │ SSL, Force SSL,     │
+#  │                                      │ :8093        │ HTTP/2, HSTS        │
+#  └──────────────────────────────────────┴──────────────┴─────────────────────┘
+#
+#  Websockets sur l'API : obligatoire. Le hub SignalR vit sur `/hubs/*` du
+#  domaine de l'API (ADR 0003). Sans cette case, la mise à jour en temps réel
+#  du lot 1.6 échouera silencieusement en repli sur du long polling.
+#
+#  HSTS : c'est le seul en-tête de sécurité que les images ne portent pas
+#  elles-mêmes. Caddy le posait ; ici c'est NPM qui termine le TLS, donc c'est
+#  à lui de le poser. Les autres en-têtes (nosniff, X-Frame-Options,
+#  Referrer-Policy, X-Robots-Tag) sont déjà émis par l'API et par les images
+#  web et vitrine — ne pas les redéclarer dans NPM, ils seraient dupliqués.
+#
+#  Sur l'hôte du CDN uniquement, onglet « Advanced » :
+#
+#      add_header Cache-Control "public, max-age=31536000, immutable" always;
+#
+#  Les photos portent une empreinte du contenu dans leur nom (RG-USR-03) :
+#  un cache d'un an est sans risque, une nouvelle photo a une nouvelle adresse.
+#
+# ---------------------------------------------------------------------------
+#  3. CE QUI EST DÉLIBÉRÉMENT LAISSÉ DE CÔTÉ
+# ---------------------------------------------------------------------------
+#
+#  Les variables GOOGLE_*, APPLE_* et FIREBASE_* sont vides. C'est voulu et
+#  sans conséquence : l'inscription et la connexion fonctionnent sans aucune
+#  clé Google (NF-DEV-05), et l'émetteur de notifications journalise en console
+#  faute de clé plutôt que de faire échouer l'action métier (NF-DEV-04).
+#
+#  SMTP, en revanche, est nécessaire : sans lui aucun lien de vérification
+#  d'adresse ni de réinitialisation de mot de passe ne part, et un compte créé
+#  reste non vérifié.
+#
+# ---------------------------------------------------------------------------
+#  4. LIMITE CONNUE
+# ---------------------------------------------------------------------------
+#
+#  Les ports 8091 à 8094 sont ouverts sur le réseau local. L'API fait confiance
+#  à l'en-tête `X-Forwarded-For` sans liste de proxys autorisés, ce qui est
+#  correct derrière NPM mais permet à une machine du LAN d'usurper une adresse
+#  et de contourner la limitation de débit par IP (RG-AUTH-05). Acceptable sur
+#  un réseau domestique, à revoir le jour où le NAS héberge de vrais
+#  utilisateurs.
+
+name: partyplan
+
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+services:
+
+  # ---------------------------------------------------------------- base ----
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    logging: *logging
+    environment:
+      POSTGRES_DB: partyplan
+      POSTGRES_USER: partyplan
+      # openssl rand -base64 24
+      POSTGRES_PASSWORD: REMPLACER_MOT_DE_PASSE_POSTGRES
+      # Comparaisons insensibles à la casse cohérentes avec citext.
+      LANG: fr_FR.utf8
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    networks:
+      - internal
+    # Aucun port publié : la base n'est joignable que depuis le réseau interne.
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U partyplan -d partyplan"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  # ----------------------------------------------------------------- api ----
+  api:
+    image: ghcr.io/maxcoeur/partyplan-api:latest
+    restart: unless-stopped
+    logging: *logging
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "8091:8080"
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      # Le mot de passe doit être identique à POSTGRES_PASSWORD ci-dessus.
+      ConnectionStrings__Default: >-
+        Host=db;Port=5432;Database=partyplan;Username=partyplan;Password=REMPLACER_MOT_DE_PASSE_POSTGRES;Maximum Pool Size=40
+
+      # ---------- Authentification ----------
+      Jwt__Issuer: https://api.partyplan.maxencecoeur.fr
+      Jwt__Audience: partyplan-app
+      # 32 octets minimum : openssl rand -base64 48
+      Jwt__SigningKey: REMPLACER_CLE_SIGNATURE_JWT
+
+      # ---------- Chiffrement des secrets de double authentification ----------
+      # RG-AUTH-10 : doit différer de Jwt__SigningKey, l'API refuse de démarrer
+      # sinon. openssl rand -base64 32
+      Security__EncryptionKey: REMPLACER_CLE_CHIFFREMENT
+      Totp__Name: PartyPlan
+
+      # ---------- Amorçage de l'administrateur — RG-ADM-09 à RG-ADM-12 ----------
+      # Obligatoire au premier démarrage. Douze caractères minimum, sinon refus
+      # de démarrer (RG-ADM-11). Ce mot de passe devra être changé dès la
+      # première connexion (RG-ADM-10), après quoi la ligne Admin__Password peut
+      # être retirée puis le projet redéployé (RG-ADM-12).
+      Admin__Email: REMPLACER_ADRESSE_ADMIN
+      Admin__Password: REMPLACER_MOT_DE_PASSE_ADMIN
+
+      # ---------- Domaines ----------
+      Cors__AllowedOrigins__0: https://partyplan.maxencecoeur.fr
+      Cors__AllowedOrigins__1: https://www.maxencecoeur.fr
+      App__PublicBaseUrl: https://partyplan.maxencecoeur.fr
+      App__CdnBaseUrl: https://cdn.partyplan.maxencecoeur.fr
+
+      # ---------- Médias ----------
+      # Sans cette injection, les adresses des photos de profil pointeraient
+      # vers localhost : invisible en développement, cassé en production.
+      Media__RootPath: /var/lib/partyplan/media
+      Media__PublicBaseUrl: https://cdn.partyplan.maxencecoeur.fr
+
+      # ---------- Base et limitation de débit ----------
+      Database__MigrateOnStartup: "true"
+      Database__SeedDemoData: "false"
+      RateLimiting__Enabled: "true"
+      RateLimiting__GlobalPerMinute: "300"
+      RateLimiting__ShortCodePerMinute: "10"
+      RateLimiting__PasswordResetPerHour: "10"
+      RateLimiting__AuthAttemptsPerMinute: "20"
+
+      # ---------- Courriel transactionnel ----------
+      # Sans ces valeurs, aucun lien de vérification ni de réinitialisation ne
+      # part. L'API démarre quand même, mais un compte créé reste non vérifié.
+      Smtp__Host: REMPLACER_HOTE_SMTP
+      Smtp__Port: "587"
+      Smtp__User: REMPLACER_UTILISATEUR_SMTP
+      Smtp__Password: REMPLACER_MOT_DE_PASSE_SMTP
+      Smtp__From: PartyPlan <bonjour@partyplan.maxencecoeur.fr>
+
+      # ---------- Connexions tierces et notifications ----------
+      # Volontairement vides : l'instance fonctionne sans (NF-DEV-04, NF-DEV-05).
+      # L'écran des moyens de connexion distingue « l'instance n'a pas les clés »
+      # de « le compte est rattaché », et n'affiche donc aucun bouton condamné.
+      Google__ClientId: ""
+      Google__AndroidClientId: ""
+      Google__IosClientId: ""
+      Push__FirebaseServiceAccountJson: ""
+    volumes:
+      - media:/var/lib/partyplan/media
+    networks:
+      - internal
+      - edge
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:8080/health/ready"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 40s
+
+  # ------------------------------------------------- application web (PWA) ----
+  # Attention : l'adresse de l'API est inscrite dans le JavaScript à la
+  # compilation de l'image (app/Dockerfile, ARG API_BASE_URL). Elle vaut
+  # https://api.partyplan.maxencecoeur.fr. Changer de domaine impose de
+  # reconstruire et republier l'image, pas de modifier ce fichier.
+  web:
+    image: ghcr.io/maxcoeur/partyplan-web:latest
+    restart: unless-stopped
+    logging: *logging
+    depends_on:
+      - api
+    ports:
+      - "8092:80"
+    networks:
+      - edge
+
+  # ---------------------------------------------------------- site vitrine ----
+  landing:
+    image: ghcr.io/maxcoeur/partyplan-landing:latest
+    restart: unless-stopped
+    logging: *logging
+    ports:
+      - "8093:80"
+    networks:
+      - edge
+
+  # ------------------------------------------------------------------ cdn ----
+  # Sert les photos de profil depuis le volume partagé avec l'API. En
+  # production l'API ne sert pas les fichiers statiques : elle réserve cela au
+  # développement, où le domaine statique n'existe pas. Ce conteneur reprend le
+  # rôle que Caddy tenait dans `compose.example.yml`.
+  #
+  # La configuration nginx par défaut sert /usr/share/nginx/html telle quelle :
+  # aucun fichier à déposer sur le NAS. Le montage est en lecture seule, aucune
+  # écriture ne passe par ce nom.
+  cdn:
+    image: nginx:1.27-alpine
+    restart: unless-stopped
+    logging: *logging
+    ports:
+      - "8094:80"
+    volumes:
+      - media:/usr/share/nginx/html:ro
+    networks:
+      - edge
+
+  # ----------------------------------------------------------- sauvegardes ----
+  # Vidage quotidien, rétention 30 jours (NF-OPS-04).
+  #
+  # Une sauvegarde restée sur la machine ne protège pas de sa perte : le volume
+  # `backups` doit être recopié hors du NAS. Sur UGOS, le plus simple est de
+  # remplacer la ligne du volume par un montage vers un dossier partagé déjà
+  # synchronisé, par exemple :
+  #     - /volume1/sauvegardes/partyplan:/backups
+  backup:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    logging: *logging
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      PGPASSWORD: REMPLACER_MOT_DE_PASSE_POSTGRES
+    volumes:
+      - backups:/backups
+    networks:
+      - internal
+    entrypoint: ["/bin/sh", "-c"]
+    command: >
+      'while true; do
+         f=/backups/partyplan-$$(date +%Y%m%d-%H%M%S).sql.gz;
+         pg_dump -h db -U partyplan -d partyplan | gzip > "$$f" \
+           && echo "sauvegarde $$f" \
+           || echo "ECHEC de sauvegarde";
+         find /backups -name "partyplan-*.sql.gz" -mtime +30 -delete;
+         sleep 86400;
+       done'
+
+networks:
+  # Base et API : jamais joignable depuis l'extérieur du projet.
+  internal:
+    internal: true
+  # Services que Nginx Proxy Manager doit atteindre par les ports publiés.
+  edge: {}
+
+volumes:
+  db-data: {}
+  media: {}
+  backups: {}
