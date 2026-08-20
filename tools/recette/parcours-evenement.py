@@ -136,7 +136,8 @@ jetons_invites = {}
 for nom, presence in [("Lucas", "Going"), ("Emma", "Maybe"), ("Rémi", "Late"),
                       ("Thomas", "NotGoing")]:
     statut, adhesion = appel("POST", f"/join/{jeton_lien}",
-                             {"displayName": nom, "status": presence})
+                             {"displayName": nom, "status": presence},
+                             cle_idempotence=uuid.uuid4().hex)
     verifier(f"{nom} rejoint sans compte, statut « {presence} »", statut == 200, f"{statut}")
     if statut == 200 and adhesion.get("guestToken"):
         jetons_invites[nom] = adhesion["guestToken"]
@@ -144,7 +145,8 @@ for nom, presence in [("Lucas", "Going"), ("Emma", "Maybe"), ("Rémi", "Late"),
 verifier("un jeton d'invité est remis à chacun", len(jetons_invites) == 4,
          str(len(jetons_invites)))
 
-statut, _ = appel("POST", f"/join/{jeton_lien}", {"displayName": "", "status": "Going"})
+statut, _ = appel("POST", f"/join/{jeton_lien}", {"displayName": "", "status": "Going"},
+                  cle_idempotence=uuid.uuid4().hex)
 verifier("un prénom vide est refusé", statut == 400, f"{statut}")
 
 if jetons_invites:
@@ -190,7 +192,7 @@ verifier("le nombre d'accompagnants est plafonné",
 print("\n--- Rôles (RG-ROLE-01 à RG-ROLE-03) ---")
 participant = compte("Lucas")
 appel("POST", f"/join/{jeton_lien}", {"displayName": "Lucas (compte)", "status": "Going"},
-      jeton=participant)
+      jeton=participant, cle_idempotence=uuid.uuid4().hex)
 
 statut, corps = appel("PATCH", f"/events/{evenement_id}", {"name": "Détourné"}, jeton=participant)
 verifier("un membre ordinaire ne modifie pas l'événement",
@@ -209,7 +211,7 @@ verifier("un membre ordinaire peut quitter", statut == 204, f"{statut}")
 print("\n--- Transfert de propriété (RG-ROLE-02) ---")
 repreneur = compte("Lucie")
 appel("POST", f"/join/{jeton_lien}", {"displayName": "Lucie", "status": "Going"},
-      jeton=repreneur)
+      jeton=repreneur, cle_idempotence=uuid.uuid4().hex)
 
 statut, membres = appel("GET", f"/events/{evenement_id}/members", jeton=organisateur)
 cible = next((m for m in membres if m["displayName"] == "Lucie"), None)
@@ -217,7 +219,7 @@ verifier("le repreneur est bien membre", cible is not None)
 
 if cible:
     statut, corps = appel("POST", f"/events/{evenement_id}/members/{cible['id']}/transfer-ownership",
-                          jeton=repreneur)
+                          jeton=repreneur, cle_idempotence=uuid.uuid4().hex)
     verifier("un membre ordinaire ne transfère pas la propriété",
              statut == 403 and corps.get("code") == "event.only_owner_transfers", f"{statut}")
 
@@ -226,13 +228,13 @@ if cible:
         statut, corps = appel(
             "POST",
             f"/events/{evenement_id}/members/{invite_sans_compte['id']}/transfer-ownership",
-            jeton=organisateur)
+            jeton=organisateur, cle_idempotence=uuid.uuid4().hex)
         verifier("un invité sans compte ne peut pas devenir propriétaire",
                  statut == 422 and corps.get("code") == "event.transfer_needs_account",
                  f"{statut}")
 
     statut, _ = appel("POST", f"/events/{evenement_id}/members/{cible['id']}/transfer-ownership",
-                      jeton=organisateur)
+                      jeton=organisateur, cle_idempotence=uuid.uuid4().hex)
     verifier("le transfert aboutit", statut == 204, f"{statut}")
 
     statut, membres = appel("GET", f"/events/{evenement_id}/members", jeton=repreneur)
@@ -253,7 +255,8 @@ statut, _ = appel("PATCH", f"/events/{evenement_id}/join-enabled", {"joinEnabled
                   jeton=organisateur)
 verifier("les arrivées se ferment", statut == 204, f"{statut}")
 
-statut, corps = appel("POST", f"/join/{jeton_lien}", {"displayName": "Trop tard", "status": "Going"})
+statut, corps = appel("POST", f"/join/{jeton_lien}", {"displayName": "Trop tard", "status": "Going"},
+                      cle_idempotence=uuid.uuid4().hex)
 verifier("un événement fermé refuse les arrivées",
          statut == 422 and corps.get("code") == "invitation.closed", f"{statut}")
 

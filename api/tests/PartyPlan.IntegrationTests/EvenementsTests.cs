@@ -110,11 +110,7 @@ public sealed class EvenementsTests(PartyPlanApiFixture fixture)
 
         using var invite = fixture.CreateClient();
 
-        var adhesion = await invite.PostAsJsonAsync($"/v1/join/{jeton}", new
-        {
-            displayName = "Julie",
-            status = "Going",
-        });
+        var adhesion = await RejoindreAsync(invite, jeton, "Julie", "Going");
 
         adhesion.StatusCode.ShouldBe(HttpStatusCode.OK);
 
@@ -151,11 +147,7 @@ public sealed class EvenementsTests(PartyPlanApiFixture fixture)
         var (eventB, _, _) = await CreerAsync(organisateur, "Événement B");
 
         using var invite = fixture.CreateClient();
-        var adhesion = await invite.PostAsJsonAsync($"/v1/join/{jetonA}", new
-        {
-            displayName = "Julie",
-            status = "Going",
-        });
+        var adhesion = await RejoindreAsync(invite, jetonA, "Julie", "Going");
 
         var jetonInvite = (await adhesion.Content.ReadFromJsonAsync<JsonDocument>())!
             .RootElement.GetProperty("guestToken").GetString();
@@ -230,11 +222,7 @@ public sealed class EvenementsTests(PartyPlanApiFixture fixture)
 
         using var invite = fixture.CreateClient();
 
-        var refus = await invite.PostAsJsonAsync($"/v1/join/{jeton}", new
-        {
-            displayName = "Trop tard",
-            status = "Going",
-        });
+        var refus = await RejoindreAsync(invite, jeton, "Trop tard", "Going");
 
         refus.StatusCode.ShouldBe(HttpStatusCode.UnprocessableEntity);
         (await Code(refus)).ShouldBe("invitation.closed");
@@ -254,11 +242,7 @@ public sealed class EvenementsTests(PartyPlanApiFixture fixture)
         var (eventId, jeton, _) = await CreerAsync(organisateur, "Chasse gardée");
 
         var participant = await CompteAsync();
-        await participant.PostAsJsonAsync($"/v1/join/{jeton}", new
-        {
-            displayName = "Lucas",
-            status = "Going",
-        });
+        await RejoindreAsync(participant, jeton, "Lucas", "Going");
 
         var modification = await participant.PatchAsJsonAsync(
             $"/v1/events/{eventId}",
@@ -302,11 +286,7 @@ public sealed class EvenementsTests(PartyPlanApiFixture fixture)
                  })
         {
             using var invite = fixture.CreateClient();
-            await invite.PostAsJsonAsync($"/v1/join/{jeton}", new
-            {
-                displayName = nom,
-                status = statut,
-            });
+            await RejoindreAsync(invite, jeton, nom, statut);
         }
 
         var evenement = await organisateur.GetFromJsonAsync<JsonDocument>($"/v1/events/{eventId}");
@@ -377,11 +357,7 @@ public sealed class EvenementsTests(PartyPlanApiFixture fixture)
 
         // Un membre avec compte : un invité sans compte ne peut pas devenir propriétaire.
         var repreneur = await CompteAsync();
-        await repreneur.PostAsJsonAsync($"/v1/join/{jeton}", new
-        {
-            displayName = "Lucas",
-            status = "Going",
-        });
+        await RejoindreAsync(repreneur, jeton, "Lucas", "Going");
 
         var membres = await organisateur.GetFromJsonAsync<JsonDocument>(
             $"/v1/events/{eventId}/members");
@@ -395,9 +371,7 @@ public sealed class EvenementsTests(PartyPlanApiFixture fixture)
                 new Uri($"/v1/events/{eventId}/members/me", UriKind.Relative)))
             .StatusCode.ShouldBe(HttpStatusCode.UnprocessableEntity);
 
-        var transfert = await organisateur.PostAsync(
-            new Uri($"/v1/events/{eventId}/members/{cible}/transfer-ownership", UriKind.Relative),
-            null);
+        var transfert = await TransfererBrutAsync(organisateur, eventId, cible!, Guid.CreateVersion7().ToString());
 
         transfert.StatusCode.ShouldBe(HttpStatusCode.NoContent);
 
@@ -427,11 +401,7 @@ public sealed class EvenementsTests(PartyPlanApiFixture fixture)
         var (eventId, jeton, _) = await CreerAsync(organisateur, "Sans compte");
 
         using var invite = fixture.CreateClient();
-        await invite.PostAsJsonAsync($"/v1/join/{jeton}", new
-        {
-            displayName = "Julie",
-            status = "Going",
-        });
+        await RejoindreAsync(invite, jeton, "Julie", "Going");
 
         var membres = await organisateur.GetFromJsonAsync<JsonDocument>(
             $"/v1/events/{eventId}/members");
@@ -440,9 +410,7 @@ public sealed class EvenementsTests(PartyPlanApiFixture fixture)
             .Single(m => m.GetProperty("displayName").GetString() == "Julie")
             .GetProperty("id").GetString();
 
-        var refus = await organisateur.PostAsync(
-            new Uri($"/v1/events/{eventId}/members/{cible}/transfer-ownership", UriKind.Relative),
-            null);
+        var refus = await TransfererBrutAsync(organisateur, eventId, cible!, Guid.CreateVersion7().ToString());
 
         // Un invité sans compte ne retrouverait pas l'événement depuis un autre appareil.
         refus.StatusCode.ShouldBe(HttpStatusCode.UnprocessableEntity);
@@ -456,11 +424,7 @@ public sealed class EvenementsTests(PartyPlanApiFixture fixture)
         var (eventId, jeton, _) = await CreerAsync(organisateur, "Chasse gardée 2");
 
         var membre = await CompteAsync();
-        await membre.PostAsJsonAsync($"/v1/join/{jeton}", new
-        {
-            displayName = "Lucas",
-            status = "Going",
-        });
+        await RejoindreAsync(membre, jeton, "Lucas", "Going");
 
         var membres = await organisateur.GetFromJsonAsync<JsonDocument>(
             $"/v1/events/{eventId}/members");
@@ -469,9 +433,7 @@ public sealed class EvenementsTests(PartyPlanApiFixture fixture)
             .Single(m => m.GetProperty("displayName").GetString() == "Lucas")
             .GetProperty("id").GetString();
 
-        var refus = await membre.PostAsync(
-            new Uri($"/v1/events/{eventId}/members/{soi}/transfer-ownership", UriKind.Relative),
-            null);
+        var refus = await TransfererBrutAsync(membre, eventId, soi!, Guid.CreateVersion7().ToString());
 
         refus.StatusCode.ShouldBe(HttpStatusCode.Forbidden);
         (await Code(refus)).ShouldBe("event.only_owner_transfers");
@@ -542,6 +504,145 @@ public sealed class EvenementsTests(PartyPlanApiFixture fixture)
             eventId,
             invitation!.RootElement.GetProperty("token").GetString()!,
             invitation.RootElement.GetProperty("shortCode").GetString()!);
+    }
+
+    [Fact]
+    public async Task Adhesion_rejouee_avec_la_meme_cle_ne_cree_pas_deux_membres()
+    {
+        var organisateur = await CompteAsync();
+        var (eventId, jeton, _) = await CreerAsync(organisateur, "Rejeu d'adhésion");
+
+        using var invite = fixture.CreateClient();
+        var cle = Guid.CreateVersion7().ToString();
+        var corps = new { displayName = "Léa", status = "Going" };
+
+        var premiere = await RejoindreBrutAsync(invite, jeton, corps, cle);
+        var seconde = await RejoindreBrutAsync(invite, jeton, corps, cle);
+
+        premiere.StatusCode.ShouldBe(HttpStatusCode.OK);
+
+        // Le rejeu rend la réponse mémorisée. C'est exactement ce qui se produit au
+        // retour du réseau, quand le client vide sa file d'écritures.
+        seconde.StatusCode.ShouldBe(HttpStatusCode.OK);
+
+        var membres = await MembresAsync(organisateur, eventId);
+        membres.EnumerateArray()
+            .Count(m => m.GetProperty("displayName").GetString() == "Léa")
+            .ShouldBe(1);
+    }
+
+    [Fact]
+    public async Task Adhesion_sans_cle_d_idempotence_est_refusee()
+    {
+        var organisateur = await CompteAsync();
+        var (_, jeton, _) = await CreerAsync(organisateur, "Sans clé");
+
+        using var invite = fixture.CreateClient();
+
+        var reponse = await RejoindreBrutAsync(
+            invite,
+            jeton,
+            new { displayName = "Léa", status = "Going" });
+
+        reponse.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
+    }
+
+    [Fact]
+    public async Task Transfert_de_propriete_rejoue_ne_change_rien()
+    {
+        var organisateur = await CompteAsync();
+        var (eventId, jeton, _) = await CreerAsync(organisateur, "Rejeu de transfert");
+
+        var repreneur = await CompteAsync();
+        await RejoindreAsync(repreneur, jeton, "Lucas");
+
+        var avant = await MembresAsync(organisateur, eventId);
+        var cible = avant.EnumerateArray()
+            .Single(m => m.GetProperty("displayName").GetString() == "Lucas")
+            .GetProperty("id").GetString()!;
+
+        var cle = Guid.CreateVersion7().ToString();
+
+        (await TransfererBrutAsync(organisateur, eventId, cible, cle))
+            .StatusCode.ShouldBe(HttpStatusCode.NoContent);
+
+        // Rejoué, le transfert rend la réponse mémorisée. Sans idempotence, le second
+        // appel échouerait — l'appelant n'étant plus propriétaire — et le client
+        // afficherait une erreur pour une action qui a pourtant abouti.
+        (await TransfererBrutAsync(organisateur, eventId, cible, cle))
+            .StatusCode.ShouldBe(HttpStatusCode.NoContent);
+
+        var apres = await MembresAsync(repreneur, eventId);
+        apres.EnumerateArray()
+            .Count(m => m.GetProperty("role").GetString() == "Owner")
+            .ShouldBe(1);
+        apres.EnumerateArray()
+            .Single(m => m.GetProperty("role").GetString() == "Owner")
+            .GetProperty("displayName").GetString().ShouldBe("Lucas");
+    }
+
+    /// <summary>
+    /// Rejoint un événement. L'en-tête d'idempotence est obligatoire : cette écriture
+    /// peut être mise en file par le client hors ligne (NF-OFFLINE-01), et son rejeu
+    /// ne doit jamais produire un second membre.
+    /// </summary>
+    internal static Task<HttpResponseMessage> RejoindreBrutAsync(
+        HttpClient client,
+        string jeton,
+        object corps,
+        string? cle = null)
+    {
+        var requete = new HttpRequestMessage(
+            HttpMethod.Post,
+            new Uri($"/v1/join/{jeton}", UriKind.Relative))
+        {
+            Content = JsonContent.Create(corps),
+        };
+
+        if (cle is not null)
+        {
+            requete.Headers.Add("Idempotency-Key", cle);
+        }
+
+        return client.SendAsync(requete);
+    }
+
+    private static Task<HttpResponseMessage> RejoindreAsync(
+        HttpClient client,
+        string jeton,
+        string prenom,
+        string statut = "Going") =>
+        RejoindreBrutAsync(
+            client,
+            jeton,
+            new { displayName = prenom, status = statut },
+            Guid.CreateVersion7().ToString());
+
+    /// <summary>Transfert de propriété, idempotent pour la même raison.</summary>
+    internal static Task<HttpResponseMessage> TransfererBrutAsync(
+        HttpClient client,
+        string eventId,
+        string membreId,
+        string? cle = null)
+    {
+        var requete = new HttpRequestMessage(
+            HttpMethod.Post,
+            new Uri($"/v1/events/{eventId}/members/{membreId}/transfer-ownership", UriKind.Relative));
+
+        if (cle is not null)
+        {
+            requete.Headers.Add("Idempotency-Key", cle);
+        }
+
+        return client.SendAsync(requete);
+    }
+
+    private static async Task<JsonElement> MembresAsync(HttpClient client, string eventId)
+    {
+        var membres = await client.GetFromJsonAsync<JsonDocument>(
+            $"/v1/events/{eventId}/members");
+
+        return membres!.RootElement.Clone();
     }
 
     private static async Task<string?> Code(HttpResponseMessage reponse)

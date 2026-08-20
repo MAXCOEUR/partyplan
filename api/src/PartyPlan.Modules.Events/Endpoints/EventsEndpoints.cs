@@ -188,6 +188,9 @@ internal static class EventsEndpoints
             .RequireRateLimiting(ShortCodePolicy)
             .Produces<JoinPreview>();
 
+        // Écriture susceptible d'être mise en file par le client hors ligne
+        // (NF-OFFLINE-01) : le rejeu doit rendre la réponse mémorisée, jamais créer un
+        // second membre.
         groupe.MapPost("/{token}", async (
                 string token,
                 JoinBody corps,
@@ -204,7 +207,8 @@ internal static class EventsEndpoints
                     .ConfigureAwait(false));
             })
             .WithName("JoinEvent")
-            .WithSummary("Rejoint l'événement. Aucun compte n'est exigé.")
+            .WithSummary("Rejoint l'événement. Aucun compte n'est exigé. En-tête Idempotency-Key obligatoire.")
+            .RequireIdempotency()
             .Produces<JoinResult>();
     }
 
@@ -259,6 +263,10 @@ internal static class EventsEndpoints
             .WithName("RemoveMember")
             .WithSummary("Exclut un participant. Ses données financières subsistent.");
 
+        // Même raison que l'adhésion : mise en file possible hors ligne, donc rejeu
+        // possible. Sans idempotence, le second appel échouerait — l'appelant n'étant
+        // plus propriétaire — et le client afficherait une erreur pour une action qui a
+        // pourtant abouti.
         groupe.MapPost("/{memberId:guid}/transfer-ownership", async (
                 Guid eventId,
                 Guid memberId,
@@ -268,7 +276,8 @@ internal static class EventsEndpoints
                 .TransfererProprieteAsync(eventId, memberId, cancellationToken)
                 .ConfigureAwait(false)))
             .WithName("TransferOwnership")
-            .WithSummary("Transfère la propriété. L'ancien propriétaire devient administrateur.");
+            .WithSummary("Transfère la propriété. L'ancien propriétaire devient administrateur. En-tête Idempotency-Key obligatoire.")
+            .RequireIdempotency();
     }
 
     private static string BaseUrl(IConfiguration configuration) =>
