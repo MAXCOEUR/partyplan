@@ -1,9 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:partyplan/design/components/pp_status_chip.dart';
+import 'package:partyplan/app/app.dart';
 import 'package:partyplan/design/theme.dart';
 
+/// Les délégués de localisation sont indispensables depuis que les libellés du
+/// composant viennent des chaînes traduites et non plus du code (NF-I18N-01).
 Widget _sous(Widget enfant) => MaterialApp(
+  localizationsDelegates: PartyPlanApp.delegues,
+  supportedLocales: PartyPlanApp.languesPrisesEnCharge,
+  locale: const Locale('fr'),
   theme: PpTheme.clair(),
   home: Scaffold(body: Center(child: enfant)),
 );

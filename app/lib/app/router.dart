@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../core/providers.dart';
+import '../features/accueil/accueil_page.dart';
 import '../features/admin/admin_audit_page.dart';
 import '../features/admin/admin_comptes_page.dart';
 import '../features/auth/connexion_page.dart';
@@ -10,12 +11,17 @@ import '../features/auth/inscription_page.dart';
 import '../features/auth/mot_de_passe_oublie_page.dart';
 import '../features/auth/second_facteur_page.dart';
 import '../features/evenement/coquille_evenement.dart';
+import '../features/evenement/creation_evenement_page.dart';
+import '../features/evenement/invitation_page.dart';
+import '../features/evenement/invites_page.dart';
+import '../features/evenement/parametres_evenement_page.dart';
 import '../features/profil/confidentialite_page.dart';
 import '../features/profil/connexions_page.dart';
 import '../features/profil/profil_edition_page.dart';
-import '../features/profil/profil_page.dart';
 import '../features/profil/second_facteur_reglage_page.dart';
 import '../features/profil/securite_page.dart';
+import '../features/rejoindre/adhesion_page.dart';
+import '../features/rejoindre/apercu_invitation_page.dart';
 import '../features/rejoindre/rejoindre_page.dart';
 import '../l10n/generated/pp_localisations.dart';
 
@@ -44,9 +50,35 @@ abstract final class PpRoutes {
   // Événementiel
   static const rejoindre = '/join/:token';
   static const rejoindreParCode = '/rejoindre';
+
+  /// Déclarée **avant** `evenement` dans la table des routes : `go_router` compare dans
+  /// l'ordre, et `/events/:eventId` capterait sinon « nouveau » comme identifiant.
+  static const creationEvenement = '/events/nouveau';
+
+  /// Aperçu et adhésion par code court. Distincts de `/join/:token` : le code ne
+  /// donne pas accès au jeton, qui reste secret (RG-INV-04).
+  static const apercuParCode = '/rejoindre/:code';
+  static const adhesionParCode = '/rejoindre/:code/participer';
+  static const adhesionParJeton = '/join/:token/participer';
+
   static const evenement = '/events/:eventId';
+  static const evenementInvites = '/events/:eventId/invites';
+  static const evenementInvitation = '/events/:eventId/inviter';
+  static const evenementParametres = '/events/:eventId/parametres';
 
   static String versEvenement(String eventId) => '/events/$eventId';
+
+  static String versApercuParCode(String code) => '/rejoindre/$code';
+
+  static String versAdhesion(String jeton) => '/join/$jeton/participer';
+
+  static String versAdhesionParCode(String code) => '/rejoindre/$code/participer';
+
+  static String versInvites(String eventId) => '/events/$eventId/invites';
+
+  static String versInvitation(String eventId) => '/events/$eventId/inviter';
+
+  static String versParametres(String eventId) => '/events/$eventId/parametres';
 
   static String versRejoindre(String token) => '/join/$token';
 
@@ -88,10 +120,14 @@ GoRouter creerRouteur(Ref ref) => GoRouter(
     final connecte = session.requireValue == EtatSession.connecte;
     final invite = session.requireValue == EtatSession.invite;
 
-    // Le lien d'invitation reste accessible en toutes circonstances : c'est le point
-    // d'entrée de tout invité (EF-INV-04), et exiger une session ici ruinerait
-    // l'adoption.
-    if (chemin.startsWith('/join/')) {
+    // Le lien d'invitation et la saisie de code restent accessibles en toutes
+    // circonstances : c'est le point d'entrée de tout invité (EF-INV-04), et exiger
+    // une session ici ruinerait l'adoption.
+    //
+    // La redirection vers l'accueil d'un compte connecté est écartée elle aussi : une
+    // personne déjà connectée qui reçoit un lien doit pouvoir rejoindre l'événement,
+    // pas se retrouver sur sa propre liste sans explication.
+    if (chemin.startsWith('/join/') || chemin.startsWith('/rejoindre')) {
       return null;
     }
 
@@ -108,7 +144,7 @@ GoRouter creerRouteur(Ref ref) => GoRouter(
   routes: [
     GoRoute(
       path: PpRoutes.accueil,
-      builder: (context, state) => const ProfilPage(),
+      builder: (context, state) => const AccueilPage(),
     ),
     GoRoute(
       path: PpRoutes.connexion,
@@ -160,16 +196,51 @@ GoRouter creerRouteur(Ref ref) => GoRouter(
     GoRoute(
       path: PpRoutes.rejoindre,
       builder: (context, state) =>
-          RejoindrePage(token: state.pathParameters['token']),
+          ApercuInvitationPage(jeton: state.pathParameters['token']),
+    ),
+    GoRoute(
+      path: PpRoutes.adhesionParJeton,
+      builder: (context, state) =>
+          AdhesionPage(jeton: state.pathParameters['token']),
     ),
     GoRoute(
       path: PpRoutes.rejoindreParCode,
       builder: (context, state) => const RejoindrePage(),
     ),
     GoRoute(
+      path: PpRoutes.apercuParCode,
+      builder: (context, state) =>
+          ApercuInvitationPage(code: state.pathParameters['code']),
+    ),
+    GoRoute(
+      path: PpRoutes.adhesionParCode,
+      builder: (context, state) =>
+          AdhesionPage(code: state.pathParameters['code']),
+    ),
+    // Avant `/events/:eventId` : sinon « nouveau » serait pris pour un identifiant.
+    GoRoute(
+      path: PpRoutes.creationEvenement,
+      builder: (context, state) => const CreationEvenementPage(),
+    ),
+    GoRoute(
       path: PpRoutes.evenement,
       builder: (context, state) =>
           CoquilleEvenement(eventId: state.pathParameters['eventId']!),
+    ),
+    GoRoute(
+      path: PpRoutes.evenementInvites,
+      builder: (context, state) =>
+          InvitesPage(evenementId: state.pathParameters['eventId']!),
+    ),
+    GoRoute(
+      path: PpRoutes.evenementInvitation,
+      builder: (context, state) =>
+          InvitationPage(evenementId: state.pathParameters['eventId']!),
+    ),
+    GoRoute(
+      path: PpRoutes.evenementParametres,
+      builder: (context, state) =>
+          ParametresEvenementPage(evenementId: state.pathParameters['eventId']!),
     ),
   ],
   errorBuilder: (context, state) => Scaffold(

@@ -1,50 +1,210 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
 
+import '../../app/router.dart';
+import '../../core/models/evenement.dart';
+import '../../core/models/membre.dart';
+import '../../core/providers.dart';
+import '../../design/components/pp_bandeau_hors_ligne.dart';
 import '../../design/components/pp_card.dart';
 import '../../design/components/pp_states.dart';
+import '../../design/components/pp_status_chip.dart';
 import '../../design/tokens.dart';
-import '../../l10n/marque.dart';
 import '../../l10n/generated/pp_localisations.dart';
+import '../../l10n/marque.dart';
+import '../evenement/presence_vers_pastille.dart';
 
 /// Écran d'accueil : les événements de la personne, à venir puis passés (EF-EVT-05).
-///
-/// Vide au lot 0.5 : la liste arrive avec le module Events en V1.0. L'état vide est en
-/// revanche déjà écrit, car c'est le premier écran que verra tout nouvel utilisateur.
-class AccueilPage extends StatelessWidget {
+class AccueilPage extends ConsumerWidget {
   const AccueilPage({super.key});
 
   @override
-  Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(
-      title: const Text(PpMarque.nom),
-      actions: [
-        IconButton(
-          onPressed: null,
-          icon: const Icon(Icons.notifications_none_rounded),
-          tooltip: 'Notifications',
-        ),
-        const SizedBox(width: PpSpacing.sm),
-      ],
-    ),
-    body: PpEmptyState(
-      titre: PpL10n.of(context).accueilVideTitre,
-      explication: PpL10n.of(context).accueilVideExplication,
-      action: Column(
-        children: [
-          FilledButton.icon(
-            onPressed: null,
-            icon: const Icon(Icons.add_rounded),
-            label: Text(PpL10n.of(context).creerUnEvenement),
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = PpL10n.of(context);
+    final evenements = ref.watch(mesEvenementsProvider);
+
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text(PpMarque.nom),
+        actions: [
+          IconButton(
+            onPressed: () => context.push(PpRoutes.profilEdition),
+            icon: const Icon(Icons.person_outline_rounded),
+            tooltip: l10n.accueilMonProfil,
           ),
-          const SizedBox(height: PpSpacing.sm),
-          TextButton(
-            onPressed: null,
-            child: Text(PpL10n.of(context).rejoindreUnEvenement),
+          const SizedBox(width: PpSpacing.sm),
+        ],
+      ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () => context.push(PpRoutes.creationEvenement),
+        icon: const Icon(Icons.add_rounded),
+        label: Text(l10n.creerUnEvenement),
+      ),
+      body: Column(
+        children: [
+          ListenableBuilder(
+            listenable: ref.watch(etatReseauProvider),
+            builder: (context, _) => PpBandeauHorsLigne(
+              etat: ref.read(etatReseauProvider),
+              onReessayer: () => ref.invalidate(mesEvenementsProvider),
+            ),
+          ),
+          Expanded(
+            child: evenements.when(
+              loading: () => const PpLoadingState(),
+              error: (_, _) => PpErrorState(
+                message: l10n.accueilChargementErreur,
+                onRetry: () => ref.invalidate(mesEvenementsProvider),
+              ),
+              data: (liste) => liste.isEmpty
+                  ? _etatVide(context)
+                  : _Liste(evenements: liste, ref: ref),
+            ),
           ),
         ],
       ),
-    ),
-  );
+    );
+  }
+
+  Widget _etatVide(BuildContext context) {
+    final l10n = PpL10n.of(context);
+
+    return PpEmptyState(
+      titre: l10n.accueilVideTitre,
+      explication: l10n.accueilVideExplication,
+      action: Column(
+        children: [
+          FilledButton.icon(
+            onPressed: () => context.push(PpRoutes.creationEvenement),
+            icon: const Icon(Icons.add_rounded),
+            label: Text(l10n.creerUnEvenement),
+          ),
+          const SizedBox(height: PpSpacing.sm),
+          TextButton(
+            onPressed: () => context.push(PpRoutes.rejoindreParCode),
+            child: Text(l10n.rejoindreUnEvenement),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Liste sectionnée : à venir d'abord, du plus proche au plus lointain ; puis les
+/// passés, du plus récent au plus ancien.
+///
+/// L'appartenance à une section vient du serveur (`isPast`) et n'est jamais recalculée :
+/// l'horloge d'un téléphone peut être fausse, et une soirée passerait du mauvais côté.
+class _Liste extends StatelessWidget {
+  const _Liste({required this.evenements, required this.ref});
+
+  final List<EvenementDeLaListe> evenements;
+  final WidgetRef ref;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = PpL10n.of(context);
+
+    final aVenir =
+        evenements.where((e) => !e.estPasse).toList()
+          ..sort((a, b) => a.debut.compareTo(b.debut));
+    final passes =
+        evenements.where((e) => e.estPasse).toList()
+          ..sort((a, b) => b.debut.compareTo(a.debut));
+
+    return RefreshIndicator(
+      onRefresh: () async => ref.invalidate(mesEvenementsProvider),
+      child: ListView(
+        padding: const EdgeInsets.fromLTRB(
+          PpSpacing.lg,
+          PpSpacing.sm,
+          PpSpacing.lg,
+          PpSpacing.xxxl * 2,
+        ),
+        children: [
+          if (aVenir.isNotEmpty) ...[
+            PpEyebrow(l10n.evenementsAVenir),
+            const SizedBox(height: PpSpacing.sm),
+            for (final e in aVenir) _Carte(evenement: e),
+          ],
+          if (passes.isNotEmpty) ...[
+            const SizedBox(height: PpSpacing.lg),
+            PpEyebrow(l10n.evenementsPasses),
+            const SizedBox(height: PpSpacing.sm),
+            for (final e in passes) _Carte(evenement: e, estompee: true),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _Carte extends StatelessWidget {
+  const _Carte({required this.evenement, this.estompee = false});
+
+  static final _dateFr = DateFormat('EEEE d MMMM, HH:mm', 'fr_FR');
+
+  final EvenementDeLaListe evenement;
+  final bool estompee;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final l10n = PpL10n.of(context);
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: PpSpacing.md),
+      child: Opacity(
+        opacity: estompee ? 0.7 : 1,
+        child: PpCard(
+          onTap: () => context.push(PpRoutes.versEvenement(evenement.id)),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(evenement.nom, style: theme.textTheme.titleLarge),
+                  ),
+                  if (evenement.monRole.peutGerer)
+                    PpEyebrow(
+                      evenement.monRole == RoleMembre.proprietaire
+                          ? l10n.roleProprietaire
+                          : l10n.roleAdministrateur,
+                      couleur: PpColors.violet,
+                    ),
+                ],
+              ),
+              const SizedBox(height: PpSpacing.xs),
+              Text(
+                [
+                  _dateFr.format(evenement.debut),
+                  ?evenement.adresse,
+                ].join(' · '),
+                style: theme.textTheme.bodySmall,
+              ),
+              const SizedBox(height: PpSpacing.md),
+              Row(
+                children: [
+                  PpStatusChip(presence: versPastille(evenement.monStatut)),
+                  const Spacer(),
+                  Text(
+                    l10n.presencesSurInvites(
+                      evenement.presents,
+                      evenement.invites,
+                    ),
+                    style: theme.textTheme.bodySmall,
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 /// Vitrine des composants du système de design.
@@ -57,38 +217,4 @@ class GalerieDesignPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) =>
       const Scaffold(body: Center(child: Text('Galerie des composants')));
-}
-
-/// Carte d'événement de l'accueil. Utilisée par la liste dès que l'API la fournit.
-class CarteEvenement extends StatelessWidget {
-  const CarteEvenement({
-    required this.titre,
-    required this.dateLisible,
-    required this.lieu,
-    required this.enfant,
-    super.key,
-  });
-
-  final String titre;
-  final String dateLisible;
-  final String lieu;
-  final Widget enfant;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
-    return PpCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(titre, style: theme.textTheme.titleLarge),
-          const SizedBox(height: PpSpacing.xs),
-          Text('$dateLisible · $lieu', style: theme.textTheme.bodySmall),
-          const SizedBox(height: PpSpacing.lg),
-          enfant,
-        ],
-      ),
-    );
-  }
 }

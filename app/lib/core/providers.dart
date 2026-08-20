@@ -153,6 +153,16 @@ class SessionCourante extends AsyncNotifier<EtatSession> {
     state = const AsyncData(EtatSession.anonyme);
   }
 
+  /// Bascule la session en mode invité après une adhésion sans compte.
+  ///
+  /// Sans cet appel, l'état resterait « anonyme » et le routeur renverrait aussitôt la
+  /// personne vers l'écran de connexion — après lui avoir promis qu'aucun compte
+  /// n'était nécessaire.
+  Future<void> reprendreCommeInvite() async {
+    state = const AsyncData(EtatSession.invite);
+    ref.invalidate(mesEvenementsProvider);
+  }
+
   /// Rattache au compte les participations rejointes sans compte (EF-AUTH-11).
   ///
   /// Appelée après toute ouverture de session. Un échec n'est pas propagé : perdre le
@@ -246,3 +256,20 @@ final monMembreProvider = FutureProvider.family<Membre?, String>((ref, id) async
 
   return null;
 });
+
+/// Aperçu d'une invitation, par jeton de lien ou par code court.
+///
+/// Un seul provider pour les deux entrées : l'écran d'aperçu est le même, seule la
+/// façon d'atteindre l'événement change.
+final apercuInvitationProvider =
+    FutureProvider.family<ApercuInvitation, ({String? jeton, String? code})>(
+  (ref, cle) {
+    final api = ref.watch(evenementsApiProvider);
+
+    if (cle.jeton != null) {
+      return api.apercuParJeton(cle.jeton!);
+    }
+
+    return api.apercuParCode(cle.code!);
+  },
+);

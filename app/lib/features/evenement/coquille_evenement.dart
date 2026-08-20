@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
+import '../../app/router.dart';
 import '../../design/components/pp_states.dart';
 import '../../design/tokens.dart';
 import '../../l10n/generated/pp_localisations.dart';
+import 'tableau_de_bord_page.dart';
 
 /// Coquille de navigation d'un événement.
 ///
@@ -60,25 +63,80 @@ class _CoquilleEvenementState extends State<CoquilleEvenement> {
   }
 
   @override
-  Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: Text(_onglets(context)[_onglet].libelle)),
-    body: PpEmptyState(
-      titre: _onglets(context)[_onglet].libelle,
-      explication:
-          'Cet écran est branché en V1.0. Événement ${widget.eventId}.',
-      icone: _onglets(context)[_onglet].icoineActive,
-    ),
-    bottomNavigationBar: NavigationBar(
-      selectedIndex: _onglet,
-      onDestinationSelected: (index) => setState(() => _onglet = index),
-      destinations: [
-        for (final onglet in _onglets(context))
-          NavigationDestination(
-            icon: Icon(onglet.icone),
-            selectedIcon: Icon(onglet.icoineActive, color: PpColors.violet),
-            label: onglet.libelle,
+  Widget build(BuildContext context) {
+    final onglets = _onglets(context);
+
+    return Scaffold(
+      appBar: AppBar(title: Text(onglets[_onglet].libelle)),
+      // IndexedStack et non reconstruction : changer d'onglet ne doit ni recharger le
+      // tableau de bord, ni perdre la position de défilement.
+      body: IndexedStack(
+        index: _onglet,
+        children: [
+          TableauDeBordPage(evenementId: widget.eventId),
+          // Courses et Dépenses arrivent au sous-projet B2, Planning au B4.
+          PpEmptyState(
+            titre: onglets[1].libelle,
+            explication: PpL10n.of(context).ongletBientot,
+            icone: onglets[1].icoineActive,
           ),
+          PpEmptyState(
+            titre: onglets[2].libelle,
+            explication: PpL10n.of(context).ongletBientot,
+            icone: onglets[2].icoineActive,
+          ),
+          PpEmptyState(
+            titre: onglets[3].libelle,
+            explication: PpL10n.of(context).ongletBientot,
+            icone: onglets[3].icoineActive,
+          ),
+          _MenuPlus(evenementId: widget.eventId),
+        ],
+      ),
+      bottomNavigationBar: NavigationBar(
+        selectedIndex: _onglet,
+        onDestinationSelected: (index) => setState(() => _onglet = index),
+        destinations: [
+          for (final onglet in onglets)
+            NavigationDestination(
+              icon: Icon(onglet.icone),
+              selectedIcon: Icon(onglet.icoineActive, color: PpColors.violet),
+              label: onglet.libelle,
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Entrées qui ne tiennent pas dans les cinq onglets (RG-UI-01).
+class _MenuPlus extends StatelessWidget {
+  const _MenuPlus({required this.evenementId});
+
+  final String evenementId;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = PpL10n.of(context);
+
+    return ListView(
+      children: [
+        ListTile(
+          leading: const Icon(Icons.people_outline_rounded),
+          title: Text(l10n.menuPlusInvites),
+          onTap: () => context.push(PpRoutes.versInvites(evenementId)),
+        ),
+        ListTile(
+          leading: const Icon(Icons.ios_share_rounded),
+          title: Text(l10n.menuPlusInviter),
+          onTap: () => context.push(PpRoutes.versInvitation(evenementId)),
+        ),
+        ListTile(
+          leading: const Icon(Icons.settings_outlined),
+          title: Text(l10n.menuPlusParametres),
+          onTap: () => context.push(PpRoutes.versParametres(evenementId)),
+        ),
       ],
-    ),
-  );
+    );
+  }
 }

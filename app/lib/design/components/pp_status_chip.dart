@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../l10n/generated/pp_localisations.dart';
 import '../tokens.dart';
 
 /// Statut de présence, tel que défini par EF-PRES-01.
@@ -21,7 +22,8 @@ class PpStatusChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final (libelle, couleurBrute, icone) = _apparence();
+    final (couleurBrute, icone) = _apparence();
+    final libelle = _libelle(PpL10n.of(context));
     // Le fond conserve la couleur de charte à 12 % ; le texte et l'icône prennent la
     // variante accessible (NF-A11Y-01).
     final couleur = PpColors.texteSur(
@@ -61,32 +63,28 @@ class PpStatusChip extends StatelessWidget {
     );
   }
 
-  (String, Color, IconData) _apparence() => switch (presence) {
-    PpPresence.present => ('Présent', PpColors.vert, Icons.check_rounded),
-    PpPresence.arriveTard => (
-      'Arrive plus tard',
-      PpColors.vert,
-      Icons.schedule_rounded,
-    ),
-    PpPresence.partTot => (
-      'Part plus tôt',
-      PpColors.vert,
-      Icons.logout_rounded,
-    ),
-    PpPresence.peutEtre => (
-      'Peut-être',
-      PpColors.orange,
-      Icons.help_outline_rounded,
-    ),
-    PpPresence.absent => (
-      'Absent',
-      PpColors.texteSecondaireClair,
-      Icons.close_rounded,
-    ),
-    PpPresence.inconnu => (
-      'Sans réponse',
-      PpColors.texteSecondaireClair,
-      Icons.remove_rounded,
-    ),
+  /// Couleur et icône. « Arrive plus tard » et « part plus tôt » reçoivent la couleur
+  /// des présents, car ils comptent comme tels (RG-PRES-02).
+  (Color, IconData) _apparence() => switch (presence) {
+    PpPresence.present => (PpColors.vert, Icons.check_rounded),
+    PpPresence.arriveTard => (PpColors.vert, Icons.schedule_rounded),
+    PpPresence.partTot => (PpColors.vert, Icons.logout_rounded),
+    PpPresence.peutEtre => (PpColors.orange, Icons.help_outline_rounded),
+    PpPresence.absent => (PpColors.texteSecondaireClair, Icons.close_rounded),
+    PpPresence.inconnu => (PpColors.texteSecondaireClair, Icons.remove_rounded),
+  };
+
+  /// Libellé traduit.
+  ///
+  /// Séparé de l'apparence, et pris dans le contexte : les libellés étaient écrits en
+  /// dur dans ce composant, ce qui violait NF-I18N-01. Le défaut est resté invisible
+  /// tant qu'aucun écran n'affichait de statut.
+  String _libelle(PpL10n l10n) => switch (presence) {
+    PpPresence.present => l10n.statutPresent,
+    PpPresence.arriveTard => l10n.statutEnRetard,
+    PpPresence.partTot => l10n.statutPartAvant,
+    PpPresence.peutEtre => l10n.statutPeutEtre,
+    PpPresence.absent => l10n.statutAbsent,
+    PpPresence.inconnu => l10n.statutInconnu,
   };
 }

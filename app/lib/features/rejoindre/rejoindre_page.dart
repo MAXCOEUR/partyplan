@@ -1,29 +1,78 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
-import '../../design/components/pp_states.dart';
+import '../../app/router.dart';
+import '../../core/network/evenements_api.dart';
+import '../../design/components/pp_form.dart';
+import '../../design/tokens.dart';
 import '../../l10n/generated/pp_localisations.dart';
 
-/// Parcours de participation, en deux écrans au maximum : prénom, puis présence
-/// (RG-INV-05).
+/// Saisie d'un code court `PLAN-XXXXXX` (EF-INV-03).
 ///
-/// Squelette au lot 0.5. Le parcours complet est le lot 1.3, et c'est le chemin le plus
-/// critique du produit pour l'adoption : toute friction ajoutée ici se paie en taux de
-/// réponse.
-class RejoindrePage extends StatelessWidget {
-  const RejoindrePage({this.token, super.key});
-
-  /// Jeton du lien d'invitation. Nul lorsque l'écran est ouvert pour saisir un code court.
-  final String? token;
+/// La saisie est tolérante — minuscules, espaces, tirets, absence de préfixe — parce
+/// qu'un code recopié depuis une conversation arrive rarement propre.
+class RejoindrePage extends ConsumerStatefulWidget {
+  const RejoindrePage({super.key});
 
   @override
-  Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: Text(PpL10n.of(context).rejoindreUnEvenement)),
-    body: PpEmptyState(
-      titre: token == null ? 'Saisis le code de la soirée' : 'Invitation reçue',
-      explication: token == null
-          ? 'Le code figure sur l’invitation, sous la forme PLAN-XXXXXX.'
-          : 'Le parcours de participation arrive au lot 1.3.',
-      icone: Icons.qr_code_rounded,
-    ),
-  );
+  ConsumerState<RejoindrePage> createState() => _RejoindrePageState();
+}
+
+class _RejoindrePageState extends ConsumerState<RejoindrePage> {
+  final _code = TextEditingController();
+
+  String? _erreur;
+
+  @override
+  void dispose() {
+    _code.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = PpL10n.of(context);
+
+    return Scaffold(
+      appBar: AppBar(title: Text(l10n.codeCourtTitre)),
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(PpSpacing.lg),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const SizedBox(height: PpSpacing.xl),
+              PpField(
+                label: l10n.codeCourtChamp,
+                controller: _code,
+                hint: 'PLAN-XXXXXX',
+                aide: l10n.codeCourtAide,
+                textInputAction: TextInputAction.done,
+                onSubmitted: (_) => _continuer(l10n),
+              ),
+              if (_erreur != null) PpFormError(_erreur!),
+              const SizedBox(height: PpSpacing.lg),
+              PpPrimaryButton(
+                label: l10n.codeCourtContinuer,
+                onPressed: () => _continuer(l10n),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _continuer(PpL10n l10n) {
+    final normalise = EvenementsApi.normaliserCode(_code.text);
+
+    if (normalise.isEmpty) {
+      setState(() => _erreur = l10n.codeCourtRequis);
+      return;
+    }
+
+    setState(() => _erreur = null);
+    context.push(PpRoutes.versApercuParCode(normalise));
+  }
 }

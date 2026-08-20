@@ -5,7 +5,8 @@ import 'package:partyplan/app/router.dart';
 import 'package:partyplan/core/providers.dart';
 import 'package:partyplan/core/storage/session_store.dart';
 import 'package:partyplan/features/auth/connexion_page.dart';
-import 'package:partyplan/features/rejoindre/rejoindre_page.dart';
+import 'package:partyplan/core/models/invitation.dart';
+import 'package:partyplan/features/rejoindre/apercu_invitation_page.dart';
 
 void main() {
   group('Routage', () {
@@ -44,7 +45,9 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.byType(RejoindrePage), findsOneWidget);
+      // L'aperçu restreint, et non le formulaire : avant de donner son prénom, un
+      // visiteur doit savoir à quoi il est invité (RG-INV-04).
+      expect(find.byType(ApercuInvitationPage), findsOneWidget);
     });
 
     testWidgets('un appelant anonyme est redirigé vers la connexion', (
@@ -67,9 +70,31 @@ void main() {
   });
 }
 
+/// Date fixe : un test ne doit pas dépendre de l'heure à laquelle il tourne.
+final _debutFictif = DateTime.utc(2026, 9, 12, 20);
+
 ProviderContainer _conteneurAnonyme() {
   final conteneur = ProviderContainer(
-    overrides: [sessionStoreProvider.overrideWithValue(_StockageVide())],
+    overrides: [
+      sessionStoreProvider.overrideWithValue(_StockageVide()),
+      // Sans cette substitution, l'écran d'accueil construit pendant la frame qui
+      // précède la redirection lance un vrai appel réseau, dont le délai d'attente
+      // survit à la fin du test : le test échouerait sur un minuteur en suspens,
+      // pour une raison étrangère à ce qu'il vérifie.
+      mesEvenementsProvider.overrideWith((ref) async => []),
+      apercuInvitationProvider.overrideWith(
+        (ref, cle) async => ApercuInvitation(
+          nom: 'Crémaillère',
+          debut: _debutFictif,
+          fin: null,
+          adresse: null,
+          description: null,
+          nombreParticipants: 3,
+          adhesionsOuvertes: true,
+          dejaMembre: false,
+        ),
+      ),
+    ],
   );
   addTearDown(conteneur.dispose);
   return conteneur;

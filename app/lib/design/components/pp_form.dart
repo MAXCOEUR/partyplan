@@ -16,6 +16,7 @@ class PpField extends StatelessWidget {
     this.onSubmitted,
     this.enabled = true,
     this.aide,
+    this.lignes = 1,
     super.key,
   });
 
@@ -29,6 +30,10 @@ class PpField extends StatelessWidget {
   final TextInputAction? textInputAction;
   final void Function(String)? onSubmitted;
   final bool enabled;
+
+  /// Nombre de lignes visibles. Au-delà de une, le champ devient multiligne et son
+  /// action clavier passe au retour à la ligne.
+  final int lignes;
 
   /// Texte d'aide sous le champ. Sert à énoncer une règle avant l'erreur, plutôt
   /// qu'à la place.
@@ -57,6 +62,7 @@ class PpField extends StatelessWidget {
           textInputAction: textInputAction,
           onFieldSubmitted: onSubmitted,
           enabled: enabled,
+          maxLines: obscure ? 1 : lignes,
           decoration: InputDecoration(hintText: hint),
         ),
         if (aide != null)
