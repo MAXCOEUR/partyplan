@@ -581,6 +581,55 @@ public sealed class EvenementsTests(PartyPlanApiFixture fixture)
             .GetProperty("displayName").GetString().ShouldBe("Lucas");
     }
 
+    [Fact]
+    public async Task Le_code_court_permet_de_rejoindre_et_pas_seulement_de_regarder()
+    {
+        var organisateur = await CompteAsync();
+        var (eventId, _, code) = await CreerAsync(organisateur, "Code court");
+
+        using var invite = fixture.CreateClient();
+
+        // Saisie tolérante : minuscules, espaces, absence de préfixe.
+        var requete = new HttpRequestMessage(
+            HttpMethod.Post,
+            new Uri($"/v1/join/code/{code[5..].ToLowerInvariant()}", UriKind.Relative))
+        {
+            Content = JsonContent.Create(new { displayName = "Zoé", status = "Going" }),
+        };
+        requete.Headers.Add("Idempotency-Key", Guid.CreateVersion7().ToString());
+
+        var adhesion = await invite.SendAsync(requete);
+
+        adhesion.StatusCode.ShouldBe(HttpStatusCode.OK);
+
+        var resultat = (await adhesion.Content.ReadFromJsonAsync<JsonDocument>())!.RootElement;
+        resultat.GetProperty("eventId").GetString().ShouldBe(eventId);
+
+        // Le jeton d'invité est bien remis : sans lui, la personne serait entrée sans
+        // pouvoir revenir.
+        resultat.GetProperty("guestToken").GetString().ShouldNotBeNullOrEmpty();
+
+        var membres = await MembresAsync(organisateur, eventId);
+        membres.EnumerateArray()
+            .ShouldContain(m => m.GetProperty("displayName").GetString() == "Zoé");
+    }
+
+    [Fact]
+    public async Task Un_code_court_inconnu_ne_laisse_pas_rejoindre()
+    {
+        using var invite = fixture.CreateClient();
+
+        var requete = new HttpRequestMessage(
+            HttpMethod.Post,
+            new Uri("/v1/join/code/ZZZZZZ", UriKind.Relative))
+        {
+            Content = JsonContent.Create(new { displayName = "Intrus", status = "Going" }),
+        };
+        requete.Headers.Add("Idempotency-Key", Guid.CreateVersion7().ToString());
+
+        (await invite.SendAsync(requete)).StatusCode.ShouldBe(HttpStatusCode.NotFound);
+    }
+
     /// <summary>
     /// Rejoint un événement. L'en-tête d'idempotence est obligatoire : cette écriture
     /// peut être mise en file par le client hors ligne (NF-OFFLINE-01), et son rejeu

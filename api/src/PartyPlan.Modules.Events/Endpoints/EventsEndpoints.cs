@@ -188,6 +188,33 @@ internal static class EventsEndpoints
             .RequireRateLimiting(ShortCodePolicy)
             .Produces<JoinPreview>();
 
+        // EF-INV-03 — rejoindre depuis un code court.
+        //
+        // Sans cet endpoint, le code court est une impasse : l'aperçu qu'il produit ne
+        // contient aucun jeton (RG-INV-04), et l'adhésion par jeton est donc hors de
+        // portée de qui n'a que le code. Faire porter le jeton par l'aperçu
+        // transformerait un code de six caractères en oracle à jetons d'invitation.
+        groupe.MapPost("/code/{shortCode}", async (
+                string shortCode,
+                JoinBody corps,
+                JoinService service,
+                CancellationToken cancellationToken) =>
+            {
+                if (!Enum.TryParse<EventMemberStatus>(corps.Status, out var statut))
+                {
+                    return Problem(AttendanceService.UnknownStatus);
+                }
+
+                return Respond(await service
+                    .RejoindreParCodeAsync(shortCode, corps.DisplayName, statut, corps.ArrivalTime, cancellationToken)
+                    .ConfigureAwait(false));
+            })
+            .WithName("JoinByShortCode")
+            .WithSummary("Rejoint depuis un code court. En-tête Idempotency-Key obligatoire.")
+            .RequireRateLimiting(ShortCodePolicy)
+            .RequireIdempotency()
+            .Produces<JoinResult>();
+
         // Écriture susceptible d'être mise en file par le client hors ligne
         // (NF-OFFLINE-01) : le rejeu doit rendre la réponse mémorisée, jamais créer un
         // second membre.

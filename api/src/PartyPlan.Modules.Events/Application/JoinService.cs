@@ -86,8 +86,45 @@ public sealed class JoinService(
     /// Rejoint un événement. Un compte connecté est rattaché ; sinon un membre sans
     /// compte est créé, et un jeton d'invité restreint à cet événement est remis.
     /// </summary>
-    public async Task<Result<JoinResult>> RejoindreAsync(
+    public Task<Result<JoinResult>> RejoindreAsync(
         string token,
+        string displayName,
+        EventMemberStatus statut,
+        TimeOnly? arrivee,
+        CancellationToken cancellationToken) =>
+        RejoindreAsync(e => e.InviteToken == token, displayName, statut, arrivee, cancellationToken);
+
+    /// <summary>
+    /// Rejoint un événement à partir d'un code court (EF-INV-03).
+    /// <para>
+    /// Endpoint distinct plutôt que jeton révélé par l'aperçu : l'aperçu ne doit
+    /// contenir aucun jeton (RG-INV-04), et le lui faire porter transformerait le code
+    /// court — devinable en six caractères — en oracle à jetons d'invitation. La même
+    /// limitation de débit que la résolution s'applique donc ici (RG-INV-03).
+    /// </para>
+    /// </summary>
+    public Task<Result<JoinResult>> RejoindreParCodeAsync(
+        string? code,
+        string displayName,
+        EventMemberStatus statut,
+        TimeOnly? arrivee,
+        CancellationToken cancellationToken)
+    {
+        if (!ShortCode.TryNormalize(code, out var normalise))
+        {
+            return Task.FromResult(Result<JoinResult>.Failure(InvitationNotFound));
+        }
+
+        return RejoindreAsync(
+            e => e.ShortCode == normalise,
+            displayName,
+            statut,
+            arrivee,
+            cancellationToken);
+    }
+
+    private async Task<Result<JoinResult>> RejoindreAsync(
+        System.Linq.Expressions.Expression<Func<Event, bool>> critere,
         string displayName,
         EventMemberStatus statut,
         TimeOnly? arrivee,
@@ -98,7 +135,7 @@ public sealed class JoinService(
             return NameRequired;
         }
 
-        var evenement = await TrouverAsync(e => e.InviteToken == token, cancellationToken)
+        var evenement = await TrouverAsync(critere, cancellationToken)
             .ConfigureAwait(false);
 
         if (evenement is null)
