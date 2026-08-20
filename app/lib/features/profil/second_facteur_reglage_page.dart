@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:qr_flutter/qr_flutter.dart';
 
 import '../../core/models/profil.dart';
 import '../../core/network/api_exception.dart';
@@ -9,7 +10,7 @@ import '../../design/components/pp_card.dart';
 import '../../design/components/pp_form.dart';
 import '../../design/components/pp_states.dart';
 import '../../design/tokens.dart';
-import '../../l10n/pp_strings.dart';
+import '../../l10n/generated/pp_localisations.dart';
 
 /// Activation et désactivation du second facteur (EF-AUTH-12).
 class SecondFacteurReglagePage extends ConsumerStatefulWidget {
@@ -51,7 +52,7 @@ class _SecondFacteurReglagePageState
     } on ApiException catch (erreur) {
       setState(() => _erreur = erreur.title);
     } on Exception {
-      setState(() => _erreur = PpStrings.erreurReseau);
+      setState(() => _erreur = PpL10n.of(context).erreurReseau);
     } finally {
       if (mounted) {
         setState(() => _enCours = false);
@@ -84,7 +85,7 @@ class _SecondFacteurReglagePageState
     } on ApiException catch (erreur) {
       setState(() => _erreur = erreur.title);
     } on Exception {
-      setState(() => _erreur = PpStrings.erreurReseau);
+      setState(() => _erreur = PpL10n.of(context).erreurReseau);
     } finally {
       if (mounted) {
         setState(() => _enCours = false);
@@ -112,7 +113,7 @@ class _SecondFacteurReglagePageState
     } on ApiException catch (erreur) {
       setState(() => _erreur = erreur.title);
     } on Exception {
-      setState(() => _erreur = PpStrings.erreurReseau);
+      setState(() => _erreur = PpL10n.of(context).erreurReseau);
     } finally {
       if (mounted) {
         setState(() => _enCours = false);
@@ -129,7 +130,7 @@ class _SecondFacteurReglagePageState
           .regenererCodesDeSecours();
       setState(() => _codesDeSecours = codes);
     } on Exception {
-      setState(() => _erreur = PpStrings.erreurReseau);
+      setState(() => _erreur = PpL10n.of(context).erreurReseau);
     } finally {
       if (mounted) {
         setState(() => _enCours = false);
@@ -146,7 +147,7 @@ class _SecondFacteurReglagePageState
       body: profil.when(
         loading: () => const PpLoadingState(),
         error: (_, _) => PpErrorState(
-          message: PpStrings.erreurReseau,
+          message: PpL10n.of(context).erreurReseau,
           onRetry: () => ref.invalidate(profilProvider),
         ),
         data: (donnees) => ListView(
@@ -235,12 +236,37 @@ class _Enrolement extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const PpEyebrow('Étape 1 — enregistre le secret'),
+          const PpEyebrow('Étape 1 — scanne ou recopie'),
           const SizedBox(height: PpSpacing.md),
           Text(
-            'Ajoute ce secret dans ton application d’authentification, puis saisis le '
-            'code qu’elle affiche.',
+            'Scanne ce code avec ton application d’authentification, ou recopie le '
+            'secret à la main.',
             style: theme.textTheme.bodyMedium,
+          ),
+          const SizedBox(height: PpSpacing.lg),
+          // Le QR code est dessiné côté Dart, sans appel réseau : envoyer un secret de
+          // double authentification à un service tiers de génération d'image serait
+          // absurde.
+          Center(
+            child: Container(
+              padding: const EdgeInsets.all(PpSpacing.md),
+              decoration: BoxDecoration(
+                // Fond blanc imposé : un lecteur de QR code a besoin du contraste
+                // nominal, que le thème sombre ne fournit pas.
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(PpRadius.md),
+              ),
+              child: QrImageView(
+                data: enrolement.uriOtpAuth,
+                size: 180,
+                backgroundColor: Colors.white,
+                // Correction d'erreur moyenne : un QR affiché à l'écran n'est ni plié
+                // ni sali, un niveau élevé ne ferait que densifier l'image.
+                errorCorrectionLevel: QrErrorCorrectLevel.M,
+                semanticsLabel:
+                    'Code à scanner avec ton application d’authentification',
+              ),
+            ),
           ),
           const SizedBox(height: PpSpacing.lg),
           // Le secret est affiché en clair, découpé en groupes de quatre : le QR code

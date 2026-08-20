@@ -3,7 +3,8 @@ import 'package:flutter/material.dart';
 import '../../design/components/pp_card.dart';
 import '../../design/components/pp_states.dart';
 import '../../design/tokens.dart';
-import '../../l10n/pp_strings.dart';
+import '../../l10n/marque.dart';
+import '../../l10n/generated/pp_localisations.dart';
 
 /// Écran d'accueil : les événements de la personne, à venir puis passés (EF-EVT-05).
 ///
@@ -15,7 +16,7 @@ class AccueilPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Scaffold(
     appBar: AppBar(
-      title: const Text(PpStrings.nomProduit),
+      title: const Text(PpMarque.nom),
       actions: [
         IconButton(
           onPressed: null,
@@ -26,19 +27,19 @@ class AccueilPage extends StatelessWidget {
       ],
     ),
     body: PpEmptyState(
-      titre: PpStrings.accueilVideTitre,
-      explication: PpStrings.accueilVideExplication,
+      titre: PpL10n.of(context).accueilVideTitre,
+      explication: PpL10n.of(context).accueilVideExplication,
       action: Column(
         children: [
           FilledButton.icon(
             onPressed: null,
             icon: const Icon(Icons.add_rounded),
-            label: const Text(PpStrings.creerUnEvenement),
+            label: Text(PpL10n.of(context).creerUnEvenement),
           ),
           const SizedBox(height: PpSpacing.sm),
           TextButton(
             onPressed: null,
-            child: const Text(PpStrings.rejoindreUnEvenement),
+            child: Text(PpL10n.of(context).rejoindreUnEvenement),
           ),
         ],
       ),

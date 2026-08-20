@@ -10,7 +10,7 @@ import '../../design/components/pp_avatar.dart';
 import '../../design/components/pp_card.dart';
 import '../../design/components/pp_states.dart';
 import '../../design/tokens.dart';
-import '../../l10n/pp_strings.dart';
+import '../../l10n/generated/pp_localisations.dart';
 
 /// Recherche courante du back-office.
 ///
@@ -98,7 +98,7 @@ class _AdminComptesPageState extends ConsumerState<AdminComptesPage> {
       body: comptes.when(
         loading: () => const PpLoadingState(),
         error: (_, _) => PpErrorState(
-          message: PpStrings.erreurReseau,
+          message: PpL10n.of(context).erreurReseau,
           onRetry: () => ref.invalidate(comptesProvider),
         ),
         data: (page) => page.elements.isEmpty
@@ -177,9 +177,9 @@ class _CarteCompte extends ConsumerWidget {
       }
     } on Exception {
       if (context.mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text(PpStrings.erreurReseau)));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(PpL10n.of(context).erreurReseau)),
+        );
       }
     }
   }
@@ -297,6 +297,19 @@ class _CarteCompte extends ConsumerWidget {
                     'Sessions révoquées.',
                   ),
                 ),
+                // Recours quand le courriel de vérification n'arrive pas : sans lui, la
+                // seule issue serait une écriture directe en base (EF-ADM-11).
+                if (!compte.emailVerifie)
+                  OutlinedButton.icon(
+                    icon: const Icon(Icons.mark_email_read_outlined, size: 16),
+                    label: const Text('Vérifier l’adresse'),
+                    onPressed: () => _agir(
+                      context,
+                      ref,
+                      () => api.forcerVerificationAdresse(compte.id),
+                      'Adresse marquée comme vérifiée.',
+                    ),
+                  ),
                 // Actions réservées à PlatformAdmin (RG-ADM-05), et jamais sur
                 // soi-même (RG-ADM-03).
                 if (peutAdministrer && !estMoi) ...[

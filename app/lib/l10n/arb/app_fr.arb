@@ -1,0 +1,51 @@
+{
+  "@@locale": "fr",
+
+  "signature": "Organise. Partage. Profite !",
+  "@signature": {
+    "description": "Signature du produit, affichée sous le logo."
+  },
+
+  "ongletAccueil": "Accueil",
+  "@ongletAccueil": {
+    "description": "Navigation principale : cinq entrées, pas une de plus (RG-UI-01)."
+  },
+  "ongletCourses": "Courses",
+  "ongletDepenses": "Dépenses",
+  "ongletPlanning": "Planning",
+  "ongletPlus": "Plus",
+
+  "evenementsAVenir": "À venir",
+  "evenementsPasses": "Passés",
+  "creerUnEvenement": "Créer un événement",
+  "rejoindreUnEvenement": "Rejoindre avec un code",
+  "accueilVideTitre": "Aucun événement pour le moment",
+  "accueilVideExplication": "Crée ta première soirée, puis partage le lien. Tes invités répondent sans avoir à créer de compte.",
+
+  "aPrendre": "À prendre",
+  "jeMenOccupe": "Je m’en occupe",
+  "coursesAvancement": "Courses",
+
+  "totalDepense": "Dépensé",
+  "tuDois": "Tu dois",
+  "onTeDoit": "On te doit",
+  "marquerRembourse": "Marquer comme remboursé",
+
+  "presents": "{presents} / {invites} présents",
+  "@presents": {
+    "description": "Compteur de présences.",
+    "placeholders": {
+      "presents": { "type": "int" },
+      "invites": { "type": "int" }
+    }
+  },
+
+  "erreurReseau": "Impossible de joindre PartyPlan. Vérifie ta connexion, puis réessaie.",
+  "erreurIntrouvable": "Cet événement n’existe pas, ou tu n’en fais plus partie.",
+  "erreurArticleDejaPris": "Quelqu’un vient de s’en occuper. La liste a été mise à jour.",
+  "erreurTropDeTentatives": "Trop de tentatives. Patiente une minute avant de réessayer.",
+  "erreurEnregistrement": "Ta modification n’a pas été enregistrée. Elle a été annulée.",
+  "reessayer": "Réessayer",
+
+  "bandeauDeveloppement": "API locale"
+}

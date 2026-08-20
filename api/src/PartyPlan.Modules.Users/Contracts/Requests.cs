@@ -46,6 +46,9 @@ public sealed record TotpActivateRequest([Required] string Code);
 
 public sealed record TotpDisableRequest([Required] string Password);
 
+/// <summary>Jeton d'identité obtenu auprès du fournisseur par le client.</summary>
+public sealed record ExternalSignInRequest([Required] string IdToken);
+
 public sealed record MfaVerifyRequest(
     [Required] string ChallengeToken,
     [Required] string Code);

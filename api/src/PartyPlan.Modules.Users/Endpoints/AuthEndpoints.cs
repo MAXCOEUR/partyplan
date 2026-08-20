@@ -103,6 +103,85 @@ internal static class AuthEndpoints
             .RequireRateLimiting(AuthAttemptPolicy)
             .Produces<TokenResponse>();
 
+        // --- Connexions tierces (EF-AUTH-06, EF-AUTH-08) ---
+
+        groupe.MapPost("/google", async (
+                ExternalSignInRequest corps,
+                ExternalSignInService service,
+                HttpContext http,
+                CancellationToken cancellationToken) =>
+            {
+                var resultat = await service.SignInAsync(
+                    ExternalProviders.Google,
+                    corps.IdToken,
+                    http.Request.Headers.UserAgent.ToString(),
+                    http.Connection.RemoteIpAddress,
+                    cancellationToken).ConfigureAwait(false);
+
+                return resultat.IsFailure
+                    ? Problem(resultat.Error!)
+                    : Results.Ok(Map(resultat.Value));
+            })
+            .WithName("SignInWithGoogle")
+            .WithSummary("Connexion Google. Sans clé configurée, renvoie une erreur explicite.")
+            .RequireRateLimiting(AuthAttemptPolicy)
+            .Produces<LoginResponse>();
+
+        groupe.MapGet("/providers", async (
+                ExternalSignInService service,
+                HttpContext http,
+                CancellationToken cancellationToken) =>
+            {
+                var utilisateur = UserId(http.User);
+
+                return utilisateur is null
+                    ? Results.Unauthorized()
+                    : Respond(await service
+                        .GetMethodsAsync(utilisateur.Value, cancellationToken)
+                        .ConfigureAwait(false));
+            })
+            .WithName("ListSignInMethods")
+            .WithSummary("Moyens de connexion du compte courant, et fournisseurs disponibles.")
+            .RequireAuthorization()
+            .Produces<SignInMethods>();
+
+        groupe.MapPost("/providers/{provider}/link", async (
+                string provider,
+                ExternalSignInRequest corps,
+                ExternalSignInService service,
+                HttpContext http,
+                CancellationToken cancellationToken) =>
+            {
+                var utilisateur = UserId(http.User);
+
+                return utilisateur is null
+                    ? Results.Unauthorized()
+                    : Respond(await service
+                        .LinkAsync(utilisateur.Value, provider, corps.IdToken, cancellationToken)
+                        .ConfigureAwait(false));
+            })
+            .WithName("LinkProvider")
+            .WithSummary("Rattache une connexion tierce au compte courant.")
+            .RequireAuthorization();
+
+        groupe.MapDelete("/providers/{provider}", async (
+                string provider,
+                ExternalSignInService service,
+                HttpContext http,
+                CancellationToken cancellationToken) =>
+            {
+                var utilisateur = UserId(http.User);
+
+                return utilisateur is null
+                    ? Results.Unauthorized()
+                    : Respond(await service
+                        .UnlinkAsync(utilisateur.Value, provider, cancellationToken)
+                        .ConfigureAwait(false));
+            })
+            .WithName("UnlinkProvider")
+            .WithSummary("Détache une connexion tierce. Refusé si c'est le dernier accès.")
+            .RequireAuthorization();
+
         // --- Double authentification ---
 
         groupe.MapPost("/totp/setup", async (

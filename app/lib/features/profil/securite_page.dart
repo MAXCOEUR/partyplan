@@ -12,7 +12,7 @@ import '../../design/components/pp_card.dart';
 import '../../design/components/pp_form.dart';
 import '../../design/components/pp_states.dart';
 import '../../design/tokens.dart';
-import '../../l10n/pp_strings.dart';
+import '../../l10n/generated/pp_localisations.dart';
 import '../../l10n/validateurs.dart';
 
 /// Sécurité du compte : mot de passe et sessions (EF-AUTH-05, EF-AUTH-10).
@@ -76,7 +76,7 @@ class _SecuritePageState extends ConsumerState<SecuritePage> {
     } on ApiException catch (erreur) {
       setState(() => _erreur = erreur.title);
     } on Exception {
-      setState(() => _erreur = PpStrings.erreurEnregistrement);
+      setState(() => _erreur = PpL10n.of(context).erreurEnregistrement);
     } finally {
       if (mounted) {
         setState(() => _enCours = false);
@@ -91,7 +91,7 @@ class _SecuritePageState extends ConsumerState<SecuritePage> {
     } on Exception {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text(PpStrings.erreurEnregistrement)),
+          SnackBar(content: Text(PpL10n.of(context).erreurEnregistrement)),
         );
       }
     }
@@ -112,7 +112,7 @@ class _SecuritePageState extends ConsumerState<SecuritePage> {
     } on Exception {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text(PpStrings.erreurEnregistrement)),
+          SnackBar(content: Text(PpL10n.of(context).erreurEnregistrement)),
         );
       }
     }
@@ -165,6 +165,8 @@ class _SecuritePageState extends ConsumerState<SecuritePage> {
           const SizedBox(height: PpSpacing.lg),
           const _EntreeSecondFacteur(),
           const SizedBox(height: PpSpacing.lg),
+          const _EntreeConnexions(),
+          const SizedBox(height: PpSpacing.lg),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -185,7 +187,7 @@ class _SecuritePageState extends ConsumerState<SecuritePage> {
               child: PpLoadingState(),
             ),
             error: (_, _) => PpErrorState(
-              message: PpStrings.erreurReseau,
+              message: PpL10n.of(context).erreurReseau,
               onRetry: () => ref.invalidate(sessionsProvider),
             ),
             data: (liste) => PpCard(
@@ -267,6 +269,32 @@ class _LigneSession extends StatelessWidget {
 }
 
 /// Entrée vers le réglage du second facteur, avec son état courant.
+/// Accès aux moyens de connexion (EF-AUTH-08).
+class _EntreeConnexions extends StatelessWidget {
+  const _EntreeConnexions();
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return PpCard(
+      padding: EdgeInsets.zero,
+      onTap: () => context.push(PpRoutes.connexionsTierces),
+      child: ListTile(
+        onTap: () => context.push(PpRoutes.connexionsTierces),
+        minVerticalPadding: PpSpacing.md,
+        leading: const Icon(Icons.link_rounded),
+        title: Text('Connexions', style: theme.textTheme.titleMedium),
+        subtitle: Text(
+          'Mot de passe et services tiers rattachés à ton compte',
+          style: theme.textTheme.bodySmall,
+        ),
+        trailing: const Icon(Icons.chevron_right_rounded),
+      ),
+    );
+  }
+}
+
 class _EntreeSecondFacteur extends ConsumerWidget {
   const _EntreeSecondFacteur();
 

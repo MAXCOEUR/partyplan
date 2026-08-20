@@ -145,14 +145,17 @@ test: test-api test-app ## Exécute toute la suite de tests
 test-api: ## Tests de l'API
 	dotnet test api/PartyPlan.slnx
 
-test-app: ## Tests Flutter
+test-app: l10n ## Tests Flutter
 	cd app && flutter test
 
 fmt: ## Formate le code
 	dotnet format api/PartyPlan.slnx
 	cd app && dart format lib test
 
-lint: ## Analyse statique, frontières de modules, variables d'environnement
+l10n: ## Régénère les chaînes traduites depuis lib/l10n/arb
+	cd app && flutter gen-l10n
+
+lint: l10n ## Analyse statique, frontières de modules, variables d'environnement
 	dotnet build api/PartyPlan.slnx
 	cd app && flutter analyze
 	./tools/verifier-frontieres-modules.sh

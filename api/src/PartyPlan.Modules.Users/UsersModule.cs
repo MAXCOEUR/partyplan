@@ -40,6 +40,7 @@ public sealed class UsersModule : IModule
 
         services.AddScoped<AdminSeeder>();
         services.AddScoped<TotpService>();
+        services.AddScoped<ExternalSignInService>();
 
         services.AddOptions<TotpIssuerOptions>()
             .Bind(configuration.GetSection(TotpIssuerOptions.SectionName))

@@ -78,11 +78,19 @@ for variable in $(declarees); do
   esac
 
   # Correspondance : JWT_SIGNING_KEY → Jwt__SigningKey, injecté par Compose.
+  #
+  # La comparaison se fait sur les suffixes : une variable peut porter un nom sans le
+  # préfixe de sa section, comme FIREBASE_SERVICE_ACCOUNT_JSON injecté sous
+  # Push__FirebaseServiceAccountJson. Exiger l'égalité stricte produirait un faux
+  # positif, et un faux positif toléré finit par faire ignorer l'outil.
   compacte="$(echo "$variable" | tr -d '_' | tr '[:upper:]' '[:lower:]')"
   trouve=0
 
   while read -r injectee; do
-    [ "$(echo "$injectee" | tr -d '_' | tr '[:upper:]' '[:lower:]')" = "$compacte" ] && trouve=1
+    plate="$(echo "$injectee" | tr -d '_' | tr '[:upper:]' '[:lower:]')"
+    case "$plate" in
+      *"$compacte") trouve=1 ;;
+    esac
   done < <(injectees)
 
   if [ "$trouve" -eq 0 ]; then

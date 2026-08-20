@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
+import 'models/moyens_connexion.dart';
 import 'models/profil.dart';
 import 'network/api_client.dart';
 import 'network/comptes_api.dart';
@@ -129,6 +130,11 @@ final profilProvider = FutureProvider<Profil>((ref) async {
 
 /// Fuseau et langue de l'application : `fr_FR` pour les dates en JJ/MM/AAAA.
 const localeFr = 'fr_FR';
+
+/// Moyens de connexion du compte : mot de passe et services tiers (EF-AUTH-08).
+final moyensConnexionProvider = FutureProvider<MoyensConnexion>(
+  (ref) => ref.watch(comptesApiProvider).moyensConnexion(),
+);
 
 /// Sessions actives du compte connecté.
 final sessionsProvider = FutureProvider<List<SessionActive>>(

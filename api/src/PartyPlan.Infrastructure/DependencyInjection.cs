@@ -73,6 +73,19 @@ public static class DependencyInjection
 
         services.AddSingleton<PartyPlan.SharedKernel.Contracts.IPushSender, ConsolePushSender>();
 
+        // --- Connexions tierces ---
+        // Sans identifiant client configuré, la vérification échoue proprement : le
+        // développement se fait par mot de passe (NF-DEV-05).
+        services.AddOptions<GoogleOptions>()
+            .Bind(configuration.GetSection(GoogleOptions.SectionName))
+            .ValidateOnStart();
+
+        services.AddHttpClient(nameof(GoogleIdentityVerifier))
+            .ConfigureHttpClient(client => client.Timeout = TimeSpan.FromSeconds(10));
+
+        services.AddSingleton<PartyPlan.SharedKernel.Contracts.IExternalIdentityVerifier,
+            GoogleIdentityVerifier>();
+
         // --- Chiffrement des secrets stockés ---
         services.AddOptions<SecurityOptions>()
             .Bind(configuration.GetSection(SecurityOptions.SectionName))

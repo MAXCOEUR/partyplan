@@ -1,6 +1,6 @@
-import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:partyplan/app/app.dart';
 import 'package:partyplan/app/router.dart';
 import 'package:partyplan/core/providers.dart';
 import 'package:partyplan/core/storage/session_store.dart';
@@ -39,7 +39,7 @@ void main() {
       await tester.pumpWidget(
         UncontrolledProviderScope(
           container: conteneur,
-          child: MaterialApp.router(routerConfig: routeur),
+          child: const PartyPlanApp(),
         ),
       );
       await tester.pumpAndSettle();
@@ -55,9 +55,7 @@ void main() {
       await tester.pumpWidget(
         UncontrolledProviderScope(
           container: conteneur,
-          child: MaterialApp.router(
-            routerConfig: conteneur.read(routeurProvider),
-          ),
+          child: const PartyPlanApp(),
         ),
       );
       await tester.pumpAndSettle();

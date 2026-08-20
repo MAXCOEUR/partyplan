@@ -7,7 +7,7 @@ import '../../core/providers.dart';
 import '../../design/components/pp_card.dart';
 import '../../design/components/pp_states.dart';
 import '../../design/tokens.dart';
-import '../../l10n/pp_strings.dart';
+import '../../l10n/generated/pp_localisations.dart';
 
 final journalAuditProvider = FutureProvider<List<EntreeAudit>>(
   (ref) => ref.watch(comptesApiProvider).journalAudit(taille: 100),
@@ -33,7 +33,7 @@ class AdminAuditPage extends ConsumerWidget {
       body: journal.when(
         loading: () => const PpLoadingState(),
         error: (_, _) => PpErrorState(
-          message: PpStrings.erreurReseau,
+          message: PpL10n.of(context).erreurReseau,
           onRetry: () => ref.invalidate(journalAuditProvider),
         ),
         data: (entrees) => entrees.isEmpty

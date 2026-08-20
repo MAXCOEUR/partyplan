@@ -63,3 +63,6 @@ Thumbs.db
 infra/data/
 *.sqlite
 *.db
+
+# Chaînes traduites générées depuis lib/l10n/arb par `make l10n`
+app/lib/l10n/generated/

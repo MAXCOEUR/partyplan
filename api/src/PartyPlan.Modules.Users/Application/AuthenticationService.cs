@@ -195,6 +195,44 @@ public sealed class AuthenticationService(
     }
 
     /// <summary>
+    /// Achève une connexion par fournisseur tiers.
+    /// <para>
+    /// La double authentification s'applique aussi ici : sans cela, la connexion tierce
+    /// serait une porte de contournement du second facteur.
+    /// </para>
+    /// </summary>
+    public async Task<Result<LoginOutcome>> CompleteExternalSignInAsync(
+        Guid userId,
+        string? deviceLabel,
+        IPAddress? ip,
+        CancellationToken cancellationToken)
+    {
+        var utilisateur = await db.Users
+            .FirstOrDefaultAsync(u => u.Id == userId && u.DeletedAt == null, cancellationToken)
+            .ConfigureAwait(false);
+
+        if (utilisateur is null || utilisateur.IsSuspended)
+        {
+            return InvalidCredentials;
+        }
+
+        if (utilisateur.TotpEnabledAt is not null)
+        {
+            var defi = tokens.CreateMfaChallenge(utilisateur.Id);
+
+            return LoginOutcome.NeedsSecondFactor(new MfaChallenge(defi.Value, defi.ExpiresAt));
+        }
+
+        utilisateur.LastLoginAt = clock.UtcNow;
+        utilisateur.FailedLoginCount = 0;
+
+        var session = await OpenSessionAsync(utilisateur, deviceLabel, ip, cancellationToken)
+            .ConfigureAwait(false);
+
+        return LoginOutcome.Connected(session);
+    }
+
+    /// <summary>
     /// Achève une connexion après vérification du second facteur. La vérification du code
     /// est confiée à l'appelant : ce service ne connaît pas les mécanismes de TOTP.
     /// </summary>

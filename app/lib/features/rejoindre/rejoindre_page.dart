@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../design/components/pp_states.dart';
-import '../../l10n/pp_strings.dart';
+import '../../l10n/generated/pp_localisations.dart';
 
 /// Parcours de participation, en deux écrans au maximum : prénom, puis présence
 /// (RG-INV-05).
@@ -17,7 +17,7 @@ class RejoindrePage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: const Text(PpStrings.rejoindreUnEvenement)),
+    appBar: AppBar(title: Text(PpL10n.of(context).rejoindreUnEvenement)),
     body: PpEmptyState(
       titre: token == null ? 'Saisis le code de la soirée' : 'Invitation reçue',
       explication: token == null

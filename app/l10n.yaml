@@ -1,0 +1,10 @@
+# Génération des chaînes traduites (NF-I18N-01).
+#
+# Le français est la langue modèle : c'est elle qui définit les clés, et une clé absente
+# d'une traduction retombe sur le français plutôt que sur un identifiant technique.
+arb-dir: lib/l10n/arb
+template-arb-file: app_fr.arb
+output-localization-file: pp_localisations.dart
+output-class: PpL10n
+output-dir: lib/l10n/generated
+nullable-getter: false

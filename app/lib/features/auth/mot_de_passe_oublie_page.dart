@@ -7,7 +7,7 @@ import '../../core/network/api_exception.dart';
 import '../../core/providers.dart';
 import '../../design/components/pp_form.dart';
 import '../../design/tokens.dart';
-import '../../l10n/pp_strings.dart';
+import '../../l10n/generated/pp_localisations.dart';
 import '../../l10n/validateurs.dart';
 
 /// Réinitialisation du mot de passe (EF-AUTH-04).
@@ -61,11 +61,11 @@ class _MotDePasseOubliePageState extends ConsumerState<MotDePasseOubliePage> {
     } on ApiException catch (erreur) {
       setState(
         () => _erreur = erreur.estTropDeRequetes
-            ? PpStrings.erreurTropDeTentatives
+            ? PpL10n.of(context).erreurTropDeTentatives
             : erreur.title,
       );
     } on Exception {
-      setState(() => _erreur = PpStrings.erreurReseau);
+      setState(() => _erreur = PpL10n.of(context).erreurReseau);
     } finally {
       if (mounted) {
         setState(() => _enCours = false);
@@ -106,7 +106,7 @@ class _MotDePasseOubliePageState extends ConsumerState<MotDePasseOubliePage> {
     } on ApiException catch (erreur) {
       setState(() => _erreur = erreur.title);
     } on Exception {
-      setState(() => _erreur = PpStrings.erreurReseau);
+      setState(() => _erreur = PpL10n.of(context).erreurReseau);
     } finally {
       if (mounted) {
         setState(() => _enCours = false);

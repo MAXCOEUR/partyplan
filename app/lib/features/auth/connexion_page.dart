@@ -7,7 +7,7 @@ import '../../core/network/api_exception.dart';
 import '../../core/providers.dart';
 import '../../design/components/pp_form.dart';
 import '../../design/tokens.dart';
-import '../../l10n/pp_strings.dart';
+import '../../l10n/generated/pp_localisations.dart';
 import '../../l10n/validateurs.dart';
 
 /// Écran de connexion (EF-AUTH-02).
@@ -55,7 +55,7 @@ class _ConnexionPageState extends ConsumerState<ConnexionPage> {
       // distingue pas adresse inconnue de mot de passe erroné (RG-AUTH-04).
       setState(() => _erreur = erreur.title);
     } on Exception {
-      setState(() => _erreur = PpStrings.erreurReseau);
+      setState(() => _erreur = PpL10n.of(context).erreurReseau);
     } finally {
       if (mounted) {
         setState(() => _enCours = false);

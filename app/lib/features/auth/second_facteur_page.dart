@@ -7,7 +7,7 @@ import '../../core/network/api_exception.dart';
 import '../../core/providers.dart';
 import '../../design/components/pp_form.dart';
 import '../../design/tokens.dart';
-import '../../l10n/pp_strings.dart';
+import '../../l10n/generated/pp_localisations.dart';
 
 /// Seconde étape de la connexion : code temporel ou code de secours (EF-AUTH-12).
 class SecondFacteurPage extends ConsumerStatefulWidget {
@@ -55,7 +55,7 @@ class _SecondFacteurPageState extends ConsumerState<SecondFacteurPage> {
     } on ApiException catch (erreur) {
       setState(() => _erreur = erreur.title);
     } on Exception {
-      setState(() => _erreur = PpStrings.erreurReseau);
+      setState(() => _erreur = PpL10n.of(context).erreurReseau);
     } finally {
       if (mounted) {
         setState(() => _enCours = false);

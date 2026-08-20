@@ -170,8 +170,15 @@ Contrainte permanente : tout doit tourner en local avant d'être poussé — `§
     texte sur fond clair, couleurs de charte conservées sur fond sombre et pour les aplats
 - [x] `NF-A11Y-02` Cibles tactiles de 44 points, vérifiées par test
 - [x] `NF-A11Y-03` Libellés sémantiques sur les composants, dont une phrase lisible pour les montants
-- [x] `NF-I18N-01` Chaînes regroupées dans `PpStrings`, aucune en dur dans un écran
-- [ ] Migrer `PpStrings` vers des fichiers ARB traduits — à faire avant toute langue supplémentaire
+- [x] `NF-I18N-01` Chaînes regroupées, aucune en dur dans un écran
+- [x] Migrer `PpStrings` vers des fichiers ARB traduits
+  - → `lib/l10n/arb/app_fr.arb` et génération par `make l10n` ; les fichiers générés ne sont pas
+    versionnés, ce qui rend impossible une divergence silencieuse avec les ARB
+  - → délégués Material uniquement : la liste générée embarque les libellés Cupertino et
+    faisait réclamer par la compilation une police d'icônes absente
+  - → le nom du produit reste hors des ARB (`PpMarque`) : un nom de produit ne se traduit pas
+  - → les tests montent désormais `PartyPlanApp` et non un `MaterialApp` nu, faute de quoi ils
+    ne voyaient pas la même application que la production
 
 ## Lot 0.7 — Déploiement initial
 
@@ -264,11 +271,20 @@ d'enrôlement.
 - [x] `NF-SEC-11` Limites de débit paramétrables — les tests partagent une adresse IP et épuisaient une limite pensée pour un utilisateur unique
 - [x] Écrans : saisie du second facteur à la connexion, enrôlement et codes de secours
 - [ ] `EF-AUTH-06` Connexion Google — suppose des identifiants Google Cloud, voir `docs/comptes-externes.md` §1
-- [ ] `EF-AUTH-08` Rattachement et détachement d'une connexion tierce
+- [x] `EF-AUTH-08` Détachement d'une connexion tierce, et écran des moyens de connexion
+  - → `GET /v1/auth/providers` distingue « l'instance n'a pas les clés » de « le compte est
+    rattaché » : une clé retirée ne doit pas rendre un compte indétachable
+  - → le sujet transmis par le fournisseur n'est jamais exposé
+  - → le rattachement depuis l'application attend un client Google (`EF-AUTH-06`) ; l'écran
+    le dit plutôt que d'afficher un bouton condamné à échouer
 - [x] `RG-AUTH-08` Un compte sans mot de passe en définit un par le parcours de réinitialisation — le lui refuser l'enfermerait dans une dépendance au fournisseur tiers
 - [x] `NF-DEV-05` Inscription et connexion vérifiées sans aucune clé Google — voir lot 0.2b
-- [ ] Écran de rattachement des connexions tierces
-- [ ] Afficher le QR code d'enrôlement — le secret est affiché en clair et copiable, ce qui suffit à s'enrôler ; le QR code demande une dépendance graphique
+- [x] Écran de rattachement des connexions tierces
+- [x] Afficher le QR code d'enrôlement
+  - → dessiné côté Dart, sans appel réseau : envoyer un secret de double authentification à
+    un service tiers de génération d'image serait absurde
+  - → fond blanc imposé, que le thème sombre ne fournit pas et sans lequel le code n'est pas
+    lisible par un téléphone
 
 ## Lot 0.10 — Compte et profil
 
@@ -287,8 +303,15 @@ d'enrôlement.
 - [x] `RG-USR-05` Anonymisation expliquée avant confirmation, confirmation par saisie de l'adresse
 - [x] `RG-USR-06` Un compte supprimé libère son adresse e-mail
 - [x] Écrans : profil, édition, sécurité, mes données
-- [ ] `EF-USR-04` Téléversement de la photo depuis l'interface — l'endpoint existe et est testé, le sélecteur de fichier reste à brancher
-- [ ] `EF-USR-05` Recadrage avant envoi
+- [x] `EF-USR-04` Téléversement de la photo depuis l'interface
+  - → le type MIME est déduit du nom et déclaré explicitement : Dio annonce sinon
+    `application/octet-stream`, que le serveur refuse ; couvert par six tests
+  - → taille contrôlée avant envoi, format non reconnu refusé localement
+- [x] `EF-USR-05` Recadrage avant envoi, carré, facultatif
+  - → indisponible sur le web, où le fichier n'a pas de chemin local ; sans conséquence, le
+    serveur recadre de toute façon au centre
+  - → le recadreur réencode en JPEG : le nom est ajusté, sinon les octets contrediraient
+    le type déclaré
 - [ ] `EF-USR-08` Écran de préférences de notification — sans objet avant le lot 1.11
 
 ## Lot 0.11 — Amorçage de l'administrateur
@@ -317,7 +340,7 @@ d'enrôlement.
 - [x] `EF-ADM-10` Indicateurs d'instance
 - [x] `RG-ADM-08` Écrans d'administration sous `/admin/*`, accessibles aux seuls rôles plateforme
 - [x] Écrans : liste des comptes avec actions, journal d'audit
-- [ ] `EF-ADM-11` Forcer la vérification d'une adresse — endpoint livré, bouton d'interface manquant
+- [x] `EF-ADM-11` Forcer la vérification d'une adresse — bouton présent sur la fiche du compte, visible seulement si l'adresse ne l'est pas
 - [x] `EF-ADM-12` Export des données d'un utilisateur ne pouvant plus se connecter — même contenu que l'export en libre-service, journalisé car c'est un accès à des données personnelles
 - [x] `EF-ADM-13` Suppression d'une photo de profil signalée, idempotente
 - [x] `EF-ADM-10` Indicateurs complétés par les décomptes d'événements, via le contrat `IEventStatistics` — des nombres, jamais de contenu (`RG-ADM-01`), vérifié par test

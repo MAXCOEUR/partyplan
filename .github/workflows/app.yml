@@ -18,6 +18,10 @@ jobs:
           channel: stable
       - run: flutter pub get
         working-directory: app
+      # Les chaînes traduites ne sont pas versionnées : sans cette étape, l'analyse
+      # échoue sur un import introuvable.
+      - run: flutter gen-l10n
+        working-directory: app
       - run: flutter analyze
         working-directory: app
       - run: flutter test

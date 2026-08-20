@@ -625,3 +625,206 @@ public sealed class CompteSansMotDePasseTests(PartyPlanApiFixture fixture)
         connexion.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
     }
 }
+
+/// <summary>
+/// Connexions tierces sans clé configurée (NF-DEV-05, EF-AUTH-06, EF-AUTH-08).
+/// <para>
+/// Le développement doit se faire sans compte Google. L'endpoint doit donc refuser
+/// proprement, et surtout ne jamais laisser passer un jeton non vérifié.
+/// </para>
+/// </summary>
+[Collection(ApiTestSuite.Name)]
+public sealed class ConnexionsTiercesTests(PartyPlanApiFixture fixture)
+{
+    [Fact]
+    public async Task Sans_cle_configuree_la_connexion_google_refuse_proprement()
+    {
+        using var client = fixture.CreateClient();
+
+        var reponse = await client.PostAsJsonAsync("/v1/auth/google", new
+        {
+            idToken = "un.jeton.quelconque",
+        });
+
+        // Un jeton non vérifié ne doit jamais ouvrir de session, même en développement.
+        reponse.StatusCode.ShouldBe(HttpStatusCode.UnprocessableEntity);
+
+        var corps = await reponse.Content.ReadFromJsonAsync<JsonDocument>();
+        corps!.RootElement.GetProperty("code").GetString().ShouldBe("external.not_configured");
+    }
+
+    [Fact]
+    public async Task L_inscription_et_la_connexion_par_mot_de_passe_fonctionnent_sans_cle()
+    {
+        // NF-DEV-05 : l'absence de clé tierce n'empêche rien.
+        using var client = fixture.CreateClient();
+        var adresse = $"sans-google-{Guid.CreateVersion7():N}@partyplan.test";
+
+        var inscription = await client.PostAsJsonAsync("/v1/auth/register", new
+        {
+            email = adresse,
+            password = "Trombone-Nuage-42x",
+            displayName = "Sans Google",
+        });
+
+        inscription.StatusCode.ShouldBe(HttpStatusCode.OK);
+
+        var connexion = await client.PostAsJsonAsync("/v1/auth/login", new
+        {
+            email = adresse,
+            password = "Trombone-Nuage-42x",
+        });
+
+        connexion.StatusCode.ShouldBe(HttpStatusCode.OK);
+    }
+
+    [Fact]
+    public async Task Detacher_le_dernier_moyen_de_connexion_est_refuse()
+    {
+        using var client = fixture.CreateClient();
+        var adresse = $"lien-{Guid.CreateVersion7():N}@partyplan.test";
+
+        var inscription = await client.PostAsJsonAsync("/v1/auth/register", new
+        {
+            email = adresse,
+            password = "Trombone-Nuage-42x",
+            displayName = "Rattaché",
+        });
+
+        var acces = (await inscription.Content.ReadFromJsonAsync<JsonDocument>())!
+            .RootElement.GetProperty("accessToken").GetString();
+
+        using var authentifie = fixture.CreateClient();
+        authentifie.DefaultRequestHeaders.Authorization =
+            new AuthenticationHeaderValue("Bearer", acces);
+
+        // Aucun fournisseur rattaché : le détachement n'a pas d'objet.
+        var inexistant = await authentifie.DeleteAsync(
+            new Uri("/v1/auth/providers/google", UriKind.Relative));
+
+        inexistant.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
+
+        // Compte sans mot de passe mais avec un fournisseur : le détacher enfermerait la
+        // personne dehors, sans recours possible.
+        var identifiant = Guid.Empty;
+
+        await fixture.WithDatabaseAsync(async db =>
+        {
+            var compte = await db.Users.SingleAsync(u => u.Email == adresse);
+            compte.PasswordHash = null;
+            compte.GoogleSubject = $"google-{Guid.CreateVersion7():N}";
+            identifiant = compte.Id;
+            await db.SaveChangesAsync();
+        });
+
+        var refus = await authentifie.DeleteAsync(
+            new Uri("/v1/auth/providers/google", UriKind.Relative));
+
+        refus.StatusCode.ShouldBe(HttpStatusCode.UnprocessableEntity);
+
+        var corps = await refus.Content.ReadFromJsonAsync<JsonDocument>();
+        corps!.RootElement.GetProperty("code").GetString().ShouldBe("external.would_lock_out");
+
+        identifiant.ShouldNotBe(Guid.Empty);
+    }
+
+    [Fact]
+    public async Task La_liste_des_moyens_de_connexion_dit_ce_qui_est_disponible()
+    {
+        // L'écran de rattachement a besoin de deux informations distinctes : le service
+        // est-il utilisable sur cette instance, et est-il déjà rattaché à ce compte.
+        using var client = fixture.CreateClient();
+        var adresse = $"moyens-{Guid.CreateVersion7():N}@partyplan.test";
+
+        var inscription = await client.PostAsJsonAsync("/v1/auth/register", new
+        {
+            email = adresse,
+            password = "Trombone-Nuage-42x",
+            displayName = "Moyens",
+        });
+
+        var acces = (await inscription.Content.ReadFromJsonAsync<JsonDocument>())!
+            .RootElement.GetProperty("accessToken").GetString();
+
+        using var authentifie = fixture.CreateClient();
+        authentifie.DefaultRequestHeaders.Authorization =
+            new AuthenticationHeaderValue("Bearer", acces);
+
+        var reponse = await authentifie.GetAsync(
+            new Uri("/v1/auth/providers", UriKind.Relative));
+
+        reponse.StatusCode.ShouldBe(HttpStatusCode.OK);
+
+        var corps = await reponse.Content.ReadFromJsonAsync<JsonDocument>();
+        var racine = corps!.RootElement;
+
+        // Le mot de passe est un moyen de connexion comme un autre : sans lui dans la
+        // liste, l'écran ne peut pas expliquer pourquoi un détachement est refusé.
+        racine.GetProperty("hasPassword").GetBoolean().ShouldBeTrue();
+
+        var fournisseurs = racine.GetProperty("providers").EnumerateArray().ToList();
+        fournisseurs.Count.ShouldBe(2);
+
+        var google = fournisseurs.Single(f => f.GetProperty("provider").GetString() == "google");
+
+        // Aucune clé en test : le service est annoncé indisponible, et l'écran masque le
+        // bouton plutôt que d'offrir une action qui échouera (NF-DEV-05).
+        google.GetProperty("configured").GetBoolean().ShouldBeFalse();
+        google.GetProperty("linked").GetBoolean().ShouldBeFalse();
+
+        // Le sujet du fournisseur n'a rien à faire dans une réponse d'API.
+        google.TryGetProperty("subject", out _).ShouldBeFalse();
+    }
+
+    [Fact]
+    public async Task Un_fournisseur_rattache_est_signale_comme_tel()
+    {
+        using var client = fixture.CreateClient();
+        var adresse = $"rattache-{Guid.CreateVersion7():N}@partyplan.test";
+
+        var inscription = await client.PostAsJsonAsync("/v1/auth/register", new
+        {
+            email = adresse,
+            password = "Trombone-Nuage-42x",
+            displayName = "Rattaché",
+        });
+
+        var acces = (await inscription.Content.ReadFromJsonAsync<JsonDocument>())!
+            .RootElement.GetProperty("accessToken").GetString();
+
+        await fixture.WithDatabaseAsync(async db =>
+        {
+            var compte = await db.Users.SingleAsync(u => u.Email == adresse);
+            compte.GoogleSubject = $"google-{Guid.CreateVersion7():N}";
+            await db.SaveChangesAsync();
+        });
+
+        using var authentifie = fixture.CreateClient();
+        authentifie.DefaultRequestHeaders.Authorization =
+            new AuthenticationHeaderValue("Bearer", acces);
+
+        var reponse = await authentifie.GetAsync(
+            new Uri("/v1/auth/providers", UriKind.Relative));
+
+        var corps = await reponse.Content.ReadFromJsonAsync<JsonDocument>();
+
+        var google = corps!.RootElement.GetProperty("providers").EnumerateArray()
+            .Single(f => f.GetProperty("provider").GetString() == "google");
+
+        google.GetProperty("linked").GetBoolean().ShouldBeTrue();
+
+        // Rattaché mais non configuré : l'écran doit pouvoir proposer le détachement
+        // sans proposer le rattachement.
+        google.GetProperty("configured").GetBoolean().ShouldBeFalse();
+    }
+
+    [Fact]
+    public async Task La_liste_des_moyens_de_connexion_exige_une_session()
+    {
+        using var client = fixture.CreateClient();
+
+        var reponse = await client.GetAsync(new Uri("/v1/auth/providers", UriKind.Relative));
+
+        reponse.StatusCode.ShouldBe(HttpStatusCode.Unauthorized);
+    }
+}

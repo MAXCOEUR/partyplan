@@ -61,8 +61,11 @@ services:
       Jwt__Issuer: https://${DOMAIN_API}
       Jwt__Audience: partyplan-app
       Jwt__SigningKey: ${JWT_SIGNING_KEY}
+      # Trois identifiants clients : Google émet un jeton par plateforme et l'audience
+      # diffère à chaque fois.
       Google__ClientId: ${GOOGLE_CLIENT_ID}
-      Google__ClientSecret: ${GOOGLE_CLIENT_SECRET}
+      Google__AndroidClientId: ${GOOGLE_ANDROID_CLIENT_ID}
+      Google__IosClientId: ${GOOGLE_IOS_CLIENT_ID}
       Apple__ClientId: ${APPLE_CLIENT_ID}
       Apple__TeamId: ${APPLE_TEAM_ID}
       Apple__KeyId: ${APPLE_KEY_ID}

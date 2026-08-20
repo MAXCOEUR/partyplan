@@ -11,12 +11,13 @@ import '../features/auth/mot_de_passe_oublie_page.dart';
 import '../features/auth/second_facteur_page.dart';
 import '../features/evenement/coquille_evenement.dart';
 import '../features/profil/confidentialite_page.dart';
+import '../features/profil/connexions_page.dart';
 import '../features/profil/profil_edition_page.dart';
 import '../features/profil/profil_page.dart';
 import '../features/profil/second_facteur_reglage_page.dart';
 import '../features/profil/securite_page.dart';
 import '../features/rejoindre/rejoindre_page.dart';
-import '../l10n/pp_strings.dart';
+import '../l10n/generated/pp_localisations.dart';
 
 /// Routes de l'application.
 abstract final class PpRoutes {
@@ -33,6 +34,7 @@ abstract final class PpRoutes {
   static const securite = '/securite';
   static const confidentialite = '/mes-donnees';
   static const secondFacteurReglage = '/securite/double-authentification';
+  static const connexionsTierces = '/securite/connexions';
 
   // Administration. Absente des versions mobiles en production (RG-ADM-08) :
   // la restriction est appliquée à la construction, voir plateforme.dart.
@@ -140,6 +142,10 @@ GoRouter creerRouteur(Ref ref) => GoRouter(
           SecondFacteurPage(jetonDefi: state.extra! as String),
     ),
     GoRoute(
+      path: PpRoutes.connexionsTierces,
+      builder: (context, state) => const ConnexionsPage(),
+    ),
+    GoRoute(
       path: PpRoutes.confidentialite,
       builder: (context, state) => const ConfidentialitePage(),
     ),
@@ -172,7 +178,7 @@ GoRouter creerRouteur(Ref ref) => GoRouter(
       child: Padding(
         padding: const EdgeInsets.all(24),
         child: Text(
-          PpStrings.erreurIntrouvable,
+          PpL10n.of(context).erreurIntrouvable,
           textAlign: TextAlign.center,
           style: Theme.of(context).textTheme.bodyLarge,
         ),

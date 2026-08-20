@@ -12,6 +12,11 @@ COPY pubspec.yaml pubspec.lock ./
 RUN flutter pub get
 
 COPY . .
+
+# Génération explicite plutôt qu'implicite : `flutter build` la déclenche, mais un
+# échec de génération est plus lisible ici que noyé dans la compilation.
+RUN flutter gen-l10n
+
 RUN flutter build web \
       --release \
       --dart-define=API_BASE_URL=${API_BASE_URL}

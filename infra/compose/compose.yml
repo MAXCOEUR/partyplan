@@ -56,7 +56,8 @@ services:
       Smtp__From: PartyPlan (dev) <dev@partyplan.local>
       # Connexions tierces désactivées par défaut en local — NF-DEV-05
       Google__ClientId: ${GOOGLE_CLIENT_ID:-}
-      Google__ClientSecret: ${GOOGLE_CLIENT_SECRET:-}
+      Google__AndroidClientId: ${GOOGLE_ANDROID_CLIENT_ID:-}
+      Google__IosClientId: ${GOOGLE_IOS_CLIENT_ID:-}
       # Notifications poussées journalisées en console faute de clé — NF-DEV-04
       Push__FirebaseServiceAccountJson: ${FIREBASE_SERVICE_ACCOUNT_JSON:-}
       # Chiffrement des secrets de double authentification

@@ -1,8 +1,9 @@
-import 'dart:typed_data';
-
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:image_cropper/image_cropper.dart';
 
+import '../../core/media/type_mime_image.dart';
 import '../../core/network/api_exception.dart';
 import '../../core/providers.dart';
 import '../../design/components/pp_avatar.dart';
@@ -10,7 +11,7 @@ import '../../design/components/pp_card.dart';
 import '../../design/components/pp_form.dart';
 import '../../design/components/pp_states.dart';
 import '../../design/tokens.dart';
-import '../../l10n/pp_strings.dart';
+import '../../l10n/generated/pp_localisations.dart';
 import '../../l10n/validateurs.dart';
 
 /// Modification du profil : nom affiché, adresse, photo (EF-USR-02 à EF-USR-07).
@@ -60,7 +61,7 @@ class _ProfilEditionPageState extends ConsumerState<ProfilEditionPage> {
     } on ApiException catch (erreur) {
       setState(() => _erreur = erreur.title);
     } on Exception {
-      setState(() => _erreur = PpStrings.erreurEnregistrement);
+      setState(() => _erreur = PpL10n.of(context).erreurEnregistrement);
     } finally {
       if (mounted) {
         setState(() => _enCours = false);
@@ -98,7 +99,96 @@ class _ProfilEditionPageState extends ConsumerState<ProfilEditionPage> {
     } on ApiException catch (erreur) {
       setState(() => _erreur = erreur.title);
     } on Exception {
-      setState(() => _erreur = PpStrings.erreurReseau);
+      setState(() => _erreur = PpL10n.of(context).erreurReseau);
+    } finally {
+      if (mounted) {
+        setState(() => _enCours = false);
+      }
+    }
+  }
+
+  /// Choisit une image, la recadre, puis la téléverse (EF-USR-04, EF-USR-05).
+  ///
+  /// Le recadrage est proposé mais non imposé : le serveur recadre de toute façon au
+  /// centre et redimensionne (RG-USR-01), donc un refus de recadrer donne un résultat
+  /// correct. Le rendre obligatoire ajouterait une étape sans nécessité.
+  Future<void> _choisirPhoto() async {
+    setState(() {
+      _enCours = true;
+      _erreur = null;
+    });
+
+    try {
+      final fichier = await FilePicker.pickFile(type: FileType.image);
+
+      if (fichier == null) {
+        return;
+      }
+
+      // Contrôle local avant envoi : inutile de faire monter cinq mégaoctets pour se
+      // faire refuser (RG-USR-01).
+      if (await fichier.length() > _tailleMaximale) {
+        setState(() => _erreur = 'L’image ne doit pas dépasser 5 Mo.');
+        return;
+      }
+
+      var octets = await fichier.readAsBytes();
+      var nom = fichier.name;
+
+      // Le recadrage n'est proposé que si le fichier est sur le disque : sur le web
+      // `path` est nul et le recadreur natif n'aurait rien à ouvrir. Il reste facultatif,
+      // car le serveur recadre de toute façon au centre.
+      final chemin = fichier.path;
+
+      if (chemin != null) {
+        final recadree = await ImageCropper().cropImage(
+          sourcePath: chemin,
+          aspectRatio: const CropAspectRatio(ratioX: 1, ratioY: 1),
+          uiSettings: [
+            AndroidUiSettings(
+              toolbarTitle: 'Recadre ta photo',
+              lockAspectRatio: true,
+              initAspectRatio: CropAspectRatioPreset.square,
+              aspectRatioPresets: const [CropAspectRatioPreset.square],
+            ),
+            IOSUiSettings(
+              title: 'Recadre ta photo',
+              aspectRatioLockEnabled: true,
+              aspectRatioPickerButtonHidden: true,
+            ),
+          ],
+        );
+
+        if (recadree != null) {
+          octets = await recadree.readAsBytes();
+          // Le recadreur réencode en JPEG : conserver le nom d'origine annoncerait un
+          // PNG là où les octets sont un JPEG, et le serveur refuserait.
+          nom = 'photo.jpg';
+        }
+      }
+
+      final typeMime = typeMimeImage(nom);
+
+      if (typeMime == null) {
+        setState(() => _erreur = 'Formats acceptés : JPEG, PNG, WebP et HEIC.');
+        return;
+      }
+
+      await ref
+          .read(comptesApiProvider)
+          .televerserPhoto(octets: octets, nomFichier: nom, typeMime: typeMime);
+
+      ref.invalidate(profilProvider);
+
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Photo enregistrée.')));
+      }
+    } on ApiException catch (erreur) {
+      setState(() => _erreur = erreur.title);
+    } on Exception {
+      setState(() => _erreur = PpL10n.of(context).erreurEnregistrement);
     } finally {
       if (mounted) {
         setState(() => _enCours = false);
@@ -114,7 +204,7 @@ class _ProfilEditionPageState extends ConsumerState<ProfilEditionPage> {
       ref.invalidate(profilProvider);
     } on Exception {
       if (mounted) {
-        setState(() => _erreur = PpStrings.erreurEnregistrement);
+        setState(() => _erreur = PpL10n.of(context).erreurEnregistrement);
       }
     } finally {
       if (mounted) {
@@ -132,7 +222,7 @@ class _ProfilEditionPageState extends ConsumerState<ProfilEditionPage> {
       body: profil.when(
         loading: () => const PpLoadingState(),
         error: (_, _) => PpErrorState(
-          message: PpStrings.erreurReseau,
+          message: PpL10n.of(context).erreurReseau,
           onRetry: () => ref.invalidate(profilProvider),
         ),
         data: (donnees) {
@@ -153,22 +243,45 @@ class _ProfilEditionPageState extends ConsumerState<ProfilEditionPage> {
                       taille: 96,
                     ),
                     const SizedBox(height: PpSpacing.md),
-                    if (donnees.urlPhoto == null)
+                    // Wrap et non Row : sur 320 points de large, deux boutons côte à
+                    // côte débordent.
+                    Wrap(
+                      alignment: WrapAlignment.center,
+                      spacing: PpSpacing.sm,
+                      runSpacing: PpSpacing.sm,
+                      children: [
+                        OutlinedButton.icon(
+                          onPressed: _enCours ? null : _choisirPhoto,
+                          icon: const Icon(
+                            Icons.photo_camera_outlined,
+                            size: 18,
+                          ),
+                          label: Text(
+                            donnees.urlPhoto == null
+                                ? 'Ajouter une photo'
+                                : 'Changer la photo',
+                          ),
+                        ),
+                        if (donnees.urlPhoto != null)
+                          OutlinedButton.icon(
+                            onPressed: _enCours ? null : _supprimerPhoto,
+                            icon: const Icon(
+                              Icons.delete_outline_rounded,
+                              size: 18,
+                            ),
+                            label: const Text('Supprimer'),
+                          ),
+                      ],
+                    ),
+                    if (donnees.urlPhoto == null) ...[
+                      const SizedBox(height: PpSpacing.sm),
                       Text(
-                        'Ta photo sera bientôt téléversable depuis l’application. '
-                        'En attendant, l’avatar est généré depuis tes initiales.',
+                        'À défaut de photo, l’avatar est généré depuis tes initiales, '
+                        'sans appel à aucun service externe.',
                         textAlign: TextAlign.center,
                         style: Theme.of(context).textTheme.bodySmall,
-                      )
-                    else
-                      OutlinedButton.icon(
-                        onPressed: _enCours ? null : _supprimerPhoto,
-                        icon: const Icon(
-                          Icons.delete_outline_rounded,
-                          size: 18,
-                        ),
-                        label: const Text('Supprimer la photo'),
                       ),
+                    ],
                   ],
                 ),
               ),
@@ -238,5 +351,5 @@ class _ProfilEditionPageState extends ConsumerState<ProfilEditionPage> {
   }
 }
 
-/// Conversion d'un fichier choisi en octets, isolée pour rester testable.
-Uint8List octetsDe(List<int> source) => Uint8List.fromList(source);
+/// Taille maximale acceptée par le serveur (RG-USR-01).
+const _tailleMaximale = 5 * 1024 * 1024;

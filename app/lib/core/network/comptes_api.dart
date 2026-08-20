@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:dio/dio.dart';
 
+import '../models/moyens_connexion.dart';
 import '../models/profil.dart';
 import '../storage/session_store.dart';
 import 'api_client.dart';
@@ -179,9 +180,16 @@ class ComptesApi {
   Future<String> televerserPhoto({
     required List<int> octets,
     required String nomFichier,
+    required String typeMime,
   }) async {
     final donnees = FormData.fromMap({
-      'file': MultipartFile.fromBytes(octets, filename: nomFichier),
+      // Le type est déclaré explicitement : sans lui, Dio annonce
+      // « application/octet-stream », que le serveur refuse (RG-USR-01).
+      'file': MultipartFile.fromBytes(
+        octets,
+        filename: nomFichier,
+        contentType: DioMediaType.parse(typeMime),
+      ),
     });
 
     return _client.put<String>(
@@ -192,6 +200,26 @@ class ComptesApi {
   }
 
   Future<void> supprimerPhoto() => _client.delete('/me/avatar');
+
+  // ------------------------------------------------------ connexions tierces ----
+
+  Future<MoyensConnexion> moyensConnexion() => _client.get<MoyensConnexion>(
+    '/auth/providers',
+    analyser: (corps) =>
+        MoyensConnexion.depuisJson(corps! as Map<String, dynamic>),
+  );
+
+  Future<void> detacherFournisseur(String identifiant) =>
+      _client.delete('/auth/providers/$identifiant');
+
+  Future<void> rattacherFournisseur({
+    required String identifiant,
+    required String jetonIdentite,
+  }) => _client.post<void>(
+    '/auth/providers/$identifiant/link',
+    corps: {'idToken': jetonIdentite},
+    analyser: (_) {},
+  );
 
   Future<String> exporterDonnees() => _client.get<String>(
     '/me/export',
@@ -227,6 +255,11 @@ class ComptesApi {
 
   Future<void> revoquerToutesSessions(String id) =>
       _client.delete('/admin/users/$id/sessions');
+
+  /// Force la vérification d'une adresse (EF-ADM-11). Recours quand le courriel de
+  /// vérification n'arrive pas ; l'action est journalisée côté serveur (RG-ADM-06).
+  Future<void> forcerVerificationAdresse(String id) =>
+      _client.post<void>('/admin/users/$id/verify-email', analyser: (_) {});
 
   Future<void> suspendre(String id, String motif) => _client.post<void>(
     '/admin/users/$id/suspend',

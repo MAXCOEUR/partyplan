@@ -10,7 +10,8 @@ import '../../design/components/pp_avatar.dart';
 import '../../design/components/pp_card.dart';
 import '../../design/components/pp_states.dart';
 import '../../design/tokens.dart';
-import '../../l10n/pp_strings.dart';
+import '../../l10n/marque.dart';
+import '../../l10n/generated/pp_localisations.dart';
 
 /// Écran de profil : ce que l'utilisateur voit de son propre compte.
 ///
@@ -27,7 +28,7 @@ class ProfilPage extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text(PpStrings.nomProduit),
+        title: const Text(PpMarque.nom),
         actions: [
           IconButton(
             tooltip: 'Se déconnecter',
@@ -45,7 +46,7 @@ class ProfilPage extends ConsumerWidget {
       body: profil.when(
         loading: () => const PpLoadingState(),
         error: (erreur, _) => PpErrorState(
-          message: PpStrings.erreurReseau,
+          message: PpL10n.of(context).erreurReseau,
           onRetry: () => ref.invalidate(profilProvider),
         ),
         data: (donnees) => RefreshIndicator(

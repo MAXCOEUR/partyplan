@@ -29,7 +29,18 @@ dependencies:
   flutter_secure_storage: ">=10.3.1 <11.0.0"
 
   # Formats français : dates JJ/MM/AAAA, montants en euros
-  intl: ^0.20.3
+  intl: ^0.20.2
+
+  # Chaînes traduites générées depuis lib/l10n/arb (NF-I18N-01)
+  flutter_localizations:
+    sdk: flutter
+
+  # Uniquement pour la police d'icônes réclamée par les libellés Cupertino, qu'aucun
+  # écran n'utilise mais qu'il faut déclarer — voir PartyPlanApp.delegues.
+  cupertino_icons: ^1.0.8
+  qr_flutter: ^4.1.0
+  file_picker: ^12.0.0
+  image_cropper: ^12.2.1
 
 dev_dependencies:
   flutter_test:
@@ -38,6 +49,9 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+
+  # Génère PpL10n depuis les fichiers ARB, selon l10n.yaml.
+  generate: true
 
   # Polices embarquées : aucun téléchargement à l'exécution, le développement
   # fonctionne hors ligne (NF-DEV-02).

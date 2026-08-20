@@ -1,6 +1,6 @@
-import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:partyplan/app/app.dart';
 import 'package:partyplan/app/router.dart';
 import 'package:partyplan/core/models/profil.dart';
 import 'package:partyplan/core/providers.dart';
@@ -112,7 +112,7 @@ Future<void> _monter(WidgetTester tester) async {
   await tester.pumpWidget(
     UncontrolledProviderScope(
       container: conteneur,
-      child: MaterialApp.router(routerConfig: routeur),
+      child: const PartyPlanApp(),
     ),
   );
   await tester.pumpAndSettle();

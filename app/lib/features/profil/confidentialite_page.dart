@@ -8,7 +8,7 @@ import '../../core/providers.dart';
 import '../../design/components/pp_card.dart';
 import '../../design/components/pp_form.dart';
 import '../../design/tokens.dart';
-import '../../l10n/pp_strings.dart';
+import '../../l10n/generated/pp_localisations.dart';
 
 /// Mes données et confidentialité : export et suppression (EF-USR-09, EF-USR-10).
 class ConfidentialitePage extends ConsumerStatefulWidget {
@@ -31,9 +31,9 @@ class _ConfidentialitePageState extends ConsumerState<ConfidentialitePage> {
       setState(() => _apercuExport = donnees);
     } on Exception {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text(PpStrings.erreurReseau)));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(PpL10n.of(context).erreurReseau)),
+        );
       }
     } finally {
       if (mounted) {
