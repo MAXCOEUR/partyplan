@@ -768,15 +768,33 @@ Ce jeu doit être couvert par un test automatisé avant toute modification du ca
 | Bières | 50,00 € | Lucas |
 | Viande | 34,00 € | Emma |
 
-Total 184,00 €, soit 61,33 € par personne (18 400 centimes / 3 = 6 133,33 → parts de
-6 134, 6 133, 6 133 selon la règle des plus grands restes, attribuées par identifiant croissant).
+La répartition se fait **dépense par dépense**, jamais sur le total : chaque dépense a
+son propre payeur, et les fusionner perdrait cette information. Identifiants croissants
+Maxence < Lucas < Emma.
 
-Soldes : Maxence +38,66 € · Lucas −11,33 € · Emma −27,33 €.
+| Dépense | Montant | Maxence | Lucas | Emma |
+|---|---|---|---|---|
+| Courses | 10 000 | 3 334 | 3 333 | 3 333 |
+| Bières | 5 000 | 1 667 | 1 667 | 1 666 |
+| Viande | 3 400 | 1 134 | 1 133 | 1 133 |
+| **Dû total** | **18 400** | **6 135** | **6 133** | **6 132** |
+| Avancé | | 10 000 | 5 000 | 3 400 |
+| **Solde** | | **+3 865** | **−1 133** | **−2 732** |
 
-Règlements attendus, dans cet ordre : Emma → Maxence 27,33 € puis Lucas → Maxence 11,33 €.
+Soldes : Maxence +38,65 € · Lucas −11,33 € · Emma −27,32 €. Somme nulle (IV-02).
 
-Somme des règlements : 38,66 €, égale au solde du créditeur unique. Deux transactions
+Règlements attendus, dans cet ordre : Emma → Maxence 27,32 € puis Lucas → Maxence 11,33 €.
+
+Somme des règlements : 38,65 €, égale au solde du créditeur unique. Deux transactions
 au lieu des six d'un règlement bilatéral naïf.
+
+> **Correction du 20/08/2026.** Cette section annonçait auparavant +38,66 / −11,33 /
+> −27,33 et un premier règlement de 27,33 €. Ces chiffres provenaient d'une répartition
+> du **total** 18 400 en une seule fois, ce qui donne bien un dû de 6 134 / 6 133 / 6 133
+> — mais contredit le `§6.2` et le modèle de données, où chaque dépense porte son propre
+> payeur et sa propre assiette (`expense_participants.amount_cents`). L'écart est d'un
+> centime sur deux membres. Les valeurs ci-dessus sont celles que produit le `§6.2`
+> appliqué à la lettre, vérifiées par `JeuDeReferenceTests`.
 
 ---
 
