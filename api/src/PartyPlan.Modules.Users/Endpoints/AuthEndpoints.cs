@@ -279,6 +279,40 @@ internal static class AuthEndpoints
             .WithSummary("Renouvelle la session. Le jeton présenté est invalidé.")
             .Produces<TokenResponse>();
 
+        // EF-AUTH-11 — rattachement d'une participation d'invité au compte connecté.
+        //
+        // Endpoint authentifié distinct, et non champ ajouté à l'inscription et à la
+        // connexion : l'API compte quatre points d'ouverture de session — inscription,
+        // connexion, second facteur, connexion tierce. Un champ n'en couvrirait que
+        // deux, et tout compte protégé par un second facteur perdrait silencieusement
+        // sa participation. L'application appelle cet endpoint dès qu'une session
+        // s'ouvre et qu'un jeton d'invité est présent sur l'appareil.
+        groupe.MapPost("/guest-claim", async (
+                ClaimGuestRequest corps,
+                IGuestMembershipLinking linking,
+                HttpContext http,
+                CancellationToken cancellationToken) =>
+            {
+                var utilisateur = UserId(http.User);
+
+                if (utilisateur is null)
+                {
+                    return Results.Unauthorized();
+                }
+
+                var rattachees = await linking
+                    .LinkAsync(utilisateur.Value, corps.GuestToken, cancellationToken)
+                    .ConfigureAwait(false);
+
+                // Zéro n'est pas une erreur : un jeton périmé ou déjà consommé ne doit
+                // pas produire un message d'échec pour une action sans conséquence.
+                return Results.Ok(new ClaimGuestResponse(rattachees));
+            })
+            .WithName("ClaimGuestParticipations")
+            .WithSummary("Rattache au compte les participations rejointes sans compte.")
+            .RequireAuthorization()
+            .Produces<ClaimGuestResponse>();
+
         groupe.MapPost("/logout", async (
                 AuthenticationService service,
                 HttpContext http,

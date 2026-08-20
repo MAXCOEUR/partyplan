@@ -1,7 +1,5 @@
 namespace PartyPlan.Modules.Events.Application;
 
-using System.Security.Cryptography;
-using System.Text;
 using Microsoft.EntityFrameworkCore;
 using PartyPlan.Modules.Events.Domain;
 using PartyPlan.Modules.Events.Persistence;
@@ -174,8 +172,16 @@ public sealed class JoinService(
     private static JoinResult Resultat(Guid eventId, EventMember membre) =>
         new(eventId, membre.Id, null, null);
 
+    /// <summary>
+    /// Empreinte du jeton d'invité, déléguée à <see cref="GuestMembershipLinking"/>.
+    /// <para>
+    /// Un seul calcul dans le module : deux implémentations qui divergeraient d'un
+    /// octet feraient qu'aucune participation ne serait jamais rattachée à un compte,
+    /// sans la moindre erreur visible.
+    /// </para>
+    /// </summary>
     private static string Empreinte(string valeur) =>
-        Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(valeur)));
+        GuestMembershipLinking.Empreinte(valeur);
 
     private async Task<Result<JoinPreview>> ApercuAsync(
         System.Linq.Expressions.Expression<Func<Event, bool>> critere,
