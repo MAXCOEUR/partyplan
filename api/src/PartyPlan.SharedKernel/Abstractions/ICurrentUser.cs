@@ -18,6 +18,17 @@ public interface ICurrentUser
     /// </summary>
     Guid? GuestEventId { get; }
 
+    /// <summary>
+    /// Ligne de membre désignée par un jeton d'invité. Toujours <c>null</c> pour un
+    /// compte, qui est retrouvé par son identifiant d'utilisateur.
+    /// <para>
+    /// Indispensable : deux invités d'un même événement n'ont ni l'un ni l'autre
+    /// d'identifiant de compte. Les distinguer par « le premier membre sans compte »
+    /// ferait que chacun modifierait la présence de l'autre, et plus tard ses dépenses.
+    /// </para>
+    /// </summary>
+    Guid? GuestMemberId { get; }
+
     PlatformRole PlatformRole { get; }
 
     bool IsAuthenticated { get; }

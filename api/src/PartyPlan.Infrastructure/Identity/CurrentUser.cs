@@ -16,6 +16,9 @@ public static class PartyPlanClaims
 
     public const string SessionId = "pp:session";
 
+    /// <summary>Ligne de membre désignée par un jeton d'invité.</summary>
+    public const string MemberId = "pp:member";
+
     /// <summary>Double authentification active (RG-ADM-04).</summary>
     public const string TotpEnabled = "pp:totp";
 
@@ -33,6 +36,13 @@ public sealed class CurrentUser(IHttpContextAccessor accessor) : ICurrentUser
 
     public Guid? GuestEventId =>
         Guid.TryParse(Principal?.FindFirstValue(PartyPlanClaims.GuestEventId), out var id) ? id : null;
+
+    public Guid? GuestMemberId =>
+        GuestEventId is null
+            ? null
+            : Guid.TryParse(Principal?.FindFirstValue(PartyPlanClaims.MemberId), out var id)
+                ? id
+                : null;
 
     public PlatformRole PlatformRole =>
         Enum.TryParse<PlatformRole>(Principal?.FindFirstValue(PartyPlanClaims.PlatformRole), out var role)

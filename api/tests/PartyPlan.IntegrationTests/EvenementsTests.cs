@@ -582,6 +582,60 @@ public sealed class EvenementsTests(PartyPlanApiFixture fixture)
     }
 
     [Fact]
+    public async Task Deux_invites_sans_compte_modifient_chacun_leur_propre_presence()
+    {
+        var organisateur = await CompteAsync();
+        var (eventId, jeton, _) = await CreerAsync(organisateur, "Deux invités");
+
+        var jetonLea = await RejoindreEtRecupererJetonAsync(jeton, "Léa");
+        var jetonTom = await RejoindreEtRecupererJetonAsync(jeton, "Tom");
+
+        using var lea = ClientAvecJeton(jetonLea);
+        using var tom = ClientAvecJeton(jetonTom);
+
+        (await lea.PatchAsJsonAsync(
+                $"/v1/events/{eventId}/members/me",
+                new { status = "NotGoing" }))
+            .StatusCode.ShouldBe(HttpStatusCode.OK);
+
+        (await tom.PatchAsJsonAsync(
+                $"/v1/events/{eventId}/members/me",
+                new { status = "Maybe" }))
+            .StatusCode.ShouldBe(HttpStatusCode.OK);
+
+        var membres = await MembresAsync(organisateur, eventId);
+        var parNom = membres.EnumerateArray()
+            .ToDictionary(
+                m => m.GetProperty("displayName").GetString()!,
+                m => m.GetProperty("status").GetString()!);
+
+        // Sans identification du membre par le jeton, les deux invités partagent la
+        // première ligne sans compte : chacun modifierait la présence de l'autre.
+        parNom["Léa"].ShouldBe("NotGoing");
+        parNom["Tom"].ShouldBe("Maybe");
+    }
+
+    private HttpClient ClientAvecJeton(string jeton)
+    {
+        var client = fixture.CreateClient();
+        client.DefaultRequestHeaders.Authorization =
+            new AuthenticationHeaderValue("Bearer", jeton);
+
+        return client;
+    }
+
+    private async Task<string> RejoindreEtRecupererJetonAsync(string jeton, string prenom)
+    {
+        using var invite = fixture.CreateClient();
+        var adhesion = await RejoindreAsync(invite, jeton, prenom);
+
+        adhesion.StatusCode.ShouldBe(HttpStatusCode.OK);
+
+        return (await adhesion.Content.ReadFromJsonAsync<JsonDocument>())!
+            .RootElement.GetProperty("guestToken").GetString()!;
+    }
+
+    [Fact]
     public async Task Le_code_court_permet_de_rejoindre_et_pas_seulement_de_regarder()
     {
         var organisateur = await CompteAsync();
