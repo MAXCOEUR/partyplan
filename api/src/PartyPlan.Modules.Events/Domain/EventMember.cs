@@ -108,6 +108,56 @@ public sealed class EventMember : IEventScoped
         return target.Role == EventMemberRole.Owner ? CannotRemoveOwner : Result.Success();
     }
 
+    public static readonly DomainError OnlyOwnerTransfers = DomainError.Forbidden(
+        "event.only_owner_transfers",
+        "Seul le propriétaire peut transférer l'événement.");
+
+    public static readonly DomainError TransferToSelf = DomainError.Rule(
+        "event.transfer_to_self",
+        "Tu es déjà propriétaire de cet événement.");
+
+    public static readonly DomainError TransferToInactive = DomainError.Rule(
+        "event.transfer_to_inactive",
+        "Ce participant ne fait plus partie de l'événement.");
+
+    public static readonly DomainError TransferNeedsAccount = DomainError.Rule(
+        "event.transfer_needs_account",
+        "Cette personne doit d'abord créer un compte pour devenir propriétaire.");
+
+    /// <summary>
+    /// Vérifie qu'un transfert de propriété est possible.
+    /// <para>
+    /// Opération rendue nécessaire par RG-ROLE-02 : sans elle, la règle interdisant au
+    /// propriétaire de partir sans transférer serait un cul-de-sac.
+    /// </para>
+    /// <para>
+    /// La cible doit posséder un compte : un invité sans compte ne retrouverait pas
+    /// l'événement depuis un autre appareil, et plus personne ne pourrait l'administrer.
+    /// </para>
+    /// </summary>
+    public static Result CanTransferOwnership(EventMember actor, EventMember target)
+    {
+        ArgumentNullException.ThrowIfNull(actor);
+        ArgumentNullException.ThrowIfNull(target);
+
+        if (actor.Role != EventMemberRole.Owner || !actor.IsActive)
+        {
+            return OnlyOwnerTransfers;
+        }
+
+        if (actor.Id == target.Id)
+        {
+            return TransferToSelf;
+        }
+
+        if (!target.IsActive)
+        {
+            return TransferToInactive;
+        }
+
+        return target.UserId is null ? TransferNeedsAccount : Result.Success();
+    }
+
     /// <summary>
     /// Vérifie qu'un membre peut quitter l'événement (RG-ROLE-02). Sans cette règle, un
     /// événement pourrait se retrouver sans propriétaire, donc impossible à administrer

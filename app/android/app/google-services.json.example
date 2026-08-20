@@ -1,0 +1,24 @@
+{
+  "_commentaire": "Fichier d'exemple. Le vrai google-services.json se télécharge depuis la console Firebase et n'est pas versionné — voir docs/comptes-externes.md §2. Sans lui, l'application se construit et fonctionne : les notifications poussées sont simplement journalisées en console (NF-DEV-04).",
+  "project_info": {
+    "project_number": "000000000000",
+    "project_id": "partyplan-a-remplacer",
+    "storage_bucket": "partyplan-a-remplacer.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:000000000000:android:0000000000000000000000",
+        "android_client_info": {
+          "package_name": "fr.maxencecoeur.partyplan"
+        }
+      },
+      "api_key": [
+        {
+          "current_key": "A_REMPLACER"
+        }
+      ]
+    }
+  ],
+  "configuration_version": "1"
+}

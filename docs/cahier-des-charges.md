@@ -141,7 +141,13 @@ plateforme.
 propriétaire, ni supprimer l'événement.
 
 **RG-ROLE-02** — Le propriétaire ne peut pas quitter l'événement sans avoir transféré la
-propriété à un autre membre.
+propriété à un autre membre. Le transfert est donc une opération de premier plan et non
+un raffinement : sans elle, la règle enfermerait l'organisateur dans son propre événement.
+
+Le repreneur doit posséder un compte : un invité sans compte ne retrouverait pas
+l'événement depuis un autre appareil, et plus personne ne pourrait l'administrer.
+L'ancien propriétaire devient administrateur, et non membre ordinaire — il vient
+d'organiser l'événement, lui retirer tout droit dans le même geste serait absurde.
 
 **RG-ROLE-03** — L'exclusion d'un membre ne supprime ni ses dépenses, ni les articles
 qu'il a achetés, ni ses dettes. Il apparaît comme membre inactif dans les calculs

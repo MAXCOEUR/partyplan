@@ -369,6 +369,114 @@ public sealed class EvenementsTests(PartyPlanApiFixture fixture)
             .StatusCode.ShouldBe(HttpStatusCode.NotFound);
     }
 
+    [Fact]
+    public async Task Le_transfert_de_propriete_debloque_le_depart_du_proprietaire()
+    {
+        var organisateur = await CompteAsync();
+        var (eventId, jeton, _) = await CreerAsync(organisateur, "Passation");
+
+        // Un membre avec compte : un invité sans compte ne peut pas devenir propriétaire.
+        var repreneur = await CompteAsync();
+        await repreneur.PostAsJsonAsync($"/v1/join/{jeton}", new
+        {
+            displayName = "Lucas",
+            status = "Going",
+        });
+
+        var membres = await organisateur.GetFromJsonAsync<JsonDocument>(
+            $"/v1/events/{eventId}/members");
+
+        var cible = membres!.RootElement.EnumerateArray()
+            .Single(m => m.GetProperty("displayName").GetString() == "Lucas")
+            .GetProperty("id").GetString();
+
+        // Avant transfert, le propriétaire est prisonnier de son événement.
+        (await organisateur.DeleteAsync(
+                new Uri($"/v1/events/{eventId}/members/me", UriKind.Relative)))
+            .StatusCode.ShouldBe(HttpStatusCode.UnprocessableEntity);
+
+        var transfert = await organisateur.PostAsync(
+            new Uri($"/v1/events/{eventId}/members/{cible}/transfer-ownership", UriKind.Relative),
+            null);
+
+        transfert.StatusCode.ShouldBe(HttpStatusCode.NoContent);
+
+        // L'ancien propriétaire devient administrateur, non membre ordinaire : lui
+        // retirer tout droit dans le même geste serait absurde.
+        var apres = await repreneur.GetFromJsonAsync<JsonDocument>(
+            $"/v1/events/{eventId}/members");
+
+        var roles = apres!.RootElement.EnumerateArray()
+            .ToDictionary(
+                m => m.GetProperty("displayName").GetString()!,
+                m => m.GetProperty("role").GetString()!);
+
+        roles["Lucas"].ShouldBe("Owner");
+        roles["Organisateur"].ShouldBe("Admin");
+
+        // Le départ est désormais possible.
+        (await organisateur.DeleteAsync(
+                new Uri($"/v1/events/{eventId}/members/me", UriKind.Relative)))
+            .StatusCode.ShouldBe(HttpStatusCode.NoContent);
+    }
+
+    [Fact]
+    public async Task Un_invite_sans_compte_ne_peut_pas_devenir_proprietaire()
+    {
+        var organisateur = await CompteAsync();
+        var (eventId, jeton, _) = await CreerAsync(organisateur, "Sans compte");
+
+        using var invite = fixture.CreateClient();
+        await invite.PostAsJsonAsync($"/v1/join/{jeton}", new
+        {
+            displayName = "Julie",
+            status = "Going",
+        });
+
+        var membres = await organisateur.GetFromJsonAsync<JsonDocument>(
+            $"/v1/events/{eventId}/members");
+
+        var cible = membres!.RootElement.EnumerateArray()
+            .Single(m => m.GetProperty("displayName").GetString() == "Julie")
+            .GetProperty("id").GetString();
+
+        var refus = await organisateur.PostAsync(
+            new Uri($"/v1/events/{eventId}/members/{cible}/transfer-ownership", UriKind.Relative),
+            null);
+
+        // Un invité sans compte ne retrouverait pas l'événement depuis un autre appareil.
+        refus.StatusCode.ShouldBe(HttpStatusCode.UnprocessableEntity);
+        (await Code(refus)).ShouldBe("event.transfer_needs_account");
+    }
+
+    [Fact]
+    public async Task Un_administrateur_ne_transfere_pas_la_propriete()
+    {
+        var organisateur = await CompteAsync();
+        var (eventId, jeton, _) = await CreerAsync(organisateur, "Chasse gardée 2");
+
+        var membre = await CompteAsync();
+        await membre.PostAsJsonAsync($"/v1/join/{jeton}", new
+        {
+            displayName = "Lucas",
+            status = "Going",
+        });
+
+        var membres = await organisateur.GetFromJsonAsync<JsonDocument>(
+            $"/v1/events/{eventId}/members");
+
+        var soi = membres!.RootElement.EnumerateArray()
+            .Single(m => m.GetProperty("displayName").GetString() == "Lucas")
+            .GetProperty("id").GetString();
+
+        var refus = await membre.PostAsync(
+            new Uri($"/v1/events/{eventId}/members/{soi}/transfer-ownership", UriKind.Relative),
+            null);
+
+        refus.StatusCode.ShouldBe(HttpStatusCode.Forbidden);
+        (await Code(refus)).ShouldBe("event.only_owner_transfers");
+    }
+
     private async Task<HttpClient> CompteAsync()
     {
         var adresse = $"evt-{Guid.CreateVersion7():N}@partyplan.test";

@@ -185,6 +185,48 @@ verifier("le propriétaire ne peut pas quitter sans transférer (RG-ROLE-02)",
 statut, _ = appel("DELETE", f"/events/{evenement_id}/members/me", jeton=participant)
 verifier("un membre ordinaire peut quitter", statut == 204, f"{statut}")
 
+print("\n--- Transfert de propriété (RG-ROLE-02) ---")
+repreneur = compte("Lucie")
+appel("POST", f"/join/{jeton_lien}", {"displayName": "Lucie", "status": "Going"},
+      jeton=repreneur)
+
+statut, membres = appel("GET", f"/events/{evenement_id}/members", jeton=organisateur)
+cible = next((m for m in membres if m["displayName"] == "Lucie"), None)
+verifier("le repreneur est bien membre", cible is not None)
+
+if cible:
+    statut, corps = appel("POST", f"/events/{evenement_id}/members/{cible['id']}/transfer-ownership",
+                          jeton=repreneur)
+    verifier("un membre ordinaire ne transfère pas la propriété",
+             statut == 403 and corps.get("code") == "event.only_owner_transfers", f"{statut}")
+
+    invite_sans_compte = next((m for m in membres if not m["hasAccount"]), None)
+    if invite_sans_compte:
+        statut, corps = appel(
+            "POST",
+            f"/events/{evenement_id}/members/{invite_sans_compte['id']}/transfer-ownership",
+            jeton=organisateur)
+        verifier("un invité sans compte ne peut pas devenir propriétaire",
+                 statut == 422 and corps.get("code") == "event.transfer_needs_account",
+                 f"{statut}")
+
+    statut, _ = appel("POST", f"/events/{evenement_id}/members/{cible['id']}/transfer-ownership",
+                      jeton=organisateur)
+    verifier("le transfert aboutit", statut == 204, f"{statut}")
+
+    statut, membres = appel("GET", f"/events/{evenement_id}/members", jeton=repreneur)
+    roles = {m["displayName"]: m["role"] for m in membres}
+    verifier("le repreneur devient propriétaire", roles.get("Lucie") == "Owner",
+             str(roles.get("Lucie")))
+    verifier("l'ancien propriétaire devient administrateur, non membre ordinaire",
+             roles.get("Organisateur") == "Admin", str(roles.get("Organisateur")))
+
+    statut, _ = appel("DELETE", f"/events/{evenement_id}/members/me", jeton=organisateur)
+    verifier("l'ancien propriétaire peut désormais quitter", statut == 204, f"{statut}")
+
+    # La suite du scénario reprend la main avec le nouveau propriétaire.
+    organisateur = repreneur
+
 print("\n--- Fermeture et régénération (EF-INV-05, EF-INV-06) ---")
 statut, _ = appel("PATCH", f"/events/{evenement_id}/join-enabled", {"joinEnabled": False},
                   jeton=organisateur)

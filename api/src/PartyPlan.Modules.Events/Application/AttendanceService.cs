@@ -190,6 +190,51 @@ public sealed class AttendanceService(
         return Result.Success();
     }
 
+    /// <summary>
+    /// Transfère la propriété de l'événement (RG-ROLE-02).
+    /// <para>
+    /// L'ancien propriétaire devient administrateur et non membre ordinaire : il vient
+    /// d'organiser l'événement, lui retirer tout droit dans le même geste serait absurde.
+    /// </para>
+    /// </summary>
+    public async Task<Result> TransfererProprieteAsync(
+        Guid eventId,
+        Guid memberId,
+        CancellationToken cancellationToken)
+    {
+        var acteur = await MembreCourantAsync(eventId, cancellationToken).ConfigureAwait(false);
+
+        if (acteur is null)
+        {
+            return NotAMember;
+        }
+
+        var cible = await db.EventMembers
+            .FirstOrDefaultAsync(m => m.Id == memberId && m.EventId == eventId, cancellationToken)
+            .ConfigureAwait(false);
+
+        if (cible is null)
+        {
+            return DomainError.NotFound("member.not_found", "Ce participant est introuvable.");
+        }
+
+        var autorise = EventMember.CanTransferOwnership(acteur, cible);
+        if (autorise.IsFailure)
+        {
+            return autorise;
+        }
+
+        // L'ordre compte : un index d'unicité garantit un seul propriétaire actif par
+        // événement. Promouvoir avant de rétrograder violerait la contrainte.
+        acteur.Role = EventMemberRole.Admin;
+        await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+
+        cible.Role = EventMemberRole.Owner;
+        await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+
+        return Result.Success();
+    }
+
     /// <summary>Quitte l'événement (EF-EVT-06, RG-ROLE-02).</summary>
     public async Task<Result> QuitterAsync(Guid eventId, CancellationToken cancellationToken)
     {

@@ -58,7 +58,7 @@ paiement ou un arbitrage.
 - [ ] Arbitrer le nom définitif (PartyPlan, SoiréeSync, BringIt, WhoBrings, Planzy, ChillPlan, Gatherly)
 - [ ] Fournir le logo en source vectorielle, puis exporter : SVG, PNG 1024, favicon, icône adaptative Android, icône iOS
 - [ ] Remplacer les icônes par défaut de Flutter par celles de PartyPlan
-- [ ] Choisir l'hébergeur, situé dans l'Union européenne — `RG-RGPD-03`
+- [ ] Choisir l'hébergeur, situé dans l'Union européenne — `RG-RGPD-03` ; voir `docs/comptes-externes.md` §6
 - [ ] Créer les enregistrements DNS : `partyplan`, `api.partyplan`, `cdn.partyplan`
 - [x] Dépôt GitHub privé créé et poussé — `MAXCOEUR/partyplan`
 - [x] Protection de la branche `main` : contrôles obligatoires (frontières, format C#, format Dart, vulnérabilités), poussée forcée et suppression interdites
@@ -258,7 +258,7 @@ d'enrôlement.
 - [x] `NF-SEC-10` Chiffrement des secrets vérifié : altération détectée, clé distincte exigée
 - [x] `NF-SEC-11` Limites de débit paramétrables — les tests partagent une adresse IP et épuisaient une limite pensée pour un utilisateur unique
 - [x] Écrans : saisie du second facteur à la connexion, enrôlement et codes de secours
-- [ ] `EF-AUTH-06` Connexion Google
+- [ ] `EF-AUTH-06` Connexion Google — suppose des identifiants Google Cloud, voir `docs/comptes-externes.md` §1
 - [ ] `EF-AUTH-08` Rattachement et détachement d'une connexion tierce
 - [ ] `RG-AUTH-08` Un compte sans mot de passe peut en définir un par le parcours de réinitialisation
 - [ ] `NF-DEV-05` Vérifier que l'inscription fonctionne sans clé Google configurée
@@ -367,7 +367,8 @@ Sortie : les critères 13 à 26 du `§18` sont vérifiés.
 - [ ] `EF-EVT-04` Tableau de bord de l'événement — la synthèse est servie par l'API, l'écran reste à écrire
 - [ ] `RG-UI-02` Le tableau de bord affiche l'information actionnable du moment
 - [ ] `RG-EVT-02` Brancher la vérification des règlements en attente — nécessite un contrat exposé par le module Settlements (lot 1.8) ; d'ici là la confirmation renforcée est la seule barrière
-- [ ] Transfert de propriété à un autre membre — exigé par `RG-ROLE-02`, qui bloque sinon le départ du propriétaire
+- [x] Transfert de propriété à un autre membre — sans lui, `RG-ROLE-02` serait un cul-de-sac : l'organisateur resterait prisonnier de son propre événement
+  - → l'ancien propriétaire devient administrateur, non membre ordinaire ; la cible doit posséder un compte, un invité sans compte ne retrouverait pas l'événement depuis un autre appareil
 - [ ] Écrans : accueil, création d'événement, tableau de bord, paramètres
 
 ## Lot 1.3 — Invitations et accès sans compte
@@ -553,7 +554,7 @@ Sortie : les critères 13 à 26 du `§18` sont vérifiés.
 
 ## Lot 1.17 — Recette et bêta privée
 
-- [x] Recette du parcours événementiel — `tools/recette/parcours-evenement.py`, 46 vérifications
+- [x] Recette du parcours événementiel — `tools/recette/parcours-evenement.py`, 53 vérifications
 - [ ] Rédiger la grille de recette manuelle — `§15`
 - [ ] Test bout en bout automatisé du parcours complet
 - [ ] `NF-QUAL-02` Couverture globale du domaine supérieure à 70 %

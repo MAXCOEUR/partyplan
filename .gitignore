@@ -35,6 +35,12 @@ app/android/.gradle/
 app/android/local.properties
 app/android/key.properties
 app/android/app/upload-keystore.jks
+
+# Configuration Firebase : identifiants de projet. Non secrets au sens d'un mot de
+# passe, mais ils n'ont pas à figurer dans un dépôt. Voir docs/comptes-externes.md.
+app/android/app/google-services.json
+app/ios/Runner/GoogleService-Info.plist
+app/lib/firebase_options.dart
 app/.fvm/
 app/web/version.json
 

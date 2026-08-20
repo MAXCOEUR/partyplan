@@ -253,6 +253,17 @@ internal static class EventsEndpoints
                 .ConfigureAwait(false)))
             .WithName("RemoveMember")
             .WithSummary("Exclut un participant. Ses données financières subsistent.");
+
+        groupe.MapPost("/{memberId:guid}/transfer-ownership", async (
+                Guid eventId,
+                Guid memberId,
+                AttendanceService service,
+                CancellationToken cancellationToken) =>
+            Respond(await service
+                .TransfererProprieteAsync(eventId, memberId, cancellationToken)
+                .ConfigureAwait(false)))
+            .WithName("TransferOwnership")
+            .WithSummary("Transfère la propriété. L'ancien propriétaire devient administrateur.");
     }
 
     private static string BaseUrl(IConfiguration configuration) =>
