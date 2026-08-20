@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import '../../core/offline/etat_reseau.dart';
+import '../../core/providers.dart';
 import '../../l10n/generated/pp_localisations.dart';
 import '../tokens.dart';
 
@@ -9,16 +11,26 @@ import '../tokens.dart';
 ///
 /// La date est le contenu, pas la décoration : sans elle, l'utilisateur ne distingue
 /// pas un état ancien d'un état courant et décide sur des chiffres périmés.
-class PpBandeauHorsLigne extends StatelessWidget {
-  const PpBandeauHorsLigne({required this.etat, this.onReessayer, super.key});
+class PpBandeauHorsLigne extends ConsumerWidget {
+  const PpBandeauHorsLigne({this.onReessayer, super.key});
 
   static final _horodatage = DateFormat('dd/MM/yyyy à HH:mm', 'fr_FR');
 
-  final EtatReseau etat;
   final VoidCallback? onReessayer;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    // `EtatReseau` est un ChangeNotifier de Flutter : on s'y abonne par
+    // `ListenableBuilder` **à l'intérieur** du widget, et non en passant l'objet depuis
+    // l'écran appelant. Mélanger les deux systèmes de réactivité au point d'appel
+    // faisait reconstruire l'écran entier à chaque changement d'état réseau.
+    return ListenableBuilder(
+      listenable: ref.watch(etatReseauProvider),
+      builder: (context, _) => _contenu(context, ref.read(etatReseauProvider)),
+    );
+  }
+
+  Widget _contenu(BuildContext context, EtatReseau etat) {
     if (etat.mode == ModeReseau.enLigne && etat.enAttente == 0) {
       return const SizedBox.shrink();
     }

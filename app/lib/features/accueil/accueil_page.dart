@@ -44,12 +44,8 @@ class AccueilPage extends ConsumerWidget {
       ),
       body: Column(
         children: [
-          ListenableBuilder(
-            listenable: ref.watch(etatReseauProvider),
-            builder: (context, _) => PpBandeauHorsLigne(
-              etat: ref.read(etatReseauProvider),
-              onReessayer: () => ref.invalidate(mesEvenementsProvider),
-            ),
+          PpBandeauHorsLigne(
+            onReessayer: () => ref.invalidate(mesEvenementsProvider),
           ),
           Expanded(
             child: evenements.when(
@@ -60,7 +56,7 @@ class AccueilPage extends ConsumerWidget {
               ),
               data: (liste) => liste.isEmpty
                   ? _etatVide(context)
-                  : _Liste(evenements: liste, ref: ref),
+                  : _Liste(evenements: liste),
             ),
           ),
         ],
@@ -97,14 +93,13 @@ class AccueilPage extends ConsumerWidget {
 ///
 /// L'appartenance à une section vient du serveur (`isPast`) et n'est jamais recalculée :
 /// l'horloge d'un téléphone peut être fausse, et une soirée passerait du mauvais côté.
-class _Liste extends StatelessWidget {
-  const _Liste({required this.evenements, required this.ref});
+class _Liste extends ConsumerWidget {
+  const _Liste({required this.evenements});
 
   final List<EvenementDeLaListe> evenements;
-  final WidgetRef ref;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final l10n = PpL10n.of(context);
 
     final aVenir = evenements.where((e) => !e.estPasse).toList()

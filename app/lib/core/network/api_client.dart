@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:dio/dio.dart';
 
 import '../config/app_config.dart';
@@ -76,19 +78,31 @@ class ApiClient {
     required T Function(Object? corps) analyser,
   }) async {
     try {
-      final reponse = await _dio.get<Object?>(
+      var reponse = await _dio.get<Object?>(
         chemin,
         queryParameters: parametres,
       );
+
+      // Le jeton d'accès ne vit que quinze minutes. Sans ce rejeu, toute lecture
+      // échouerait passé ce délai — définitivement, puisque rien ne relancerait le
+      // rafraîchissement : l'écran d'accueil resterait en erreur pour un compte
+      // pourtant connecté. Les écritures l'avaient, les lectures non.
+      if (reponse.statusCode == 401 && await _rafraichir()) {
+        reponse = await _dio.get<Object?>(chemin, queryParameters: parametres);
+      }
+
       _verifier(reponse);
 
       final cache = _cache;
       if (cacheable && cache != null) {
-        await cache.enregistrer(
-          chemin,
-          parametres,
-          reponse.data,
-          DateTime.now(),
+        // Écriture non attendue, et dont l'échec est avalé. Le cache est une
+        // commodité : le faire précéder la réponse rend l'écran tributaire du magasin
+        // local, et une écriture lente — ou qui n'aboutit jamais — laisse l'utilisateur
+        // devant un indicateur de chargement alors que le serveur a déjà répondu.
+        unawaited(
+          cache
+              .enregistrer(chemin, parametres, reponse.data, DateTime.now())
+              .catchError((Object _) {}),
         );
       }
 

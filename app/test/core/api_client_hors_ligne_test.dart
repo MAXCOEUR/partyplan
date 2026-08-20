@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:partyplan/core/network/api_client.dart';
+import 'package:partyplan/core/network/api_exception.dart';
 import 'package:partyplan/core/offline/cache_lecture.dart';
 import 'package:partyplan/core/offline/ecriture_differee.dart';
 import 'package:partyplan/core/offline/etat_reseau.dart';
@@ -16,9 +17,29 @@ class _Reseau extends Interceptor {
   int statut = 200;
   final List<RequestOptions> requetes = [];
 
+  /// Statuts à rendre une seule fois, dans l'ordre, avant de reprendre [statut].
+  final List<int> statutsUniques = [];
+
   @override
   void onRequest(RequestOptions options, RequestInterceptorHandler handler) {
     requetes.add(options);
+
+    if (statutsUniques.isNotEmpty) {
+      final unique = statutsUniques.removeAt(0);
+      handler.resolve(
+        Response<Object?>(
+          requestOptions: options,
+          statusCode: unique,
+          data: unique == 200
+              ? {
+                  'accessToken': 'neuf',
+                  'refreshToken': 'neuf',
+                }
+              : reponse,
+        ),
+      );
+      return;
+    }
 
     if (coupe) {
       handler.reject(
@@ -59,7 +80,10 @@ void main() {
     )..interceptors.add(reseau);
 
     client = ApiClient(
-      SessionStoreDouble(jetonAcces: 'jeton'),
+      SessionStoreDouble(
+        jetonAcces: 'jeton',
+        jetonRafraichissement: 'rafraichissement',
+      ),
       dio: dio,
       cache: CacheLecture(magasin),
       file: FileEcritures(magasin),
@@ -104,6 +128,62 @@ void main() {
         );
       },
     );
+  });
+
+  group('Session expirée', () {
+    test('une lecture en 401 rafraîchit la session et rejoue', () async {
+      // Le jeton d'accès ne vit que quinze minutes. Sans ce rejeu, l'écran d'accueil
+      // resterait en erreur pour un compte pourtant connecté.
+      reseau
+        ..statutsUniques.addAll([401, 200])
+        ..reponse = [
+          {'id': 'a'},
+        ];
+
+      final servi = await client.get<List<dynamic>>(
+        '/events',
+        analyser: (c) => c! as List<dynamic>,
+      );
+
+      expect(servi, [
+        {'id': 'a'},
+      ]);
+
+      // Trois appels : la lecture refusée, le rafraîchissement, puis la relecture.
+      expect(reseau.requetes.map((r) => r.path), [
+        '/events',
+        '/auth/refresh',
+        '/events',
+      ]);
+    });
+
+    test('sans jeton de rafraîchissement, la lecture échoue franchement', () async {
+      final sansRafraichissement = ApiClient(
+        // Aucun jeton de rafraîchissement : la session est définitivement perdue.
+        SessionStoreDouble(jetonAcces: 'jeton'),
+        dio: Dio(
+          BaseOptions(
+            baseUrl: 'https://exemple.test/v1',
+            validateStatus: (_) => true,
+          ),
+        )..interceptors.add(reseau),
+        cache: CacheLecture(magasin),
+        file: FileEcritures(magasin),
+        etat: etat,
+      );
+
+      reseau
+        ..statut = 401
+        ..reponse = {'title': 'Unauthorized'};
+
+      await expectLater(
+        sansRafraichissement.get<List<dynamic>>(
+          '/events',
+          analyser: (c) => c! as List<dynamic>,
+        ),
+        throwsA(isA<ApiException>()),
+      );
+    });
   });
 
   group('Écriture hors ligne', () {

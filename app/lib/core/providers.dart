@@ -194,13 +194,19 @@ final sessionProvider = AsyncNotifierProvider<SessionCourante, EtatSession>(
 final profilProvider = FutureProvider<Profil>((ref) async {
   // La dépendance à l'état de session est explicite : se déconnecter puis se
   // reconnecter doit recharger le profil, pas servir celui du compte précédent.
-  final etat = await ref.watch(sessionProvider.future);
+  //
+  // Les deux dépendances sont lues avant la première attente : un `ref.watch` après un
+  // `await` se réabonne à chaque reconstruction et fait boucler le provider.
+  final api = ref.watch(comptesApiProvider);
+  final session = ref.watch(sessionProvider.future);
+
+  final etat = await session;
 
   if (etat != EtatSession.connecte) {
     throw StateError('Aucun compte connecté.');
   }
 
-  return ref.watch(comptesApiProvider).profil();
+  return api.profil();
 });
 
 /// Fuseau et langue de l'application : `fr_FR` pour les dates en JJ/MM/AAAA.
@@ -226,9 +232,28 @@ final evenementsApiProvider = Provider<EvenementsApi>(
 );
 
 /// Événements de la personne connectée, à venir puis passés (EF-EVT-05).
-final mesEvenementsProvider = FutureProvider<List<EvenementDeLaListe>>(
-  (ref) => ref.watch(evenementsApiProvider).lister(),
-);
+///
+/// La dépendance à l'état de session est explicite, pour la même raison que
+/// [profilProvider] : sans elle, la requête part pendant la frame qui précède la
+/// redirection, échoue en 401, et l'erreur reste affichée après la connexion — l'écran
+/// annonce « impossible de charger tes événements » alors que le serveur répond.
+final mesEvenementsProvider = FutureProvider<List<EvenementDeLaListe>>((ref) async {
+  // Toutes les dépendances sont lues **avant** la première attente. Un `ref.watch`
+  // placé après un `await` se réabonne à chaque reconstruction : le provider se
+  // réexécute en boucle, l'écran reste sur son indicateur de chargement et le serveur
+  // reçoit une rafale de requêtes identiques.
+  final api = ref.watch(evenementsApiProvider);
+  final session = ref.watch(sessionProvider.future);
+
+  final etat = await session;
+
+  // Un invité sans compte n'a pas de liste : son jeton ne vaut que pour un événement.
+  if (etat != EtatSession.connecte) {
+    return const [];
+  }
+
+  return api.lister();
+});
 
 final evenementProvider = FutureProvider.family<ResumeEvenement, String>(
   (ref, id) => ref.watch(evenementsApiProvider).lire(id),

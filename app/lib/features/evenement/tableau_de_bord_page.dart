@@ -59,11 +59,7 @@ class TableauDeBordPage extends ConsumerWidget {
             PpSpacing.xxl,
           ),
           children: [
-            ListenableBuilder(
-              listenable: ref.watch(etatReseauProvider),
-              builder: (context, _) =>
-                  PpBandeauHorsLigne(etat: ref.read(etatReseauProvider)),
-            ),
+            const PpBandeauHorsLigne(),
             SectionIdentite(resume: resume),
             SectionCompteARebours(resume: resume),
             SectionMaPresence(evenementId: evenementId),
