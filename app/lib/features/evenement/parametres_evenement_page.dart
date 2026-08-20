@@ -212,8 +212,10 @@ class _ParametresEvenementPageState
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(l10n.paramQuitterInterditProprietaire),
+          // Libellé court : « Transférer la propriété » déborde la largeur d'un
+          // téléphone lorsqu'il accompagne le message.
           action: SnackBarAction(
-            label: l10n.paramTransferer,
+            label: l10n.paramTransfererCourt,
             onPressed: _choisirRepreneur,
           ),
         ),

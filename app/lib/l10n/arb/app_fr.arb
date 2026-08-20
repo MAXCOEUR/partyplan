@@ -136,6 +136,7 @@
   "paramEnregistre": "Modifications enregistrées.",
   "paramEchec": "Les modifications n’ont pas pu être enregistrées.",
   "paramTransferer": "Transférer la propriété",
+  "paramTransfererCourt": "Transférer",
   "paramTransfererExplication": "Le nouveau propriétaire doit avoir un compte : un invité sans compte ne retrouverait pas l’événement depuis un autre appareil.",
   "paramTransfererDevientAdmin": "Tu deviendras co-organisateur de l’événement.",
   "paramTransfererAucun": "Aucun membre avec compte à qui transférer pour l’instant.",

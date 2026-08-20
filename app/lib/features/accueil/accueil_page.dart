@@ -163,20 +163,17 @@ class _Carte extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Row(
-                children: [
-                  Expanded(
-                    child: Text(evenement.nom, style: theme.textTheme.titleLarge),
-                  ),
-                  if (evenement.monRole.peutGerer)
-                    PpEyebrow(
-                      evenement.monRole == RoleMembre.proprietaire
-                          ? l10n.roleProprietaire
-                          : l10n.roleAdministrateur,
-                      couleur: PpColors.violet,
-                    ),
-                ],
-              ),
+              if (evenement.monRole.peutGerer)
+                PpEyebrow(
+                  evenement.monRole == RoleMembre.proprietaire
+                      ? l10n.roleProprietaire
+                      : l10n.roleAdministrateur,
+                  couleur: PpColors.violet,
+                ),
+              // Le rôle est placé au-dessus du titre et non à côté : un nom long et une
+              // étiquette « CO-ORGANISATEUR » ne tiennent pas sur une ligne de
+              // téléphone, et tronquer le nom de l'événement serait le pire choix.
+              Text(evenement.nom, style: theme.textTheme.titleLarge),
               const SizedBox(height: PpSpacing.xs),
               Text(
                 [
@@ -186,10 +183,14 @@ class _Carte extends StatelessWidget {
                 style: theme.textTheme.bodySmall,
               ),
               const SizedBox(height: PpSpacing.md),
-              Row(
+              // Wrap et non Row : sur un téléphone étroit, « Arrive plus tard » suivi
+              // de « 12 présents sur 24 invités » dépasse la largeur disponible.
+              Wrap(
+                spacing: PpSpacing.sm,
+                runSpacing: PpSpacing.xs,
+                crossAxisAlignment: WrapCrossAlignment.center,
                 children: [
                   PpStatusChip(presence: versPastille(evenement.monStatut)),
-                  const Spacer(),
                   Text(
                     l10n.presencesSurInvites(
                       evenement.presents,

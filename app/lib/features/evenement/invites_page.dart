@@ -176,19 +176,23 @@ class _CarteMembre extends ConsumerWidget {
               ],
             ),
             const SizedBox(height: PpSpacing.sm),
-            Row(
+            // Wrap et non Row : sur un téléphone étroit, une pastille « arrive plus
+            // tard » assortie d'une heure et de trois accompagnants dépasse la largeur
+            // disponible et provoquerait un débordement.
+            Wrap(
+              spacing: PpSpacing.sm,
+              runSpacing: PpSpacing.xs,
+              crossAxisAlignment: WrapCrossAlignment.center,
               children: [
                 PpStatusChip(
                   presence: versPastille(membre.statut),
                   heure: membre.heureArrivee ?? membre.heureDepart,
                 ),
-                if (membre.accompagnants > 0) ...[
-                  const SizedBox(width: PpSpacing.sm),
+                if (membre.accompagnants > 0)
                   Text(
                     l10n.invitesAccompagnants(membre.accompagnants),
                     style: theme.textTheme.bodySmall,
                   ),
-                ],
               ],
             ),
             // EF-PRES-03 — chacun ne modifie que son propre statut.
@@ -256,9 +260,14 @@ class _Accompagnants extends ConsumerWidget {
       children: [
         Row(
           children: [
-            Text(
-              l10n.invitesAccompagnantsTitre,
-              style: Theme.of(context).textTheme.bodyMedium,
+            // Flexible : le libellé cède la place aux commandes plutôt que de pousser
+            // la ligne au-delà de la largeur de l'écran.
+            Flexible(
+              child: Text(
+                l10n.invitesAccompagnantsTitre,
+                style: Theme.of(context).textTheme.bodyMedium,
+                overflow: TextOverflow.ellipsis,
+              ),
             ),
             const Spacer(),
             IconButton(
