@@ -15,7 +15,9 @@ public sealed class EventsModule : IModule
     {
         ArgumentNullException.ThrowIfNull(services);
 
-        services.AddScoped<EventReader>();
+        services.AddScoped<EventService>();
+        services.AddScoped<JoinService>();
+        services.AddScoped<AttendanceService>();
     }
 
     public void MapEndpoints(IEndpointRouteBuilder routes) => EventsEndpoints.Map(routes);

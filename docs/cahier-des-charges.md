@@ -474,7 +474,7 @@ interactions et aucune saisie d'adresse e-mail.
 | EF-PRES-03 | P0 | Modifier son statut à tout moment, y compris pendant l'événement. |
 | EF-PRES-04 | P0 | Consulter la liste des membres avec statut et horaires. |
 | EF-PRES-05 | P0 | Afficher la synthèse « n confirmés sur m invités ». |
-| EF-PRES-06 | P1 | Indiquer un nombre d'accompagnants (« +1 »). |
+| EF-PRES-06 | P1 | Indiquer un nombre d'accompagnants (« +1 »), plafonné à dix. |
 | EF-PRES-07 | P1 | Relancer les membres n'ayant pas répondu (action de l'organisateur). |
 
 **RG-PRES-01** — Le statut initial d'un membre est `Unknown`. Il n'est jamais présumé
@@ -485,6 +485,10 @@ les décomptes et dans l'assiette de répartition par défaut des dépenses.
 
 **RG-PRES-03** — Le statut `Maybe` ne compte pas dans les présents affichés, mais est
 signalé séparément. Il n'entre pas dans la répartition par défaut des dépenses.
+
+**RG-PRES-04** — Le décompte des présents et le décompte des têtes sont deux valeurs
+distinctes : la seconde ajoute les accompagnants. L'organisateur achète pour des têtes,
+pas pour des comptes ; les confondre fausse toutes les quantités de la liste de courses.
 
 ### 5.5 Liste de courses
 

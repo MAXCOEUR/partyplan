@@ -178,7 +178,14 @@ Une fois `make api` lancé :
 python3 tools/recette/parcours-comptes.py
 ```
 
-La recette déroule 55 vérifications : politique de mot de passe, inscription,
+Deux recettes sont disponibles :
+
+```bash
+python3 tools/recette/parcours-comptes.py      # comptes et administration
+python3 tools/recette/parcours-evenement.py    # événements, invitations, présences
+```
+
+La première déroule 77 vérifications : politique de mot de passe, inscription,
 vérification d'adresse par courriel, sessions et rotation des jetons, réinitialisation,
 export et suppression, puis tout le back-office. Elle lit les courriels dans Mailpit, ce
 qui la rend exécutable sans aucun service externe.

@@ -6,7 +6,7 @@
 > n'existe pas dans le cahier des charges, c'est le cahier des charges qu'il faut
 > compléter d'abord.
 
-Mise à jour : 19/08/2026 — V0 livrée hors lots 0.1 et 0.7 ; V0.5 livrée hors connexion Google
+Mise à jour : 19/08/2026 — V0 et V0.5 livrées ; V1.0 en cours : événements, invitations et présences côté API
 
 ## Comment lire ce document
 
@@ -31,7 +31,7 @@ Toute tâche non cochée d'une version publiée devient une anomalie, pas un rep
 |---|---|---|
 | V0 — socle technique | lots 0.2 à 0.6, dépôt GitHub et protection de branche | lot 0.1 (INPI, nom, logo, hébergeur, DNS), lot 0.7 (serveur) |
 | V0.5 — comptes et administration | lots 0.8 à 0.14 | connexion Google, photo depuis l'interface, QR code |
-| V1.0 — MVP événementiel | — | tout |
+| V1.0 — MVP événementiel | lots 1.2 à 1.4 côté API | écrans Flutter, courses, dépenses, remboursements, planning |
 
 Décisions d'architecture prises : `ADR 0001` monorepo, `ADR 0002` monolithe modulaire,
 `ADR 0003` domaines et certificats, `ADR 0004` chaîne de livraison, `ADR 0005` identité
@@ -347,53 +347,59 @@ Sortie : les critères 13 à 26 du `§18` sont vérifiés.
 
 ## Lot 1.1 — Rattachement des invités sans compte
 
+- [x] `RG-AUTH-07` L'empreinte du jeton d'invité est conservée à l'adhésion : c'est elle, et jamais le prénom, qui portera le rattachement
 - [ ] `EF-AUTH-11` Conversion d'une participation d'invité en compte permanent
-- [ ] `RG-AUTH-07` Liaison sur le jeton de session invité, jamais sur le prénom
 - [ ] Test : aucun doublon de membre après conversion, dépenses conservées
 
 ## Lot 1.2 — Événements
 
-- [ ] `EF-EVT-01` Créer un événement : nom, date, heure, lieu, description
-- [ ] `EF-EVT-02` Date de fin facultative, sinon fin implicite à +12 heures
-- [ ] `EF-EVT-03` Modifier l'événement, avec notification en cas de changement de date ou de lieu
-- [ ] `EF-EVT-04` Tableau de bord de l'événement
+- [x] `EF-EVT-01` Créer un événement : nom, date, heure, lieu, description
+- [x] `EF-EVT-02` Date de fin facultative, sinon fin implicite à +12 heures
+- [x] `EF-EVT-03` Modifier l'événement ; un changement de date ou de lieu est inscrit au fil d'activité
+- [x] `EF-EVT-05` Liste « à venir » et « passés », avec rôle et statut de l'appelant
+- [x] `EF-EVT-06` Quitter un événement
+- [x] `RG-ROLE-01` Rôles `Owner` / `Admin` / `Member` ; un administrateur n'exclut pas le propriétaire et ne supprime pas l'événement
+- [x] `RG-ROLE-02` Le propriétaire doit transférer la propriété avant de quitter
+- [x] `RG-ROLE-03` L'exclusion horodate la ligne sans la supprimer : les données financières subsistent
+- [x] `EF-EVT-07` Supprimer un événement, avec confirmation renforcée
+- [x] `RG-EVT-01` En-tête `noindex` sur toute réponse d'API et toute page
+- [x] Le créateur devient propriétaire et est déclaré présent
+- [ ] `EF-EVT-04` Tableau de bord de l'événement — la synthèse est servie par l'API, l'écran reste à écrire
 - [ ] `RG-UI-02` Le tableau de bord affiche l'information actionnable du moment
-- [ ] `EF-EVT-05` Liste « à venir » et « passés »
-- [ ] `EF-EVT-06` Quitter un événement
-- [ ] `RG-ROLE-02` Le propriétaire doit transférer la propriété avant de quitter
-- [ ] `EF-EVT-07` Supprimer un événement, avec confirmation explicite
-- [ ] `RG-EVT-02` Blocage de la suppression si des règlements restent en attente
-- [ ] `RG-EVT-01` En-tête `noindex` sur toute page d'événement
-- [ ] Gestion des rôles `Owner` / `Admin` / `Member` — `RG-ROLE-01`
-- [ ] `RG-ROLE-03` L'exclusion d'un membre préserve ses données financières
-- [ ] Écrans : accueil, création d'événement, tableau de bord, paramètres de l'événement
+- [ ] `RG-EVT-02` Brancher la vérification des règlements en attente — nécessite un contrat exposé par le module Settlements (lot 1.8) ; d'ici là la confirmation renforcée est la seule barrière
+- [ ] Transfert de propriété à un autre membre — exigé par `RG-ROLE-02`, qui bloque sinon le départ du propriétaire
+- [ ] Écrans : accueil, création d'événement, tableau de bord, paramètres
 
 ## Lot 1.3 — Invitations et accès sans compte
 
-- [ ] `EF-INV-01` Lien d'invitation `/join/{token}`
-- [ ] `RG-INV-01` Jeton de 128 bits minimum, non déductible de l'identifiant
+- [x] `EF-INV-01` Lien d'invitation `/join/{token}`
+- [x] `RG-INV-01` Jeton de 192 bits, encodé en base64url pour survivre au partage, non déductible de l'identifiant
+- [x] `EF-INV-03` Code court `PLAN-XXXXXX`
+- [x] `RG-INV-02` Alphabet de 32 caractères sans `I`, `O`, `0` ni `1` ; six positions, soit un milliard de combinaisons contre un million à quatre
+- [x] `RG-INV-03` Limitation de la résolution de code court appliquée à l'endpoint
+- [x] `RG-INV-04` Aperçu restreint vérifié par test : ni membres, ni dépenses, ni jeton
+- [x] `EF-INV-04` Rejoindre avec un prénom seulement ; un jeton d'invité restreint à l'événement est remis
+- [x] `EF-INV-05` Régénérer le lien — le code court est renouvelé avec lui, sans quoi une porte resterait ouverte
+- [x] `EF-INV-06` Fermer les nouvelles arrivées ; l'aperçu reste lisible pour expliquer le refus
+- [x] Saisie du code tolérante : minuscules, espaces, tirets, absence de préfixe
 - [ ] `EF-INV-02` QR code exportable en image
-- [ ] `EF-INV-03` Code court `PLAN-XXXXXX`
-- [ ] `RG-INV-02` Alphabet de 32 caractères sans ambiguïté, 6 positions, unicité
-- [ ] `RG-INV-03` Limitation à 10 résolutions par minute et par IP, 100 par jour
-- [ ] `RG-INV-04` Aperçu restreint avant participation : nom, date, lieu, nombre
-- [ ] `EF-INV-04` Rejoindre avec un prénom seulement, sans compte
-- [ ] `RG-INV-05` Parcours en deux écrans maximum
-- [ ] `EF-INV-05` Régénérer le lien, ce qui invalide le précédent
-- [ ] `EF-INV-06` Fermer les nouvelles arrivées
+- [ ] `RG-INV-05` Parcours en deux écrans — écrans Flutter à écrire
 - [ ] Écrans : aperçu d'invitation, saisie du prénom, choix du statut
 - [ ] Recette : trois interactions maximum depuis un navigateur sans session
 
 ## Lot 1.4 — Présences
 
-- [ ] `EF-PRES-01` Cinq statuts : présent, peut-être, absent, arrive plus tard, part plus tôt
-- [ ] `EF-PRES-02` Heure d'arrivée et de départ prévues
-- [ ] `EF-PRES-03` Modification du statut à tout moment
-- [ ] `EF-PRES-04` Liste des membres avec statut et horaires
-- [ ] `EF-PRES-05` Synthèse « n confirmés sur m invités »
-- [ ] `RG-PRES-01` Statut initial `Unknown`, jamais présumé présent
-- [ ] `RG-PRES-02` `Late` et `EarlyLeave` comptent comme présents
-- [ ] `RG-PRES-03` `Maybe` compté séparément
+- [x] `EF-PRES-01` Cinq statuts : présent, peut-être, absent, arrive plus tard, part plus tôt
+- [x] `EF-PRES-02` Heure d'arrivée et de départ prévues
+- [x] `EF-PRES-03` Modification du statut à tout moment ; chacun ne modifie que le sien
+- [x] `EF-PRES-04` Liste des membres avec statut, horaires et rôle
+- [x] `EF-PRES-05` Synthèse « n présents sur m invités », avec les « peut-être » à part
+- [x] `EF-PRES-06` Accompagnants, plafonnés à dix — au-delà il s'agit d'un autre événement
+- [x] `RG-PRES-01` Statut initial `Unknown`, jamais présumé présent
+- [x] `RG-PRES-02` `Late` et `EarlyLeave` comptent comme présents, y compris dans le total des têtes
+- [x] `RG-PRES-03` `Maybe` compté séparément
+- [x] `RG-PRES-04` Présents et têtes sont deux décomptes distincts : les confondre fausse toutes les quantités de courses
+- [ ] `EF-PRES-07` Relance des membres sans réponse — dépend des notifications (lot 1.11)
 - [ ] Écran : invités
 
 ## Lot 1.5 — Liste de courses
@@ -547,6 +553,7 @@ Sortie : les critères 13 à 26 du `§18` sont vérifiés.
 
 ## Lot 1.17 — Recette et bêta privée
 
+- [x] Recette du parcours événementiel — `tools/recette/parcours-evenement.py`, 46 vérifications
 - [ ] Rédiger la grille de recette manuelle — `§15`
 - [ ] Test bout en bout automatisé du parcours complet
 - [ ] `NF-QUAL-02` Couverture globale du domaine supérieure à 70 %
