@@ -67,10 +67,7 @@ class TableauDeBordPage extends ConsumerWidget {
             SectionIdentite(resume: resume),
             SectionCompteARebours(resume: resume),
             SectionMaPresence(evenementId: evenementId),
-            SectionSynthesePresences(
-              evenementId: evenementId,
-              resume: resume,
-            ),
+            SectionSynthesePresences(evenementId: evenementId, resume: resume),
             SectionPartage(evenementId: evenementId),
             SectionSansReponse(evenementId: evenementId),
             const SectionCreerUnCompte(),

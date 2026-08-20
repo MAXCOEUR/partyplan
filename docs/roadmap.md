@@ -6,7 +6,8 @@
 > n'existe pas dans le cahier des charges, c'est le cahier des charges qu'il faut
 > compléter d'abord.
 
-Mise à jour : 19/08/2026 — V0 et V0.5 livrées ; V1.0 en cours : événements, invitations et présences côté API
+Mise à jour : 20/08/2026 — V0 et V0.5 livrées ; V1.0 en cours : événements, invitations,
+présences et socle hors ligne, API **et** écrans
 
 ## Comment lire ce document
 
@@ -31,7 +32,7 @@ Toute tâche non cochée d'une version publiée devient une anomalie, pas un rep
 |---|---|---|
 | V0 — socle technique | lots 0.2 à 0.6, dépôt GitHub et protection de branche | lot 0.1 (INPI, nom, logo, hébergeur, DNS), lot 0.7 (serveur) |
 | V0.5 — comptes et administration | lots 0.8 à 0.14 | connexion Google, photo depuis l'interface, QR code |
-| V1.0 — MVP événementiel | lots 1.2 à 1.4 côté API | écrans Flutter, courses, dépenses, remboursements, planning |
+| V1.0 — MVP événementiel | lots 1.1 à 1.4, écrans compris, et le socle hors ligne du lot 1.12 | courses, temps réel, dépenses, remboursements, planning, notifications, conformité, exploitation, publication |
 
 Décisions d'architecture prises : `ADR 0001` monorepo, `ADR 0002` monolithe modulaire,
 `ADR 0003` domaines et certificats, `ADR 0004` chaîne de livraison, `ADR 0005` identité
@@ -386,8 +387,18 @@ Sortie : les critères 13 à 26 du `§18` sont vérifiés.
 ## Lot 1.1 — Rattachement des invités sans compte
 
 - [x] `RG-AUTH-07` L'empreinte du jeton d'invité est conservée à l'adhésion : c'est elle, et jamais le prénom, qui portera le rattachement
-- [ ] `EF-AUTH-11` Conversion d'une participation d'invité en compte permanent
-- [ ] Test : aucun doublon de membre après conversion, dépenses conservées
+- [x] `EF-AUTH-11` Conversion d'une participation d'invité en compte permanent
+  - → endpoint authentifié `POST /v1/auth/guest-claim`, et non un champ ajouté à
+    l'inscription : l'API compte quatre points d'ouverture de session — inscription,
+    connexion, second facteur, connexion tierce — et un champ n'en couvrirait que deux,
+    faisant perdre silencieusement sa participation à tout compte à second facteur
+  - → le contrat reçoit le jeton brut, pas son empreinte : l'algorithme reste interne à
+    `Events`, sans quoi n'importe quel module pourrait forger une empreinte
+- [x] Test : aucun doublon de membre après conversion
+  - → deux homonymes ne fusionnent pas : la liaison se fait sur l'empreinte du jeton
+  - → **reste à faire en B2** : réaffecter les contributions financières lorsqu'un
+    compte déjà membre absorbe sa propre ligne d'invité, faute de quoi le critère
+    « la dépense reste rattachée à lui » serait faux
 
 ## Lot 1.2 — Événements
 
@@ -402,12 +413,24 @@ Sortie : les critères 13 à 26 du `§18` sont vérifiés.
 - [x] `EF-EVT-07` Supprimer un événement, avec confirmation renforcée
 - [x] `RG-EVT-01` En-tête `noindex` sur toute réponse d'API et toute page
 - [x] Le créateur devient propriétaire et est déclaré présent
-- [ ] `EF-EVT-04` Tableau de bord de l'événement — la synthèse est servie par l'API, l'écran reste à écrire
+- [x] `EF-EVT-04` Tableau de bord de l'événement
+  - → composé de sections autonomes : ajouter une section consiste à créer un fichier
+    dans `sections/` et à l'insérer dans une liste ; B2 et B4 ne toucheront pas la page
 - [ ] `RG-UI-02` Le tableau de bord affiche l'information actionnable du moment
+  - → structure livrée, emplacements réservés et commentés dans la page
+  - → l'information exigée par la règle — articles non attribués, montant dû — vient de
+    `Shopping` et `Settlements` : la case ne peut être cochée qu'à la fin de B2, et la
+    cocher maintenant serait un faux
 - [ ] `RG-EVT-02` Brancher la vérification des règlements en attente — nécessite un contrat exposé par le module Settlements (lot 1.8) ; d'ici là la confirmation renforcée est la seule barrière
 - [x] Transfert de propriété à un autre membre — sans lui, `RG-ROLE-02` serait un cul-de-sac : l'organisateur resterait prisonnier de son propre événement
   - → l'ancien propriétaire devient administrateur, non membre ordinaire ; la cible doit posséder un compte, un invité sans compte ne retrouverait pas l'événement depuis un autre appareil
-- [ ] Écrans : accueil, création d'événement, tableau de bord, paramètres
+- [x] Écrans : accueil, création d'événement, tableau de bord, paramètres
+  - → assistant de création en trois étapes, navigation libre, « Créer » actif dès
+    l'étape 2 : nom et date suffisent à l'API, imposer l'étape 3 ferait de la
+    description un champ obligatoire de fait
+  - → clé d'idempotence fixée à l'ouverture de l'assistant, pas à l'appui sur « Créer »
+  - → dans les paramètres, le transfert précède « quitter » : découvrir l'interdiction
+    de `RG-ROLE-02` après avoir appuyé serait un cul-de-sac
 
 ## Lot 1.3 — Invitations et accès sans compte
 
@@ -421,10 +444,19 @@ Sortie : les critères 13 à 26 du `§18` sont vérifiés.
 - [x] `EF-INV-05` Régénérer le lien — le code court est renouvelé avec lui, sans quoi une porte resterait ouverte
 - [x] `EF-INV-06` Fermer les nouvelles arrivées ; l'aperçu reste lisible pour expliquer le refus
 - [x] Saisie du code tolérante : minuscules, espaces, tirets, absence de préfixe
-- [ ] `EF-INV-02` QR code exportable en image
-- [ ] `RG-INV-05` Parcours en deux écrans — écrans Flutter à écrire
-- [ ] Écrans : aperçu d'invitation, saisie du prénom, choix du statut
-- [ ] Recette : trois interactions maximum depuis un navigateur sans session
+- [x] `EF-INV-02` QR code exportable en image
+  - → livré comme partage natif et non comme enregistrement en galerie : le besoin réel
+    est d'envoyer l'invitation dans une conversation, et l'enregistrement coûterait une
+    permission et une dépendance sur chaque plateforme
+- [x] `EF-INV-03` **Rejoindre** depuis un code court — trou trouvé en écrivant le client
+  - → le code permettait de voir l'aperçu mais pas d'entrer : l'aperçu ne contient aucun
+    jeton (`RG-INV-04`) et l'adhésion l'exigeait. Endpoint dédié plutôt que jeton révélé
+    par l'aperçu, qui ferait du code à six caractères un oracle à jetons
+- [x] `RG-INV-05` Parcours en deux écrans
+  - → la validation clavier du prénom passe directement au statut : ajouter un bouton
+    « suivant » ferait une quatrième interaction et ferait échouer `EF-INV-04`
+- [x] Écrans : aperçu d'invitation, saisie du prénom, choix du statut
+- [x] Recette : trois interactions maximum depuis un navigateur sans session
 
 ## Lot 1.4 — Présences
 
@@ -439,7 +471,7 @@ Sortie : les critères 13 à 26 du `§18` sont vérifiés.
 - [x] `RG-PRES-03` `Maybe` compté séparément
 - [x] `RG-PRES-04` Présents et têtes sont deux décomptes distincts : les confondre fausse toutes les quantités de courses
 - [ ] `EF-PRES-07` Relance des membres sans réponse — dépend des notifications (lot 1.11)
-- [ ] Écran : invités
+- [x] Écran : invités
 
 ## Lot 1.5 — Liste de courses
 
@@ -543,12 +575,30 @@ Sortie : les critères 13 à 26 du `§18` sont vérifiés.
 
 ## Lot 1.12 — Interface et navigation
 
-- [ ] Écrans de démarrage et de découverte
-- [ ] `RG-UI-01` Barre inférieure à cinq entrées, le reste sous « Plus »
-- [ ] Écrans profil et paramètres
-- [ ] `NF-OFFLINE-01` Consultation du dernier état chargé et file d'attente des écritures
-- [ ] `NF-PERF-04` Premier affichage utile en moins de 2,5 s en 4G
-- [ ] `NF-A11Y-03` Libellés sémantiques sur toute action
+- [ ] Écrans de démarrage et de découverte — reportés : ils présentent le produit fini
+- [x] `RG-UI-01` Barre inférieure à cinq entrées, le reste sous « Plus »
+  - → `IndexedStack` et non reconstruction : changer d'onglet ne doit ni recharger le
+    tableau de bord, ni perdre la position de défilement
+- [x] Écrans profil et paramètres
+- [x] `NF-OFFLINE-01` Consultation du dernier état chargé et file d'attente des écritures
+  - → couche générique adossée à `ApiClient`, seul point de sortie réseau : un cache par
+    écran et une file par module divergeraient, et chaque module suivant repaierait le
+    prix de leur mise en place
+  - → la clé d'idempotence est fixée à l'inscription en file, jamais régénérée au rejeu :
+    une clé neuve ne serait pas reconnue par le serveur et le rejeu créerait un doublon
+  - → la mise en file est déclarée opération par opération : `invitation/rotate` est
+    délibérément non idempotent, et un rejeu invaliderait le lien qui vient d'être partagé
+  - → panne détectée sur l'échec réel de la requête, jamais par une bibliothèque de
+    connectivité : un wifi capté sans Internet — cave, salle des fêtes, portail captif —
+    est le cas le plus fréquent pour ce produit, et une telle bibliothèque le déclare
+    « connecté »
+  - → cache purgé à la déconnexion : il contient le contenu d'événements privés
+  - → **limite consignée** : `shared_preferences` ne conviendra plus au fil d'activité
+    paginé du lot 1.10 ; les trois unités étant isolées derrière leur interface, en
+    changer ne touchera ni `ApiClient` ni un écran
+- [ ] `NF-PERF-04` Premier affichage utile en moins de 2,5 s en 4G — mesure, à faire au
+  déploiement ; le bundle web pèse 31 Mo en CanvasKit
+- [x] `NF-A11Y-03` Libellés sémantiques sur toute action
 
 ## Lot 1.13 — Sécurité et conformité
 
@@ -592,7 +642,7 @@ Sortie : les critères 13 à 26 du `§18` sont vérifiés.
 
 ## Lot 1.17 — Recette et bêta privée
 
-- [x] Recette du parcours événementiel — `tools/recette/parcours-evenement.py`, 53 vérifications
+- [x] Recette du parcours événementiel — `tools/recette/parcours-evenement.py`, **74 vérifications**
 - [ ] Rédiger la grille de recette manuelle — `§15`
 - [ ] Test bout en bout automatisé du parcours complet
 - [ ] `NF-QUAL-02` Couverture globale du domaine supérieure à 70 %

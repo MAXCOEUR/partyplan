@@ -92,19 +92,20 @@ class ResumeEvenement {
   /// EF-EVT-02 — sans fin saisie, l'événement se termine implicitement à +12 heures.
   DateTime get finEffective => fin ?? debut.add(const Duration(hours: 12));
 
-  static ResumeEvenement depuisJson(Map<String, dynamic> json) => ResumeEvenement(
-    id: json['id'] as String,
-    nom: json['name'] as String,
-    description: json['description'] as String?,
-    debut: DateTime.parse(json['startsAt'] as String).toLocal(),
-    fin: json['endsAt'] == null
-        ? null
-        : DateTime.parse(json['endsAt'] as String).toLocal(),
-    adresse: json['address'] as String?,
-    imageCouverture: json['coverImageUrl'] as String?,
-    nombreMembres: (json['memberCount'] as num).toInt(),
-    nombrePresents: (json['presentCount'] as num).toInt(),
-    nombrePeutEtre: (json['maybeCount'] as num).toInt(),
-    adhesionsOuvertes: json['joinEnabled'] as bool,
-  );
+  static ResumeEvenement depuisJson(Map<String, dynamic> json) =>
+      ResumeEvenement(
+        id: json['id'] as String,
+        nom: json['name'] as String,
+        description: json['description'] as String?,
+        debut: DateTime.parse(json['startsAt'] as String).toLocal(),
+        fin: json['endsAt'] == null
+            ? null
+            : DateTime.parse(json['endsAt'] as String).toLocal(),
+        adresse: json['address'] as String?,
+        imageCouverture: json['coverImageUrl'] as String?,
+        nombreMembres: (json['memberCount'] as num).toInt(),
+        nombrePresents: (json['presentCount'] as num).toInt(),
+        nombrePeutEtre: (json['maybeCount'] as num).toInt(),
+        adhesionsOuvertes: json['joinEnabled'] as bool,
+      );
 }

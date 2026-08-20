@@ -68,7 +68,10 @@ void main() {
 
       await monterEcran(tester, const AccueilPage(), conteneur: conteneur);
 
-      expect(find.text('Impossible de charger tes événements.'), findsOneWidget);
+      expect(
+        find.text('Impossible de charger tes événements.'),
+        findsOneWidget,
+      );
       expect(find.text('Réessayer'), findsOneWidget);
     });
   });

@@ -26,7 +26,9 @@ final sessionStoreProvider = Provider<SessionStore>(
 
 /// Magasin du cache et de la file (NF-OFFLINE-01). Distinct du stockage sécurisé :
 /// ce qui transite ici est du contenu applicatif, pas un secret.
-final magasinLocalProvider = Provider<MagasinLocal>((ref) => MagasinPreferences());
+final magasinLocalProvider = Provider<MagasinLocal>(
+  (ref) => MagasinPreferences(),
+);
 
 final cacheLectureProvider = Provider<CacheLecture>(
   (ref) => CacheLecture(ref.watch(magasinLocalProvider)),
@@ -245,7 +247,10 @@ final invitationProvider = FutureProvider.family<Invitation, String>(
 /// Dérivé de la liste des membres plutôt que d'un appel dédié : l'API marque déjà la
 /// ligne de l'appelant par `isMe`, et un second appel donnerait deux sources de vérité
 /// sur le rôle.
-final monMembreProvider = FutureProvider.family<Membre?, String>((ref, id) async {
+final monMembreProvider = FutureProvider.family<Membre?, String>((
+  ref,
+  id,
+) async {
   final membres = await ref.watch(membresProvider(id).future);
 
   for (final membre in membres) {
@@ -262,14 +267,15 @@ final monMembreProvider = FutureProvider.family<Membre?, String>((ref, id) async
 /// Un seul provider pour les deux entrées : l'écran d'aperçu est le même, seule la
 /// façon d'atteindre l'événement change.
 final apercuInvitationProvider =
-    FutureProvider.family<ApercuInvitation, ({String? jeton, String? code})>(
-  (ref, cle) {
-    final api = ref.watch(evenementsApiProvider);
+    FutureProvider.family<ApercuInvitation, ({String? jeton, String? code})>((
+      ref,
+      cle,
+    ) {
+      final api = ref.watch(evenementsApiProvider);
 
-    if (cle.jeton != null) {
-      return api.apercuParJeton(cle.jeton!);
-    }
+      if (cle.jeton != null) {
+        return api.apercuParJeton(cle.jeton!);
+      }
 
-    return api.apercuParCode(cle.code!);
-  },
-);
+      return api.apercuParCode(cle.code!);
+    });

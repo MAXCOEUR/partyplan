@@ -72,7 +72,8 @@ abstract final class PpRoutes {
 
   static String versAdhesion(String jeton) => '/join/$jeton/participer';
 
-  static String versAdhesionParCode(String code) => '/rejoindre/$code/participer';
+  static String versAdhesionParCode(String code) =>
+      '/rejoindre/$code/participer';
 
   static String versInvites(String eventId) => '/events/$eventId/invites';
 
@@ -239,8 +240,9 @@ GoRouter creerRouteur(Ref ref) => GoRouter(
     ),
     GoRoute(
       path: PpRoutes.evenementParametres,
-      builder: (context, state) =>
-          ParametresEvenementPage(evenementId: state.pathParameters['eventId']!),
+      builder: (context, state) => ParametresEvenementPage(
+        evenementId: state.pathParameters['eventId']!,
+      ),
     ),
   ],
   errorBuilder: (context, state) => Scaffold(

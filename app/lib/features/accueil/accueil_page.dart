@@ -107,12 +107,10 @@ class _Liste extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = PpL10n.of(context);
 
-    final aVenir =
-        evenements.where((e) => !e.estPasse).toList()
-          ..sort((a, b) => a.debut.compareTo(b.debut));
-    final passes =
-        evenements.where((e) => e.estPasse).toList()
-          ..sort((a, b) => b.debut.compareTo(a.debut));
+    final aVenir = evenements.where((e) => !e.estPasse).toList()
+      ..sort((a, b) => a.debut.compareTo(b.debut));
+    final passes = evenements.where((e) => e.estPasse).toList()
+      ..sort((a, b) => b.debut.compareTo(a.debut));
 
     return RefreshIndicator(
       onRefresh: () async => ref.invalidate(mesEvenementsProvider),

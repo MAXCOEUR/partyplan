@@ -90,39 +90,45 @@ void main() {
       expect(etat.fraicheur, isNotNull);
     });
 
-    test('échoue quand le réseau est coupé et que rien n’est en cache', () async {
-      reseau.coupe = true;
+    test(
+      'échoue quand le réseau est coupé et que rien n’est en cache',
+      () async {
+        reseau.coupe = true;
 
-      await expectLater(
-        client.get<List<dynamic>>(
-          '/events',
-          analyser: (c) => c! as List<dynamic>,
-        ),
-        throwsA(isA<DioException>()),
-      );
-    });
+        await expectLater(
+          client.get<List<dynamic>>(
+            '/events',
+            analyser: (c) => c! as List<dynamic>,
+          ),
+          throwsA(isA<DioException>()),
+        );
+      },
+    );
   });
 
   group('Écriture hors ligne', () {
-    test('met en file une écriture différable et lève EcritureDifferee', () async {
-      reseau.coupe = true;
+    test(
+      'met en file une écriture différable et lève EcritureDifferee',
+      () async {
+        reseau.coupe = true;
 
-      await expectLater(
-        client.patch<void>(
+        await expectLater(
+          client.patch<void>(
+            '/events/1/members/me',
+            corps: {'status': 'Going'},
+            differable: true,
+            analyser: (_) {},
+          ),
+          throwsA(isA<EcritureDifferee>()),
+        );
+
+        expect(
+          (await FileEcritures(magasin).enAttente()).single.chemin,
           '/events/1/members/me',
-          corps: {'status': 'Going'},
-          differable: true,
-          analyser: (_) {},
-        ),
-        throwsA(isA<EcritureDifferee>()),
-      );
-
-      expect(
-        (await FileEcritures(magasin).enAttente()).single.chemin,
-        '/events/1/members/me',
-      );
-      expect(etat.enAttente, 1);
-    });
+        );
+        expect(etat.enAttente, 1);
+      },
+    );
 
     test('ne met pas en file une écriture non différable', () async {
       reseau.coupe = true;
@@ -148,8 +154,9 @@ void main() {
           )
           .onError((_, _) {});
 
-      final cleAttendue =
-          (await FileEcritures(magasin).enAttente()).single.cleIdempotence;
+      final cleAttendue = (await FileEcritures(
+        magasin,
+      ).enAttente()).single.cleIdempotence;
 
       reseau
         ..coupe = false
@@ -159,10 +166,7 @@ void main() {
       await client.rejouerLaFile();
 
       expect(await FileEcritures(magasin).enAttente(), isEmpty);
-      expect(
-        reseau.requetes.single.headers['Idempotency-Key'],
-        cleAttendue,
-      );
+      expect(reseau.requetes.single.headers['Idempotency-Key'], cleAttendue);
     });
 
     test('une 4xx métier retire l’écriture de la file', () async {

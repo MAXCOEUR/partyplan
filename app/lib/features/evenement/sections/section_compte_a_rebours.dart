@@ -22,11 +22,12 @@ class SectionCompteARebours extends StatelessWidget {
 
     // Différence en jours calendaires, et non en tranches de 24 heures : « demain »
     // doit s'afficher pour une soirée du lendemain, même s'il ne reste que huit heures.
-    final jours = DateTime(
-      resume.debut.year,
-      resume.debut.month,
-      resume.debut.day,
-    ).difference(DateTime(maintenant.year, maintenant.month, maintenant.day)).inDays;
+    final jours =
+        DateTime(resume.debut.year, resume.debut.month, resume.debut.day)
+            .difference(
+              DateTime(maintenant.year, maintenant.month, maintenant.day),
+            )
+            .inDays;
 
     return Padding(
       padding: const EdgeInsets.only(top: PpSpacing.md),

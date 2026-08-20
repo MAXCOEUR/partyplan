@@ -14,7 +14,11 @@ import 'presence_vers_pastille.dart';
 
 /// Liste des invités et de leurs présences (EF-PRES-04 à EF-PRES-06).
 class InvitesPage extends ConsumerWidget {
-  const InvitesPage({required this.evenementId, this.dansUneCoquille = false, super.key});
+  const InvitesPage({
+    required this.evenementId,
+    this.dansUneCoquille = false,
+    super.key,
+  });
 
   final String evenementId;
 
@@ -100,7 +104,10 @@ class _Liste extends ConsumerWidget {
                   ),
                 if (tetes != presents) ...[
                   const SizedBox(height: PpSpacing.xs),
-                  Text(l10n.tetesAPrevoir(tetes), style: theme.textTheme.bodySmall),
+                  Text(
+                    l10n.tetesAPrevoir(tetes),
+                    style: theme.textTheme.bodySmall,
+                  ),
                 ],
               ],
             ),
@@ -155,7 +162,10 @@ class _CarteMembre extends ConsumerWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(membre.nomAffiche, style: theme.textTheme.titleMedium),
+                      Text(
+                        membre.nomAffiche,
+                        style: theme.textTheme.titleMedium,
+                      ),
                       if (membre.role != RoleMembre.membre)
                         PpEyebrow(
                           membre.role == RoleMembre.proprietaire

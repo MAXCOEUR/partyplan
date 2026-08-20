@@ -325,7 +325,9 @@ class _BarreProgression extends StatelessWidget {
                         decoration: BoxDecoration(
                           color: i <= etape
                               ? PpColors.violet
-                              : Theme.of(context).colorScheme.surfaceContainerHighest,
+                              : Theme.of(
+                                  context,
+                                ).colorScheme.surfaceContainerHighest,
                           borderRadius: BorderRadius.circular(PpRadius.pill),
                         ),
                       ),

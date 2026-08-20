@@ -67,7 +67,10 @@ class _Contenu extends ConsumerWidget {
             child: PpCard(
               child: Row(
                 children: [
-                  const Icon(Icons.lock_outline_rounded, color: PpColors.orange),
+                  const Icon(
+                    Icons.lock_outline_rounded,
+                    color: PpColors.orange,
+                  ),
                   const SizedBox(width: PpSpacing.md),
                   Expanded(child: Text(l10n.invitationFermee)),
                 ],
@@ -106,10 +109,7 @@ class _Contenu extends ConsumerWidget {
             children: [
               PpEyebrow(l10n.invitationLien),
               const SizedBox(height: PpSpacing.xs),
-              SelectableText(
-                invitation.lien,
-                style: theme.textTheme.bodySmall,
-              ),
+              SelectableText(invitation.lien, style: theme.textTheme.bodySmall),
               const SizedBox(height: PpSpacing.md),
               Row(
                 children: [
@@ -176,7 +176,10 @@ class _Contenu extends ConsumerWidget {
     );
   }
 
-  Future<void> _basculerAdhesions(WidgetRef ref, {required bool ouvertes}) async {
+  Future<void> _basculerAdhesions(
+    WidgetRef ref, {
+    required bool ouvertes,
+  }) async {
     await ref
         .read(evenementsApiProvider)
         .ouvrirAdhesions(evenementId, ouvertes: ouvertes);
@@ -186,7 +189,10 @@ class _Contenu extends ConsumerWidget {
       ..invalidate(evenementProvider(evenementId));
   }
 
-  Future<void> _confirmerRegeneration(BuildContext context, WidgetRef ref) async {
+  Future<void> _confirmerRegeneration(
+    BuildContext context,
+    WidgetRef ref,
+  ) async {
     final l10n = PpL10n.of(context);
 
     final confirme = await showDialog<bool>(

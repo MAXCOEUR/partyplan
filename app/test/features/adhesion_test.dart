@@ -24,19 +24,20 @@ void main() {
       expect(find.textContaining('€'), findsNothing);
     });
 
-    testWidgets('EF-INV-06 : l’aperçu reste lisible quand les arrivées sont fermées', (
-      tester,
-    ) async {
-      await _monterApercu(tester, apercu(adhesionsOuvertes: false));
+    testWidgets(
+      'EF-INV-06 : l’aperçu reste lisible quand les arrivées sont fermées',
+      (tester) async {
+        await _monterApercu(tester, apercu(adhesionsOuvertes: false));
 
-      // L'aperçu explique le refus au lieu de renvoyer une erreur opaque.
-      expect(find.text('Crémaillère chez Léa'), findsOneWidget);
-      expect(
-        find.text('L’organisateur a fermé les nouvelles arrivées.'),
-        findsOneWidget,
-      );
-      expect(find.text('Participer'), findsNothing);
-    });
+        // L'aperçu explique le refus au lieu de renvoyer une erreur opaque.
+        expect(find.text('Crémaillère chez Léa'), findsOneWidget);
+        expect(
+          find.text('L’organisateur a fermé les nouvelles arrivées.'),
+          findsOneWidget,
+        );
+        expect(find.text('Participer'), findsNothing);
+      },
+    );
 
     testWidgets('un membre déjà inscrit va directement à l’événement', (
       tester,
@@ -109,7 +110,10 @@ void main() {
   });
 }
 
-Future<void> _monterApercu(WidgetTester tester, ApercuInvitation donnees) async {
+Future<void> _monterApercu(
+  WidgetTester tester,
+  ApercuInvitation donnees,
+) async {
   final conteneur = ProviderContainer(
     overrides: [
       sessionStoreProvider.overrideWithValue(SessionStoreDouble()),

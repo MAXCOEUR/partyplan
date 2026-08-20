@@ -35,7 +35,10 @@ void main() {
 
       expect(entree, isNotNull);
       expect(entree!.recuA, recuA);
-      expect((entree.charge! as List).first, {'id': 'a', 'name': 'Crémaillère'});
+      expect((entree.charge! as List).first, {
+        'id': 'a',
+        'name': 'Crémaillère',
+      });
     });
 
     test('renvoie null quand rien n’a été mis en cache', () async {

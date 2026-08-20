@@ -8,7 +8,11 @@ void main() {
     test('conserve l’ordre d’inscription', () async {
       final file = FileEcritures(MagasinLocalDouble());
 
-      await file.inscrire(methode: 'POST', chemin: '/join/abc', corps: {'a': 1});
+      await file.inscrire(
+        methode: 'POST',
+        chemin: '/join/abc',
+        corps: {'a': 1},
+      );
       await file.inscrire(methode: 'PATCH', chemin: '/events/1/members/me');
 
       final attente = await file.enAttente();
@@ -19,20 +23,26 @@ void main() {
       ]);
     });
 
-    test('la clé d’idempotence est fixée à l’inscription et ne change plus', () async {
-      final magasin = MagasinLocalDouble();
-      final file = FileEcritures(magasin);
+    test(
+      'la clé d’idempotence est fixée à l’inscription et ne change plus',
+      () async {
+        final magasin = MagasinLocalDouble();
+        final file = FileEcritures(magasin);
 
-      final inscrite = await file.inscrire(methode: 'POST', chemin: '/join/abc');
+        final inscrite = await file.inscrire(
+          methode: 'POST',
+          chemin: '/join/abc',
+        );
 
-      // Relecture depuis le magasin : c'est le chemin qu'emprunte un rejeu après
-      // redémarrage de l'application. Une clé régénérée ici ne serait plus reconnue
-      // par l'idempotence du serveur, et le rejeu créerait un doublon.
-      final relue = (await FileEcritures(magasin).enAttente()).single;
+        // Relecture depuis le magasin : c'est le chemin qu'emprunte un rejeu après
+        // redémarrage de l'application. Une clé régénérée ici ne serait plus reconnue
+        // par l'idempotence du serveur, et le rejeu créerait un doublon.
+        final relue = (await FileEcritures(magasin).enAttente()).single;
 
-      expect(relue.cleIdempotence, inscrite.cleIdempotence);
-      expect(relue.cleIdempotence, isNotEmpty);
-    });
+        expect(relue.cleIdempotence, inscrite.cleIdempotence);
+        expect(relue.cleIdempotence, isNotEmpty);
+      },
+    );
 
     test('deux inscriptions portent deux clés distinctes', () async {
       final file = FileEcritures(MagasinLocalDouble());

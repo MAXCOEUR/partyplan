@@ -28,7 +28,9 @@ class ApercuInvitationPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = PpL10n.of(context);
-    final apercu = ref.watch(apercuInvitationProvider((jeton: jeton, code: code)));
+    final apercu = ref.watch(
+      apercuInvitationProvider((jeton: jeton, code: code)),
+    );
 
     return Scaffold(
       appBar: AppBar(title: const Text(PpMarque.nom)),
@@ -36,8 +38,9 @@ class ApercuInvitationPage extends ConsumerWidget {
         loading: () => const PpLoadingState(),
         error: (_, _) => PpErrorState(
           message: l10n.apercuIntrouvable,
-          onRetry: () =>
-              ref.invalidate(apercuInvitationProvider((jeton: jeton, code: code))),
+          onRetry: () => ref.invalidate(
+            apercuInvitationProvider((jeton: jeton, code: code)),
+          ),
         ),
         data: (donnees) => _Contenu(
           apercu: donnees,
@@ -77,7 +80,10 @@ class _Contenu extends StatelessWidget {
             children: [
               Text(apercu.nom, style: theme.textTheme.headlineSmall),
               const SizedBox(height: PpSpacing.sm),
-              Text(dateFr.format(apercu.debut), style: theme.textTheme.bodyMedium),
+              Text(
+                dateFr.format(apercu.debut),
+                style: theme.textTheme.bodyMedium,
+              ),
               if (apercu.adresse != null)
                 Text(apercu.adresse!, style: theme.textTheme.bodyMedium),
               const SizedBox(height: PpSpacing.md),

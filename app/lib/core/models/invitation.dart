@@ -50,16 +50,17 @@ class ApercuInvitation {
 
   final bool dejaMembre;
 
-  static ApercuInvitation depuisJson(Map<String, dynamic> json) => ApercuInvitation(
-    nom: json['name'] as String,
-    debut: DateTime.parse(json['startsAt'] as String).toLocal(),
-    fin: json['endsAt'] == null
-        ? null
-        : DateTime.parse(json['endsAt'] as String).toLocal(),
-    adresse: json['address'] as String?,
-    description: json['description'] as String?,
-    nombreParticipants: (json['participantCount'] as num).toInt(),
-    adhesionsOuvertes: json['joinEnabled'] as bool,
-    dejaMembre: json['alreadyMember'] as bool? ?? false,
-  );
+  static ApercuInvitation depuisJson(Map<String, dynamic> json) =>
+      ApercuInvitation(
+        nom: json['name'] as String,
+        debut: DateTime.parse(json['startsAt'] as String).toLocal(),
+        fin: json['endsAt'] == null
+            ? null
+            : DateTime.parse(json['endsAt'] as String).toLocal(),
+        adresse: json['address'] as String?,
+        description: json['description'] as String?,
+        nombreParticipants: (json['participantCount'] as num).toInt(),
+        adhesionsOuvertes: json['joinEnabled'] as bool,
+        dejaMembre: json['alreadyMember'] as bool? ?? false,
+      );
 }

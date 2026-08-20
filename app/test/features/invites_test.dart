@@ -57,7 +57,9 @@ void main() {
 
       expect(bouton.onPressed, isNull);
       expect(
-        find.text('Au-delà de dix accompagnants, il s’agit d’un autre événement.'),
+        find.text(
+          'Au-delà de dix accompagnants, il s’agit d’un autre événement.',
+        ),
         findsOneWidget,
       );
     });
@@ -106,7 +108,9 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(
-        find.textContaining('Ses dépenses et ses achats restent comptabilisés.'),
+        find.textContaining(
+          'Ses dépenses et ses achats restent comptabilisés.',
+        ),
         findsOneWidget,
       );
     });

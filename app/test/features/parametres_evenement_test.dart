@@ -11,7 +11,9 @@ import '../doubles/session_store_double.dart';
 
 void main() {
   group('Paramètres de l’événement', () {
-    testWidgets('RG-ROLE-02 : le transfert précède « quitter »', (tester) async {
+    testWidgets('RG-ROLE-02 : le transfert précède « quitter »', (
+      tester,
+    ) async {
       await _monter(tester, monRole: RoleMembre.proprietaire);
 
       final transfert = tester.getTopLeft(find.text('Transférer la propriété'));
@@ -22,7 +24,9 @@ void main() {
       expect(transfert.dy, lessThan(quitter.dy));
     });
 
-    testWidgets('un propriétaire ne quitte pas sans transférer', (tester) async {
+    testWidgets('un propriétaire ne quitte pas sans transférer', (
+      tester,
+    ) async {
       await _monter(tester, monRole: RoleMembre.proprietaire);
 
       await tester.tap(find.text('Quitter l’événement'));
@@ -41,7 +45,12 @@ void main() {
         tester,
         monRole: RoleMembre.proprietaire,
         membres: [
-          membre(id: 'moi', nom: 'Moi', role: RoleMembre.proprietaire, cestMoi: true),
+          membre(
+            id: 'moi',
+            nom: 'Moi',
+            role: RoleMembre.proprietaire,
+            cestMoi: true,
+          ),
           membre(id: 'lea', nom: 'Léa'),
           membre(id: 'inv', nom: 'Invité', aUnCompte: false),
         ],
@@ -53,12 +62,16 @@ void main() {
       expect(find.byKey(const ValueKey('repreneur-lea')), findsOneWidget);
       expect(find.byKey(const ValueKey('repreneur-inv')), findsNothing);
       expect(
-        find.textContaining('un invité sans compte ne retrouverait pas l’événement'),
+        find.textContaining(
+          'un invité sans compte ne retrouverait pas l’événement',
+        ),
         findsOneWidget,
       );
     });
 
-    testWidgets('RG-ROLE-01 : un co-organisateur ne supprime pas', (tester) async {
+    testWidgets('RG-ROLE-01 : un co-organisateur ne supprime pas', (
+      tester,
+    ) async {
       await _monter(tester, monRole: RoleMembre.administrateur);
 
       expect(find.text('Supprimer l’événement'), findsNothing);
@@ -113,7 +126,8 @@ Future<void> _monter(
       evenementProvider.overrideWith((ref, id) async => resume()),
       membresProvider.overrideWith(
         (ref, id) async =>
-            membres ?? [membre(id: 'moi', nom: 'Moi', role: monRole, cestMoi: true)],
+            membres ??
+            [membre(id: 'moi', nom: 'Moi', role: monRole, cestMoi: true)],
       ),
     ],
   );

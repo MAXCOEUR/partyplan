@@ -101,33 +101,39 @@ void main() {
   });
 
   group('Membre', () {
-    test('EF-PRES-06 : les têtes comptent la personne et ses accompagnants', () {
-      expect(_membre(StatutPresence.present, accompagnants: 2).tetes, 3);
-      expect(_membre(StatutPresence.enRetard, accompagnants: 1).tetes, 2);
-    });
+    test(
+      'EF-PRES-06 : les têtes comptent la personne et ses accompagnants',
+      () {
+        expect(_membre(StatutPresence.present, accompagnants: 2).tetes, 3);
+        expect(_membre(StatutPresence.enRetard, accompagnants: 1).tetes, 2);
+      },
+    );
 
     test('RG-PRES-04 : un absent n’apporte aucune tête', () {
       expect(_membre(StatutPresence.absent, accompagnants: 4).tetes, 0);
       expect(_membre(StatutPresence.peutEtre, accompagnants: 4).tetes, 0);
     });
 
-    test('l’identifiant de compte n’est pas exposé, seulement le fait d’en avoir un', () {
-      final membre = Membre.depuisJson({
-        'id': 'm1',
-        'displayName': 'Léa',
-        'avatarUrl': null,
-        'status': 'Going',
-        'arrivalTime': null,
-        'departureTime': null,
-        'extraGuests': 0,
-        'role': 'Member',
-        'hasAccount': true,
-        'isMe': false,
-      });
+    test(
+      'l’identifiant de compte n’est pas exposé, seulement le fait d’en avoir un',
+      () {
+        final membre = Membre.depuisJson({
+          'id': 'm1',
+          'displayName': 'Léa',
+          'avatarUrl': null,
+          'status': 'Going',
+          'arrivalTime': null,
+          'departureTime': null,
+          'extraGuests': 0,
+          'role': 'Member',
+          'hasAccount': true,
+          'isMe': false,
+        });
 
-      expect(membre.aUnCompte, isTrue);
-      expect(membre.cestMoi, isFalse);
-    });
+        expect(membre.aUnCompte, isTrue);
+        expect(membre.cestMoi, isFalse);
+      },
+    );
   });
 
   group('RoleMembre', () {

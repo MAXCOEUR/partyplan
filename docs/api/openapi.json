@@ -782,6 +782,45 @@
             }
           }
         }
+      },
+      "post": {
+        "tags": [
+          "Invitations"
+        ],
+        "summary": "Rejoint depuis un code court. En-tête Idempotency-Key obligatoire.",
+        "operationId": "JoinByShortCode",
+        "parameters": [
+          {
+            "name": "shortCode",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/JoinBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JoinResult"
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/v1/events/{eventId}/members": {

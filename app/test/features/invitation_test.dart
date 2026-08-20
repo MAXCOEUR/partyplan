@@ -15,12 +15,17 @@ void main() {
     testWidgets('affiche le lien, le code court et le QR', (tester) async {
       await _monter(tester);
 
-      expect(find.text('https://partyplan.test/join/JETON-SECRET'), findsOneWidget);
+      expect(
+        find.text('https://partyplan.test/join/JETON-SECRET'),
+        findsOneWidget,
+      );
       expect(find.text('PLAN-K7M2X9'), findsOneWidget);
       expect(find.byType(QrImageView), findsOneWidget);
     });
 
-    testWidgets('le QR est sur fond blanc, quel que soit le thème', (tester) async {
+    testWidgets('le QR est sur fond blanc, quel que soit le thème', (
+      tester,
+    ) async {
       await _monter(tester);
 
       // Sans fond blanc imposé, le code n'est pas lisible par un téléphone en thème
@@ -29,14 +34,18 @@ void main() {
       expect(qr.backgroundColor, Colors.white);
     });
 
-    testWidgets('EF-INV-05 : la régénération avertit avant d’agir', (tester) async {
+    testWidgets('EF-INV-05 : la régénération avertit avant d’agir', (
+      tester,
+    ) async {
       await _monter(tester);
 
       await tester.tap(find.byKey(const ValueKey('regenerer')));
       await tester.pumpAndSettle();
 
       expect(
-        find.textContaining('Le lien et le code actuels cesseront de fonctionner.'),
+        find.textContaining(
+          'Le lien et le code actuels cesseront de fonctionner.',
+        ),
         findsOneWidget,
       );
     });
@@ -49,7 +58,10 @@ void main() {
   });
 }
 
-Future<void> _monter(WidgetTester tester, {bool adhesionsOuvertes = true}) async {
+Future<void> _monter(
+  WidgetTester tester, {
+  bool adhesionsOuvertes = true,
+}) async {
   final conteneur = ProviderContainer(
     overrides: [
       sessionStoreProvider.overrideWithValue(SessionStoreDouble()),

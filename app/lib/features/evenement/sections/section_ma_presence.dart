@@ -38,7 +38,9 @@ class SectionMaPresence extends ConsumerWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              sansReponse ? l10n.tdbMaPresenceQuestion : l10n.tdbMaPresenceModifier,
+              sansReponse
+                  ? l10n.tdbMaPresenceQuestion
+                  : l10n.tdbMaPresenceModifier,
               style: Theme.of(context).textTheme.titleMedium,
             ),
             const SizedBox(height: PpSpacing.md),

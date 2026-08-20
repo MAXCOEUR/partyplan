@@ -162,9 +162,9 @@ class _ParametresEvenementPageState
         Expanded(
           child: Text(
             l10n.paramSupprimer,
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-              color: PpColors.rougeTexte,
-            ),
+            style: Theme.of(
+              context,
+            ).textTheme.titleMedium?.copyWith(color: PpColors.rougeTexte),
           ),
         ),
       ],
@@ -238,9 +238,7 @@ class _ParametresEvenementPageState
     // RG-ROLE-02 : la cible doit posséder un compte. Un invité sans compte ne
     // retrouverait pas l'événement depuis un autre appareil, et l'événement serait
     // orphelin au premier changement de téléphone.
-    final eligibles = membres
-        .where((m) => m.aUnCompte && !m.cestMoi)
-        .toList();
+    final eligibles = membres.where((m) => m.aUnCompte && !m.cestMoi).toList();
 
     if (!mounted) {
       return;
@@ -317,10 +315,7 @@ class _ParametresEvenementPageState
               const SizedBox(height: PpSpacing.md),
               Text(l10n.paramSupprimerConfirmation(resume.nom)),
               const SizedBox(height: PpSpacing.sm),
-              TextField(
-                controller: saisie,
-                onChanged: (_) => setEtat(() {}),
-              ),
+              TextField(controller: saisie, onChanged: (_) => setEtat(() {})),
             ],
           ),
           actions: [
