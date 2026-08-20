@@ -47,5 +47,17 @@
   "erreurEnregistrement": "Ta modification n’a pas été enregistrée. Elle a été annulée.",
   "reessayer": "Réessayer",
 
-  "bandeauDeveloppement": "API locale"
+  "bandeauDeveloppement": "API locale",
+
+  "horsLigneDonneesDu": "Données du {date}",
+  "@horsLigneDonneesDu": {
+    "description": "Bandeau affiché quand l'écran montre l'état en cache. La date rend visible qu'il ne s'agit pas de l'état courant.",
+    "placeholders": { "date": { "type": "String" } }
+  },
+  "horsLigneEnAttente": "{nombre, plural, one{1 modification en attente d’envoi} other{{nombre} modifications en attente d’envoi}}",
+  "@horsLigneEnAttente": {
+    "placeholders": { "nombre": { "type": "int" } }
+  },
+  "horsLigneReessayer": "Réessayer",
+  "horsLigneDiffere": "Enregistré. Sera envoyé dès le retour du réseau."
 }
