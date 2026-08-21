@@ -1,3 +1,5 @@
+import 'package:dio/dio.dart';
+
 import '../models/message.dart';
 import 'api_client.dart';
 
@@ -71,6 +73,39 @@ class DiscussionApi {
     corps: {'emoji': emoji},
     analyser: (reponse) => Message.depuisJson(reponse! as Map<String, dynamic>),
   );
+
+  /// Dépose une image et renvoie son adresse, à joindre ensuite à un message.
+  ///
+  /// Deux temps plutôt qu'un : l'envoi est long sur un réseau de soirée, et le séparer
+  /// permet de montrer une progression puis de laisser écrire une légende sans retenir
+  /// l'image.
+  ///
+  /// Le fichier part tel quel : c'est le serveur qui réduit et réencode. La compression
+  /// s'applique alors quel que soit l'appareil, et le réencodage supprime les
+  /// métadonnées EXIF — dont la géolocalisation qu'un téléphone inscrit dans chaque
+  /// photo, et qui serait sinon publiée à tout l'événement.
+  Future<String> deposerImage(
+    String evenementId, {
+    required List<int> octets,
+    required String nomFichier,
+    required String typeMime,
+  }) {
+    final donnees = FormData.fromMap({
+      // Le type est déclaré explicitement : sans lui, Dio annonce
+      // « application/octet-stream », que le serveur refuse.
+      'file': MultipartFile.fromBytes(
+        octets,
+        filename: nomFichier,
+        contentType: DioMediaType.parse(typeMime),
+      ),
+    });
+
+    return _client.post<String>(
+      '${_fil(evenementId)}/images',
+      corps: donnees,
+      analyser: (corps) => (corps! as Map<String, dynamic>)['url'] as String,
+    );
+  }
 
   // ---------------------------------------------------------------- épingles ----
 

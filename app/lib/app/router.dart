@@ -11,6 +11,7 @@ import '../features/auth/inscription_page.dart';
 import '../features/auth/mot_de_passe_a_changer_page.dart';
 import '../features/auth/mot_de_passe_oublie_page.dart';
 import '../features/auth/second_facteur_page.dart';
+import '../features/discussion/epingles_page.dart';
 import '../features/evenement/coquille_evenement.dart';
 import '../features/evenement/creation_evenement_page.dart';
 import '../features/evenement/invitation_page.dart';
@@ -72,6 +73,7 @@ abstract final class PpRoutes {
   static const evenementInvitation = '/events/:eventId/inviter';
   static const evenementParametres = '/events/:eventId/parametres';
   static const evenementReglements = '/events/:eventId/reglements';
+  static const evenementEpingles = '/events/:eventId/epingle';
 
   static String versEvenement(String eventId) => '/events/$eventId';
 
@@ -89,6 +91,8 @@ abstract final class PpRoutes {
   static String versParametres(String eventId) => '/events/$eventId/parametres';
 
   static String versReglements(String eventId) => '/events/$eventId/reglements';
+
+  static String versEpingles(String eventId) => '/events/$eventId/epingle';
 
   static String versRejoindre(String token) => '/join/$token';
 
@@ -263,6 +267,11 @@ GoRouter creerRouteur(Ref ref) => GoRouter(
       path: PpRoutes.evenementInvitation,
       builder: (context, state) =>
           InvitationPage(evenementId: state.pathParameters['eventId']!),
+    ),
+    GoRoute(
+      path: PpRoutes.evenementEpingles,
+      builder: (context, state) =>
+          EpinglesPage(evenementId: state.pathParameters['eventId']!),
     ),
     GoRoute(
       path: PpRoutes.evenementReglements,

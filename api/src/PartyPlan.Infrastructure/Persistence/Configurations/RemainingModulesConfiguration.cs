@@ -98,10 +98,14 @@ internal sealed class PollVoteConfiguration : IEntityTypeConfiguration<PollVote>
     {
         builder.HasKey(v => v.Id);
 
-        // Un vote unique par membre et par sondage, tant que le choix multiple n'est
-        // pas ouvert (EF-SDG-01). L'index porte la règle : changer son vote met à jour
-        // la ligne existante plutôt que d'en créer une seconde (EF-SDG-02).
-        builder.HasIndex(v => new { v.PollId, v.MemberId }).IsUnique();
+        // Une voix par option et par membre. L'unicité porte aussi sur l'option : sans
+        // elle, un même choix compté deux fois fausserait le résultat.
+        //
+        // Elle ne peut pas porter sur le seul couple (sondage, membre) : ce serait
+        // interdire le choix multiple que « AllowMultiple » annonce, et l'option
+        // resterait inopérante. Changer d'avis efface les voix précédentes plutôt que
+        // de les mettre à jour (EF-SDG-02).
+        builder.HasIndex(v => new { v.PollId, v.MemberId, v.OptionId }).IsUnique();
 
         builder.HasOne<PollOption>()
             .WithMany(o => o.Votes)

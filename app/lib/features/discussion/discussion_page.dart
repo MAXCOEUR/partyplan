@@ -1,13 +1,16 @@
 import 'package:flutter/material.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../../core/media/type_mime_image.dart';
 import '../../core/models/membre.dart';
 import '../../core/models/message.dart';
 import '../../core/network/api_exception.dart';
 import '../../core/providers.dart';
 import '../../design/components/pp_avatar.dart';
+import '../../design/components/pp_selecteur_emoji.dart';
 import '../../design/components/pp_states.dart';
 import '../../design/components/pp_texte_message.dart';
 import '../../design/tokens.dart';
@@ -36,6 +39,14 @@ class _DiscussionPageState extends ConsumerState<DiscussionPage> {
   Message? _citation;
 
   bool _envoiEnCours = false;
+
+  /// Vrai pendant le dépôt d'une image. Le geste est long sur un réseau de soirée :
+  /// sans repère, on appuie une seconde fois.
+  bool _imageEnCours = false;
+
+  /// Plafond accepté par le serveur. Vérifié ici d'abord, pour ne pas faire attendre
+  /// une montée vouée au refus.
+  static const _tailleMaximale = 12 * 1024 * 1024;
 
   @override
   void dispose() {
@@ -81,6 +92,74 @@ class _DiscussionPageState extends ConsumerState<DiscussionPage> {
     } finally {
       if (mounted) {
         setState(() => _envoiEnCours = false);
+      }
+    }
+  }
+
+  /// Choisit une image et l'envoie comme message.
+  ///
+  /// Le fichier part tel quel : c'est le serveur qui réduit et réencode, ce qui
+  /// s'applique quel que soit l'appareil et supprime les métadonnées EXIF — dont la
+  /// géolocalisation qu'un téléphone inscrit dans chaque photo.
+  Future<void> _joindreUneImage() async {
+    if (_imageEnCours) {
+      return;
+    }
+
+    final fichier = await FilePicker.pickFile(type: FileType.image);
+
+    if (fichier == null) {
+      return;
+    }
+
+    final typeMime = typeMimeImage(fichier.name);
+
+    if (typeMime == null) {
+      _signaler('Formats acceptés : JPEG, PNG, WebP et HEIC.');
+      return;
+    }
+
+    // Contrôle local avant envoi : inutile de faire monter douze mégaoctets pour se
+    // faire refuser au bout.
+    if (await fichier.length() > _tailleMaximale) {
+      _signaler('L’image ne doit pas dépasser 12 Mo.');
+      return;
+    }
+
+    setState(() => _imageEnCours = true);
+
+    try {
+      final api = ref.read(discussionApiProvider);
+
+      final adresse = await api.deposerImage(
+        widget.evenementId,
+        octets: await fichier.readAsBytes(),
+        nomFichier: fichier.name,
+        typeMime: typeMime,
+      );
+
+      // La légende éventuellement déjà écrite part avec l'image, plutôt que d'être
+      // perdue ou envoyée séparément.
+      final legende = _saisie.text.trim();
+
+      await api.envoyer(
+        widget.evenementId,
+        corps: legende.isEmpty ? null : legende,
+        urlPieceJointe: adresse,
+        repondreA: _citation?.id,
+      );
+
+      _saisie.clear();
+      setState(() => _citation = null);
+
+      ref.invalidate(filDiscussionProvider(widget.evenementId));
+    } on ApiException catch (erreur) {
+      _signaler(erreur.title);
+    } on Exception {
+      _signaler('Image non envoyée. Réessaie.');
+    } finally {
+      if (mounted) {
+        setState(() => _imageEnCours = false);
       }
     }
   }
@@ -141,8 +220,10 @@ class _DiscussionPageState extends ConsumerState<DiscussionPage> {
         _Saisie(
           controleur: _saisie,
           enCours: _envoiEnCours,
+          imageEnCours: _imageEnCours,
           membres: ref.watch(membresProvider(widget.evenementId)).value ?? [],
           onEnvoyer: _envoyer,
+          onImage: _joindreUneImage,
         ),
       ],
     );
@@ -426,10 +507,6 @@ class _MenuMessage extends ConsumerWidget {
     required this.surReponse,
   });
 
-  /// Réactions proposées d'emblée. Une palette courte : le choix exhaustif d'emoji
-  /// transforme un geste d'une seconde en fouille dans un catalogue.
-  static const emojis = ['👍', '🎉', '😂', '❤️', '😮'];
-
   final String evenementId;
   final Message message;
   final void Function(Message) surReponse;
@@ -441,12 +518,13 @@ class _MenuMessage extends ConsumerWidget {
     onSelected: (choix) => _agir(context, ref, choix),
     itemBuilder: (_) => [
       const PopupMenuItem(value: 'repondre', child: Text('Répondre')),
+      // Une seule entrée, qui ouvre le choix : six entrées « Réagir 👍 » ne laissaient
+      // le choix qu'entre six emoji, et allongeaient le menu d'autant.
+      const PopupMenuItem(value: 'reagir', child: Text('Réagir…')),
       PopupMenuItem(
         value: 'epingler',
         child: Text(message.epingle ? 'Retirer l’épingle' : 'Épingler'),
       ),
-      for (final emoji in emojis)
-        PopupMenuItem(value: 'emoji:$emoji', child: Text('Réagir $emoji')),
       // Modifier et supprimer n'appartiennent qu'à l'auteur : réécrire le message
       // d'un autre permettrait de lui faire dire le contraire de ce qu'il a écrit.
       if (message.leMien && !message.supprime) ...[
@@ -459,17 +537,18 @@ class _MenuMessage extends ConsumerWidget {
   Future<void> _agir(BuildContext context, WidgetRef ref, String choix) async {
     final api = ref.read(discussionApiProvider);
 
-    if (choix.startsWith('emoji:')) {
-      await api.basculerReaction(
-        evenementId,
-        message.id,
-        choix.substring('emoji:'.length),
-      );
-      ref.invalidate(filDiscussionProvider(evenementId));
-      return;
-    }
-
     switch (choix) {
+      case 'reagir':
+        if (context.mounted) {
+          final emoji = await ouvrirSelecteurEmoji(context);
+
+          // Refermer sans choisir ne pose rien : la feuille rend alors `null`.
+          if (emoji != null) {
+            await api.basculerReaction(evenementId, message.id, emoji);
+            ref.invalidate(filDiscussionProvider(evenementId));
+          }
+        }
+
       case 'repondre':
         surReponse(message);
 
@@ -572,14 +651,18 @@ class _Saisie extends StatefulWidget {
   const _Saisie({
     required this.controleur,
     required this.enCours,
+    required this.imageEnCours,
     required this.membres,
     required this.onEnvoyer,
+    required this.onImage,
   });
 
   final TextEditingController controleur;
   final bool enCours;
+  final bool imageEnCours;
   final List<Membre> membres;
   final VoidCallback onEnvoyer;
+  final VoidCallback onImage;
 
   @override
   State<_Saisie> createState() => _SaisieState();
@@ -699,7 +782,9 @@ class _SaisieState extends State<_Saisie> {
         _BarreSaisie(
           controleur: widget.controleur,
           enCours: widget.enCours,
+          imageEnCours: widget.imageEnCours,
           onEnvoyer: widget.onEnvoyer,
+          onImage: widget.onImage,
           theme: theme,
         ),
       ],
@@ -756,13 +841,17 @@ class _BarreSaisie extends StatelessWidget {
   const _BarreSaisie({
     required this.controleur,
     required this.enCours,
+    required this.imageEnCours,
     required this.onEnvoyer,
+    required this.onImage,
     required this.theme,
   });
 
   final TextEditingController controleur;
   final bool enCours;
+  final bool imageEnCours;
   final VoidCallback onEnvoyer;
+  final VoidCallback onImage;
   final ThemeData theme;
 
   @override
@@ -776,6 +865,18 @@ class _BarreSaisie extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
+          IconButton(
+            key: const Key('discussion-image'),
+            onPressed: imageEnCours ? null : onImage,
+            icon: imageEnCours
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Icon(Icons.image_outlined),
+            tooltip: 'Joindre une image',
+          ),
           Expanded(
             child: TextField(
               key: const Key('discussion-saisie'),

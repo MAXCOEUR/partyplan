@@ -99,6 +99,17 @@ class _DiscussionApiDouble implements DiscussionApi {
     String evenementId, {
     String? dossierId,
   }) async => const PageEpingles(dossiers: [], epingles: []);
+
+  @override
+  Future<String> deposerImage(
+    String evenementId, {
+    required List<int> octets,
+    required String nomFichier,
+    required String typeMime,
+  }) async {
+    appels.add('deposerImage|$nomFichier|$typeMime|${octets.length}');
+    return 'http://localhost:5080/media/events/x/abc.webp';
+  }
 }
 
 Message _message({
@@ -271,6 +282,39 @@ void main() {
 
       expect(find.textContaining('🎉'), findsOneWidget);
       expect(find.textContaining('3'), findsWidgets);
+    });
+
+    testWidgets('réagir ouvre le choix d’un emoji', (tester) async {
+      // Six entrées « Réagir 👍 » dans le menu ne laissaient le choix qu'entre six
+      // emoji, et allongeaient le menu d'autant.
+      final api = await _monter(tester, [_message(id: 'a')]);
+
+      await tester.tap(find.byKey(const Key('menu-a')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Réagir…'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Fête'), findsOneWidget);
+
+      await tester.tap(find.text('🥂'));
+      await tester.pumpAndSettle();
+
+      expect(api.appels, contains('reaction|a|🥂'));
+    });
+
+    testWidgets('refermer le choix sans emoji ne pose aucune réaction', (
+      tester,
+    ) async {
+      final api = await _monter(tester, [_message(id: 'a')]);
+
+      await tester.tap(find.byKey(const Key('menu-a')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Réagir…'));
+      await tester.pumpAndSettle();
+      await tester.tapAt(const Offset(10, 10));
+      await tester.pumpAndSettle();
+
+      expect(api.appels.where((a) => a.startsWith('reaction')), isEmpty);
     });
 
     testWidgets('appuyer sur une réaction la bascule', (tester) async {
@@ -450,6 +494,25 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.byKey(const Key('mention-choix-m2')), findsNothing);
+    });
+
+    testWidgets('un bouton propose de joindre une image', (tester) async {
+      await _monter(tester, const []);
+
+      expect(find.byKey(const Key('discussion-image')), findsOneWidget);
+    });
+
+    testWidgets('une image jointe s’affiche dans le fil', (tester) async {
+      await _monter(tester, [
+        _message(
+          id: 'a',
+          corps: null,
+          image: 'http://localhost:5080/media/events/x/abc.webp',
+        ),
+      ]);
+
+      // Une photo se passe de légende : un message sans texte reste valable.
+      expect(find.byType(Image), findsWidgets);
     });
 
     testWidgets('offre une reprise après une erreur de chargement', (

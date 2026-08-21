@@ -17,6 +17,10 @@ public sealed class MessagesModule : IModule
         ArgumentNullException.ThrowIfNull(services);
 
         services.AddScoped<MessageService>();
+
+        // Contrat consommé par le module Polls : c'est Messages qui possède le fil.
+        services.AddScoped<PartyPlan.SharedKernel.Contracts.IPollAnnouncement>(
+            fournisseur => fournisseur.GetRequiredService<MessageService>());
     }
 
     public void MapEndpoints(IEndpointRouteBuilder routes) => MessagesEndpoints.Map(routes);

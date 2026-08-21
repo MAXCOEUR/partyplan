@@ -63,6 +63,7 @@ public static class DependencyInjection
 
         services.AddSingleton<PartyPlan.SharedKernel.Contracts.IEmailSender, SmtpEmailSender>();
         services.AddSingleton<PartyPlan.SharedKernel.Contracts.IAvatarStorage, AvatarStorage>();
+        services.AddSingleton<PartyPlan.SharedKernel.Contracts.IEventImageStorage, EventImageStorage>();
 
         // Notifications poussées. L'émetteur de développement journalise au lieu
         // d'envoyer (NF-DEV-04) ; l'implémentation Firebase le remplacera au lot 1.11,

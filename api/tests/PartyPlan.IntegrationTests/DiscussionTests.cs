@@ -301,6 +301,83 @@ public sealed class DiscussionTests(PartyPlanApiFixture fixture)
         epingles!.RootElement.GetProperty("items").GetArrayLength().ShouldBe(0);
     }
 
+    [Fact]
+    public async Task Une_image_deposee_rend_une_adresse_utilisable()
+    {
+        var (client, evenement, _) = await EvenementAsync();
+
+        using var contenu = new MultipartFormDataContent();
+        var fichier = new ByteArrayContent(ImagePng());
+        fichier.Headers.ContentType = new MediaTypeHeaderValue("image/png");
+        contenu.Add(fichier, "file", "photo.png");
+
+        var depot = await client.PostAsync(
+            new Uri($"{Chemin(evenement)}/images", UriKind.Relative),
+            contenu);
+
+        depot.StatusCode.ShouldBe(HttpStatusCode.OK);
+
+        var corps = await depot.Content.ReadFromJsonAsync<JsonDocument>();
+        var adresse = corps!.RootElement.GetProperty("url").GetString();
+
+        // Réencodée en WebP : c'est ce réencodage qui supprime les métadonnées EXIF,
+        // dont la géolocalisation qu'un téléphone inscrit dans chaque photo.
+        adresse.ShouldNotBeNull();
+        adresse.ShouldEndWith(".webp");
+
+        // Puis jointe à un message, elle apparaît dans le fil.
+        var envoi = await client.PostAsJsonAsync(
+            Chemin(evenement),
+            new { attachmentUrl = adresse });
+
+        envoi.StatusCode.ShouldBe(HttpStatusCode.OK);
+
+        var fil = await client.GetFromJsonAsync<JsonDocument>(Chemin(evenement));
+        fil!.RootElement.GetProperty("items")[0]
+            .GetProperty("attachmentUrl").GetString().ShouldBe(adresse);
+    }
+
+    [Fact]
+    public async Task Un_fichier_qui_n_est_pas_une_image_est_refuse()
+    {
+        // Le type déclaré ne fait pas foi : c'est le décodage qui valide, sans quoi un
+        // exécutable renommé en .png serait accepté et servi à tout l'événement.
+        var (client, evenement, _) = await EvenementAsync();
+
+        using var contenu = new MultipartFormDataContent();
+        var fichier = new ByteArrayContent([0x4D, 0x5A, 0x90, 0x00]);
+        fichier.Headers.ContentType = new MediaTypeHeaderValue("image/png");
+        contenu.Add(fichier, "file", "programme.png");
+
+        var depot = await client.PostAsync(
+            new Uri($"{Chemin(evenement)}/images", UriKind.Relative),
+            contenu);
+
+        depot.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
+        (await Code(depot)).ShouldBe("message.not_an_image");
+    }
+
+    [Fact]
+    public async Task Un_message_ne_portant_qu_une_image_est_accepte()
+    {
+        // Une photo se passe de légende : exiger du texte obligerait à écrire « voilà ».
+        var (client, evenement, _) = await EvenementAsync();
+
+        var envoi = await client.PostAsJsonAsync(
+            Chemin(evenement),
+            new { attachmentUrl = "http://localhost:5080/media/events/x/abc.webp" });
+
+        envoi.StatusCode.ShouldBe(HttpStatusCode.OK);
+    }
+
+    /// <summary>
+    /// PNG valide de quatre pixels sur quatre, en couleurs vraies. Assez petit pour un
+    /// test, assez complet pour être réellement décodé — c'est le décodage qui valide
+    /// le fichier côté serveur.
+    /// </summary>
+    private static byte[] ImagePng() => Convert.FromBase64String(
+        "iVBORw0KGgoAAAANSUhEUgAAAAQAAAAECAIAAAAmkwkpAAAAEElEQVR4nGM4YdMDRwzEcQCOEhkBYbxwrwAAAABJRU5ErkJggg==");
+
     // ------------------------------------------------------------------ aides ----
 
     private static string Chemin(Guid evenement) => $"/v1/events/{evenement}/messages";

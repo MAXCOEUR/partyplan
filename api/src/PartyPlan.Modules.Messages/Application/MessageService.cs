@@ -82,8 +82,9 @@ public sealed record PinPage(
 public sealed class MessageService(
     IMessagesDbContext db,
     IEventMembership membership,
+    IEventImageStorage images,
     IClock clock,
-    IIdGenerator ids)
+    IIdGenerator ids) : IPollAnnouncement
 {
     /// <summary>Longueur du corps d'un message cité, au-delà de laquelle il est coupé.</summary>
     private const int LongueurCitation = 120;
@@ -421,6 +422,66 @@ public sealed class MessageService(
 
         return await VueSeuleAsync(eventId, messageId, moi.MemberId, cancellationToken)
             .ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Enregistre une image et renvoie son adresse, à joindre ensuite à un message
+    /// (EF-MSG-02).
+    /// <para>
+    /// Deux temps plutôt qu'un : l'envoi du fichier est long sur un réseau de soirée, et
+    /// le séparer de l'envoi du message permet de montrer une progression, puis de
+    /// laisser écrire une légende sans retenir l'image.
+    /// </para>
+    /// </summary>
+    public async Task<Result<string>> EnvoyerImageAsync(
+        Guid eventId,
+        Stream contenu,
+        string typeDeclare,
+        CancellationToken cancellationToken)
+    {
+        var moi = await membership.FindCurrentAsync(eventId, cancellationToken)
+            .ConfigureAwait(false);
+
+        if (moi is null)
+        {
+            return EventNotFound;
+        }
+
+        return await images
+            .StoreAsync(eventId, contenu, typeDeclare, cancellationToken)
+            .ConfigureAwait(false);
+    }
+
+    /// <inheritdoc />
+    ///
+    /// <remarks>
+    /// L'appartenance n'est pas revérifiée : le module appelant l'a déjà établie pour
+    /// créer le sondage, et un second contrôle sur la même requête ne dirait rien de
+    /// plus.
+    /// </remarks>
+    public async Task<Guid> AnnounceAsync(
+        Guid eventId,
+        Guid memberId,
+        Guid pollId,
+        string question,
+        CancellationToken cancellationToken)
+    {
+        var message = new Message
+        {
+            Id = ids.NewId(),
+            EventId = eventId,
+            MemberId = memberId,
+            // Le corps reprend la question : un fil relu plus tard doit rester
+            // compréhensible même si le sondage a été supprimé depuis.
+            Body = question,
+            PollId = pollId,
+            CreatedAt = clock.UtcNow,
+        };
+
+        db.Messages.Add(message);
+        await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+
+        return message.Id;
     }
 
     // ---------------------------------------------------------------- épingles ----

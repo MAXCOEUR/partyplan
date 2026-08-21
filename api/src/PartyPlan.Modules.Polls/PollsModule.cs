@@ -3,6 +3,8 @@ namespace PartyPlan.Modules.Polls;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using PartyPlan.Modules.Polls.Application;
+using PartyPlan.Modules.Polls.Endpoints;
 using PartyPlan.SharedKernel.Modules;
 
 /// <summary>
@@ -15,11 +17,10 @@ public sealed class PollsModule : IModule
 
     public void AddServices(IServiceCollection services, IConfiguration configuration)
     {
-        // Aucun service pour l'instant.
+        ArgumentNullException.ThrowIfNull(services);
+
+        services.AddScoped<PollService>();
     }
 
-    public void MapEndpoints(IEndpointRouteBuilder routes)
-    {
-        // Aucun endpoint pour l'instant.
-    }
+    public void MapEndpoints(IEndpointRouteBuilder routes) => PollsEndpoints.Map(routes);
 }

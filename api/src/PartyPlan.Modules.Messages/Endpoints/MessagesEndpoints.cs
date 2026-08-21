@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using PartyPlan.Modules.Messages.Application;
+using PartyPlan.SharedKernel.Contracts;
 using PartyPlan.SharedKernel.Http;
 
 public sealed record MessageBody(
@@ -19,6 +20,9 @@ public sealed record ReactionBody([Required][MaxLength(16)] string Emoji);
 public sealed record PinBody(Guid? FolderId);
 
 public sealed record FolderBody([Required][MaxLength(60)] string Name);
+
+/// <summary>Adresse d'une image déposée, à joindre ensuite à un message.</summary>
+public sealed record ImageDeposee(string Url);
 
 /// <summary>Endpoints de la discussion (§8.2).</summary>
 internal static class MessagesEndpoints
@@ -98,6 +102,57 @@ internal static class MessagesEndpoints
             .WithName("ToggleReaction")
             .WithSummary("Pose ou retire sa réaction.")
             .Produces<MessageView>();
+
+        // Multipart : le fichier ne passe pas en JSON, et l'encoder en base64
+        // gonflerait la requête d'un tiers pour rien.
+        groupe.MapPost("/images", async (
+                Guid eventId,
+                HttpRequest requete,
+                MessageService service,
+                CancellationToken cancellationToken) =>
+            {
+                if (!requete.HasFormContentType)
+                {
+                    return Results.BadRequest(new { code = "message.multipart_required" });
+                }
+
+                var formulaire = await requete.ReadFormAsync(cancellationToken)
+                    .ConfigureAwait(false);
+
+                var fichier = formulaire.Files.GetFile("file");
+
+                if (fichier is null || fichier.Length == 0)
+                {
+                    return Results.BadRequest(new { code = "message.file_required" });
+                }
+
+                // Le plafond est vérifié avant lecture : accepter puis rejeter un
+                // fichier de vingt mégaoctets ferait attendre pour rien.
+                if (fichier.Length > IEventImageStorage.MaxBytes)
+                {
+                    return Results.BadRequest(new { code = "message.image_too_large" });
+                }
+
+                await using var contenu = fichier.OpenReadStream();
+
+                var resultat = await service
+                    .EnvoyerImageAsync(
+                        eventId,
+                        contenu,
+                        fichier.ContentType,
+                        cancellationToken)
+                    .ConfigureAwait(false);
+
+                // L'adresse est enveloppée dans un objet : une chaîne nue en corps de
+                // réponse se prête mal à l'ajout d'un champ, et il en viendra un —
+                // largeur, hauteur, poids.
+                return resultat.IsSuccess
+                    ? Results.Ok(new ImageDeposee(resultat.Value!))
+                    : ResultatHttp.Probleme(resultat.Error!);
+            })
+            .WithName("UploadMessageImage")
+            .WithSummary("Dépose une image, réduite et débarrassée de ses métadonnées.")
+            .DisableAntiforgery();
 
         groupe.MapPost("/{messageId:guid}/pin", async (
                 Guid eventId,

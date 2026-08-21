@@ -1,1 +1,9 @@
 include: package:flutter_lints/flutter.yaml
+
+analyzer:
+  exclude:
+    # Client Dart engendré par « make openapi ». Il n'a aucun appelant — les clients
+    # d'API de ce projet sont écrits à la main — et ses dépendances ne sont pas
+    # installées : analysé, il produit plusieurs milliers d'erreurs qui noient les
+    # vraies.
+    - packages/partyplan_api/**

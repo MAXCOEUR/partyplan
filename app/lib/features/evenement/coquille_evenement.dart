@@ -270,6 +270,11 @@ class _MenuPlus extends StatelessWidget {
           onTap: () => context.push(PpRoutes.versInvites(evenementId)),
         ),
         ListTile(
+          leading: const Icon(Icons.push_pin_outlined),
+          title: const Text('Épinglé'),
+          onTap: () => context.push(PpRoutes.versEpingles(evenementId)),
+        ),
+        ListTile(
           leading: const Icon(Icons.handshake_rounded),
           title: const Text('Qui rend quoi'),
           onTap: () => context.push(PpRoutes.versReglements(evenementId)),
