@@ -164,17 +164,22 @@ if [[ -z $manifeste_fusionne ]]; then
     exit 70
 fi
 
-python3 - "$manifeste_fusionne" "$domaine" "$prefixe" <<'PYTHON'
+python3 - "$manifeste_fusionne" "$package_android" "$domaine" "$prefixe" <<'PYTHON'
 import sys
 import xml.etree.ElementTree as ET
 
-manifest_path, domain, prefix = sys.argv[1:]
+manifest_path, package_name, domain, prefix = sys.argv[1:]
 android = "{http://schemas.android.com/apk/res/android}"
 
 try:
     root = ET.parse(manifest_path).getroot()
 except (OSError, ET.ParseError) as error:
     raise SystemExit(f"Échec : manifeste fusionné invalide : {error}")
+
+if root.get("package") != package_name:
+    raise SystemExit(
+        f"Échec : package du manifeste fusionné inattendu : {root.get('package')!r}."
+    )
 
 main_activity = next(
     (
@@ -186,52 +191,67 @@ main_activity = next(
 )
 if main_activity is None:
     raise SystemExit("Échec : MainActivity absente du manifeste debug fusionné.")
+if main_activity.get(android + "exported") != "true":
+    raise SystemExit("Échec : MainActivity doit définir android:exported=\"true\".")
 
-expected_actions = {"android.intent.action.VIEW"}
-expected_categories = {
+view_action = "android.intent.action.VIEW"
+required_categories = {
     "android.intent.category.DEFAULT",
     "android.intent.category.BROWSABLE",
 }
-matching_filters = []
+domain_associations = []
 
-for intent_filter in main_activity.findall("intent-filter"):
+for index, intent_filter in enumerate(main_activity.findall("intent-filter"), start=1):
+    if intent_filter.get(android + "autoVerify") != "true":
+        continue
+    actions = {node.get(android + "name") for node in intent_filter.findall("action")}
+    categories = {node.get(android + "name") for node in intent_filter.findall("category")}
+    if view_action not in actions or not required_categories.issubset(categories):
+        continue
+
     data_nodes = intent_filter.findall("data")
-    if any(
-        data.get(android + "scheme") == "https" and data.get(android + "host") == domain
+    # Android fusionne les attributs de tous les nœuds <data> d’un même filtre :
+    # les schémas, hôtes et préfixes forment des ensembles combinés, pas des triplets
+    # indépendants par nœud XML.
+    schemes = {data.get(android + "scheme") for data in data_nodes if data.get(android + "scheme")}
+    hosts = {data.get(android + "host") for data in data_nodes if data.get(android + "host")}
+    path_prefixes = {
+        data.get(android + "pathPrefix")
         for data in data_nodes
-    ):
-        matching_filters.append(intent_filter)
+        if data.get(android + "pathPrefix")
+    }
+    unsupported_attributes = {
+        attribute
+        for data in data_nodes
+        for attribute in data.attrib
+        if attribute not in {
+            android + "scheme",
+            android + "host",
+            android + "pathPrefix",
+        }
+    }
 
-if len(matching_filters) != 1:
+    if "https" in schemes and domain in hosts:
+        domain_associations.append(
+            (index, schemes, hosts, path_prefixes, unsupported_attributes)
+        )
+
+if len(domain_associations) != 1:
     raise SystemExit(
-        "Échec : MainActivity doit avoir un unique filtre HTTPS pour le domaine Android App Links."
+        "Échec : MainActivity doit avoir une unique association HTTPS autoVerify "
+        f"pour {domain}."
     )
 
-intent_filter = matching_filters[0]
-if intent_filter.get(android + "autoVerify") != "true":
-    raise SystemExit("Échec : le filtre HTTPS doit définir android:autoVerify=\"true\".")
-
-actions = {node.get(android + "name") for node in intent_filter.findall("action")}
-categories = {node.get(android + "name") for node in intent_filter.findall("category")}
-if actions != expected_actions:
-    raise SystemExit("Échec : le filtre HTTPS doit avoir uniquement l’action VIEW.")
-if categories != expected_categories:
-    raise SystemExit("Échec : le filtre HTTPS doit avoir exactement DEFAULT et BROWSABLE.")
-
-data_nodes = intent_filter.findall("data")
-if len(data_nodes) != 1:
-    raise SystemExit("Échec : le filtre HTTPS doit déclarer une unique donnée limitée à /join/.")
-
-data = data_nodes[0]
-expected_data = {
-    android + "scheme": "https",
-    android + "host": domain,
-    android + "pathPrefix": prefix,
-}
-if data.attrib != expected_data:
+index, schemes, hosts, path_prefixes, unsupported_attributes = domain_associations[0]
+if schemes != {"https"} or hosts != {domain} or path_prefixes != {prefix}:
     raise SystemExit(
-        "Échec : le filtre HTTPS doit être limité exactement à "
-        f"https://{domain}{prefix}."
+        "Échec : le filtre HTTPS autoVerify pertinent doit se limiter exactement à "
+        f"https://{domain}{prefix} (filtre {index})."
+    )
+if unsupported_attributes:
+    raise SystemExit(
+        "Échec : le filtre HTTPS autoVerify pertinent contient des attributs data "
+        f"non autorisés : {sorted(unsupported_attributes)!r}."
     )
 
 print(f"Manifeste debug fusionné valide : https://{domain}{prefix} sur MainActivity.")
