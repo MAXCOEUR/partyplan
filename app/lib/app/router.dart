@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../core/providers.dart';
+import '../design/components/pp_image_message.dart';
+import '../design/tokens.dart';
 import '../features/accueil/accueil_page.dart';
 import '../features/admin/admin_audit_page.dart';
 import '../features/admin/admin_comptes_page.dart';
@@ -82,6 +84,7 @@ abstract final class PpRoutes {
   static const evenementReglements = '/events/:eventId/reglements';
   static const evenementEpingles = '/events/:eventId/epingle';
   static const evenementSondages = '/events/:eventId/sondages';
+  static const evenementImage = '/events/:eventId/image';
 
   static String versEvenement(String eventId) => '/events/$eventId';
 
@@ -103,6 +106,14 @@ abstract final class PpRoutes {
   static String versEpingles(String eventId) => '/events/$eventId/epingle';
 
   static String versSondages(String eventId) => '/events/$eventId/sondages';
+
+  /// Une image de la discussion, agrandie.
+  ///
+  /// L'agrandissement est une adresse à part entière : sans cela le « précédent » du
+  /// navigateur, qui ne connaît que les adresses, refermerait la discussion au lieu de
+  /// l'image.
+  static String versImage(String eventId, String url) =>
+      '/events/$eventId/image?url=${Uri.encodeQueryComponent(url)}';
 
   static String versRejoindre(String token) => '/join/$token';
 
@@ -170,9 +181,9 @@ GoRouter creerRouteur(Ref ref) => GoRouter(
     // L'information vient du refus lui-même, pas d'une lecture du profil : interroger
     // le profil au démarrage ajouterait un appel réseau à chaque lancement, pour un
     // cas qui ne concerne que le compte amorcé.
-    if (connecte
-        && chemin != PpRoutes.motDePasseAChanger
-        && ref.read(motDePasseAChangerProvider)) {
+    if (connecte &&
+        chemin != PpRoutes.motDePasseAChanger &&
+        ref.read(motDePasseAChangerProvider)) {
       return PpRoutes.motDePasseAChanger;
     }
 
@@ -288,15 +299,30 @@ GoRouter creerRouteur(Ref ref) => GoRouter(
           SondagesPage(evenementId: state.pathParameters['eventId']!),
     ),
     GoRoute(
+      path: PpRoutes.evenementImage,
+      pageBuilder: (context, state) => CustomTransitionPage<void>(
+        // Non opaque : la discussion reste en place sous l'image, et la refermer la
+        // redonne telle qu'on l'avait laissée, au même endroit du fil.
+        opaque: false,
+        barrierColor: Colors.black87,
+        transitionDuration: PpDuration.normale,
+        child: PpVisionneuseImage(
+          url: state.uri.queryParameters['url'] ?? '',
+          versParent: PpRoutes.versEvenement(state.pathParameters['eventId']!),
+        ),
+        transitionsBuilder: (_, animation, _, child) =>
+            FadeTransition(opacity: animation, child: child),
+      ),
+    ),
+    GoRoute(
       path: PpRoutes.evenementEpingles,
       builder: (context, state) =>
           EpinglesPage(evenementId: state.pathParameters['eventId']!),
     ),
     GoRoute(
       path: PpRoutes.evenementReglements,
-      builder: (context, state) => ReglementsEcran(
-        evenementId: state.pathParameters['eventId']!,
-      ),
+      builder: (context, state) =>
+          ReglementsEcran(evenementId: state.pathParameters['eventId']!),
     ),
     GoRoute(
       path: PpRoutes.evenementParametres,
@@ -324,7 +350,11 @@ GoRouter creerRouteur(Ref ref) => GoRouter(
 class _EcouteSession extends ChangeNotifier {
   _EcouteSession(Ref ref) {
     _abonnements = [
-      ref.listen(sessionProvider, (_, _) => notifyListeners(), fireImmediately: true),
+      ref.listen(
+        sessionProvider,
+        (_, _) => notifyListeners(),
+        fireImmediately: true,
+      ),
       // Le refus « change ton mot de passe » arrive après la première lecture, donc
       // après la redirection initiale. Sans cette écoute, l'écran affiché resterait
       // celui de l'accueil, vide.

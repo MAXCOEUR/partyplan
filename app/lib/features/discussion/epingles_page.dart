@@ -9,6 +9,7 @@ import '../../core/providers.dart';
 import '../../design/components/pp_avatar.dart';
 import '../../design/components/pp_barre_evenement.dart';
 import '../../design/components/pp_card.dart';
+import '../../design/components/pp_image_message.dart';
 import '../../design/components/pp_rail.dart';
 import '../../design/components/pp_remonte_au_parent.dart';
 import '../../design/components/pp_states.dart';
@@ -241,15 +242,14 @@ class _CarteEpingle extends ConsumerWidget {
           if (message.porteUneImage)
             Padding(
               padding: const EdgeInsets.only(bottom: PpSpacing.xs),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(PpRadius.md),
-                child: Image.network(
+              child: PpImageMessage(
+                url: message.urlPieceJointe!,
+                adresseAgrandie: PpRoutes.versImage(
+                  evenementId,
                   message.urlPieceJointe!,
-                  height: 160,
-                  fit: BoxFit.cover,
-                  errorBuilder: (context, _, _) =>
-                      const Text('Image indisponible'),
                 ),
+                hauteur: 160,
+                etiquette: 'Image de ${message.auteur}',
               ),
             ),
           Text(

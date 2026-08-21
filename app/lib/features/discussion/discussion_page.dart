@@ -4,12 +4,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../../app/router.dart';
 import '../../core/media/type_mime_image.dart';
 import '../../core/models/membre.dart';
 import '../../core/models/message.dart';
 import '../../core/network/api_exception.dart';
 import '../../core/providers.dart';
 import '../../design/components/pp_avatar.dart';
+import '../../design/components/pp_image_message.dart';
 import '../../design/components/pp_selecteur_emoji.dart';
 import '../../design/components/pp_states.dart';
 import '../../design/components/pp_texte_message.dart';
@@ -76,12 +78,14 @@ class _DiscussionPageState extends ConsumerState<DiscussionPage> {
         .toList();
 
     try {
-      await ref.read(discussionApiProvider).envoyer(
-        widget.evenementId,
-        corps: texte,
-        repondreA: _citation?.id,
-        mentions: cites,
-      );
+      await ref
+          .read(discussionApiProvider)
+          .envoyer(
+            widget.evenementId,
+            corps: texte,
+            repondreA: _citation?.id,
+            mentions: cites,
+          );
 
       _saisie.clear();
       setState(() => _citation = null);
@@ -183,7 +187,8 @@ class _DiscussionPageState extends ConsumerState<DiscussionPage> {
   Future<void> _ouvrirLien(String url) async {
     final cible = Uri.tryParse(url);
 
-    if (cible == null || !await launchUrl(cible, mode: LaunchMode.externalApplication)) {
+    if (cible == null ||
+        !await launchUrl(cible, mode: LaunchMode.externalApplication)) {
       _signaler('Ce lien n’a pas pu être ouvert.');
     }
   }
@@ -264,7 +269,8 @@ class _Fil extends StatelessWidget {
       message: messages[index],
       // L'auteur n'est répété que lorsqu'il change : une suite de messages d'une même
       // personne n'a pas besoin de son nom à chaque ligne.
-      montrerAuteur: index == 0 ||
+      montrerAuteur:
+          index == 0 ||
           messages[index - 1].auteurMembreId != messages[index].auteurMembreId,
       surLien: surLien,
       surReponse: surReponse,
@@ -389,19 +395,13 @@ class _Corps extends StatelessWidget {
         if (message.porteUneImage)
           Padding(
             padding: const EdgeInsets.only(bottom: PpSpacing.xs),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(PpRadius.md),
-              child: Image.network(
+            child: PpImageMessage(
+              url: message.urlPieceJointe!,
+              adresseAgrandie: PpRoutes.versImage(
+                evenementId,
                 message.urlPieceJointe!,
-                height: 200,
-                fit: BoxFit.cover,
-                errorBuilder: (context, _, _) => Container(
-                  height: 80,
-                  alignment: Alignment.center,
-                  color: theme.colorScheme.surfaceContainerHighest,
-                  child: const Text('Image indisponible'),
-                ),
               ),
+              etiquette: 'Image de ${message.auteur}',
             ),
           ),
         if (message.corps != null && message.corps!.isNotEmpty)
@@ -450,7 +450,10 @@ class _Citation extends StatelessWidget {
       ),
       decoration: BoxDecoration(
         border: Border(
-          left: BorderSide(color: PpColors.violet.withValues(alpha: 0.6), width: 3),
+          left: BorderSide(
+            color: PpColors.violet.withValues(alpha: 0.6),
+            width: 3,
+          ),
         ),
       ),
       child: Column(
@@ -722,7 +725,9 @@ class _SaisieState extends State<_Saisie> {
   void _surFrappe() {
     final texte = widget.controleur.text;
     final curseur = widget.controleur.selection.baseOffset;
-    final position = curseur < 0 || curseur > texte.length ? texte.length : curseur;
+    final position = curseur < 0 || curseur > texte.length
+        ? texte.length
+        : curseur;
     final avant = texte.substring(0, position);
 
     final arobase = avant.lastIndexOf('@');
@@ -730,7 +735,10 @@ class _SaisieState extends State<_Saisie> {
     String? recherche;
 
     if (arobase >= 0) {
-      final debutDeMot = arobase == 0 || avant[arobase - 1] == ' ' || avant[arobase - 1] == '\n';
+      final debutDeMot =
+          arobase == 0 ||
+          avant[arobase - 1] == ' ' ||
+          avant[arobase - 1] == '\n';
       final fragment = avant.substring(arobase + 1);
 
       // Un nom ne contient pas d'espace ici : passée la première, la citation est
@@ -764,7 +772,9 @@ class _SaisieState extends State<_Saisie> {
   void _choisir(Membre membre) {
     final texte = widget.controleur.text;
     final curseur = widget.controleur.selection.baseOffset;
-    final position = curseur < 0 || curseur > texte.length ? texte.length : curseur;
+    final position = curseur < 0 || curseur > texte.length
+        ? texte.length
+        : curseur;
     final avant = texte.substring(0, position);
     final arobase = avant.lastIndexOf('@');
 
@@ -980,16 +990,12 @@ class _BarreSaisie extends StatelessWidget {
   }
 }
 
-
 /// Sondage porté par un message, chargé depuis la liste des sondages.
 ///
 /// La liste est déjà en mémoire pour l'écran des sondages : la relire ici évite un
 /// appel par message et garde les décomptes cohérents entre les deux écrans.
 class _SondageDuMessage extends ConsumerWidget {
-  const _SondageDuMessage({
-    required this.evenementId,
-    required this.sondageId,
-  });
+  const _SondageDuMessage({required this.evenementId, required this.sondageId});
 
   final String evenementId;
   final String sondageId;
