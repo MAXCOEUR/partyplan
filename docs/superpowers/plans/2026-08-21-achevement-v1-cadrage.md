@@ -22,10 +22,10 @@ route — laquelle est en retard sur le code.
 | Domaine | API | Écran Flutter |
 |---|---|---|
 | Comptes, administration, événements, invitations, présences | 17 endpoints | fait |
-| Liste de courses | 7 endpoints | **absent** |
-| Dépenses | 5 endpoints | **absent** |
-| Règlements | 3 endpoints | **absent** |
-| Planning | **absent** | absent |
+| Liste de courses | 7 endpoints | fait |
+| Dépenses | 5 endpoints | fait |
+| Règlements | 3 endpoints | fait |
+| Planning | — | **abandonné** |
 | Fil d'activité | **absent** | absent |
 | Temps réel | **absent** | absent |
 | Chat, sondages, tâches | **modules vides** | absent |
@@ -47,11 +47,12 @@ valeur d'usage : ce qui sert pendant la soirée avant ce qui l'accompagne.
 | 1 | Courses | client d'API, écran de liste, ajout, attribution, achat | non | `2026-08-21-sp1-courses.md` |
 | 2 | Dépenses | liste et totaux, création avec les trois assiettes, détail | non | à écrire |
 | 3 | Règlements | soldes, règlements proposés, marquage, rappel sur le tableau de bord | non | à écrire |
-| 4 | Planning | module `Schedule`, endpoints, écran chronologique | oui | à écrire |
-| 5 | Fil d'activité | endpoints de lecture, écran, alimentation par les modules existants | oui | à écrire |
-| 6 | Temps réel | hub SignalR, diffusion, abonnement Flutter | oui | à écrire |
-| 7 | Chat | module `Messages`, endpoints, écran de discussion, réactions | oui | à écrire |
-| 8 | Sondages et tâches | modules `Polls` et `Tasks`, endpoints, écrans | oui | à écrire |
+| ~~4~~ | ~~Planning~~ | **abandonné** — la date se règle dans les paramètres | — | — |
+| 4 | Discussion | module `Messages`, endpoints, fil, réactions, réponses, mentions, images, épingles | oui | à écrire |
+| 5 | Sondages | module `Polls`, création dans le fil, écran dédié | oui | à écrire |
+| 6 | Fil d'activité | endpoints de lecture, écran, alimentation par les modules existants | oui | à écrire |
+| 7 | Temps réel | hub SignalR, diffusion, abonnement Flutter | oui | à écrire |
+| 8 | Tâches | module `Tasks`, endpoints, écran | oui | à écrire |
 | 9 | Navigation et finitions | coquille d'événement complète, documents légaux | non | à écrire |
 | 10 | Site vitrine | pages, charte, mentions, référencement | non | à écrire |
 
@@ -84,22 +85,28 @@ conversation, se reperd et se redécide autrement six semaines plus tard.
 - **Les notifications sont préparées mais pas envoyées.** Les mentions et les messages
   produisent ce qu'il faut pour notifier plus tard ; aucun envoi n'est branché.
 
-### Choix de la date
+### La date, et l'abandon du planning
 
-Le « planning » attendu n'est pas un déroulé horaire de la soirée, c'est le **choix
-collectif de la date** :
+Décision revue le 21/08/2026, après examen du coût : **le planning est abandonné**, dans
+ses deux acceptions — ni déroulé horaire de la soirée, ni choix collectif de la date par
+vote.
 
-- un événement peut naître **sans date** ;
-- n'importe quel membre **propose** une ou plusieurs dates ;
-- chacun **vote oui ou non** sur chaque date proposée ;
-- **l'organisateur arrête** la date retenue, qui devient la date de l'événement.
-
-Le déroulé horaire — les étapes de la soirée du lot 1.9 — reste hors périmètre jusqu'à
-nouvel ordre : ce n'est pas ce qui manque aujourd'hui.
+- La date reste **obligatoire à la création**. Aucune migration : `events.starts_at`
+  demeure `NOT NULL`, et les huit fichiers qui en dépendent restent inchangés.
+- Elle est **modifiable dans les paramètres de l'événement**, par qui peut le gérer.
+  C'est le seul endroit : une date fixée à la création se décale souvent d'un jour ou
+  d'une heure, et recréer l'événement ferait perdre les présences, les courses et les
+  dépenses déjà saisies.
+- Le vote de dates est écarté. Il demandait une structure dédiée — l'index unique
+  `(poll_id, member_id)` de `poll_votes` interdit de voter sur plusieurs options — pour
+  un besoin que le simple déplacement de la date couvre.
+- L'onglet « Planning » est retiré de la navigation d'événement. Quatre onglets
+  subsistent, et la place attend la discussion.
 
 ### Ordre d'exécution retenu
 
-Règlements, puis choix de la date, puis discussion. Le site vitrine ferme la marche.
+Courses, dépenses et règlements sont livrés. Vient la discussion, puis les sondages,
+puis le fil d'activité, le temps réel et les tâches. Le site vitrine ferme la marche.
 
 ## Contraintes qui s'appliquent à tous les sous-projets
 

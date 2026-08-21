@@ -7,7 +7,6 @@ import '../../core/providers.dart';
 import '../../app/router.dart';
 import '../../design/components/pp_barre_app.dart';
 import '../../design/components/pp_rail.dart';
-import '../../design/components/pp_states.dart';
 import '../../design/tokens.dart';
 import '../../l10n/generated/pp_localisations.dart';
 import '../courses/article_feuille.dart';
@@ -18,10 +17,13 @@ import 'tableau_de_bord_page.dart';
 
 /// Coquille de navigation d'un événement.
 ///
-/// Cinq entrées, jamais plus (RG-UI-01) : tout ce qui vient ensuite — invités, tâches,
-/// sondages, discussion, paramètres — passe sous « Plus ». La contrainte est posée dès
-/// maintenant, car c'est en ajoutant un sixième onglet « juste pour cette fois » que la
+/// Cinq entrées au maximum (RG-UI-01) : tout ce qui vient ensuite — invités,
+/// remboursements, tâches, sondages, paramètres — passe sous « Plus ». La contrainte
+/// tient parce que c'est en ajoutant un onglet « juste pour cette fois » que la
 /// navigation se dégrade.
+///
+/// Quatre aujourd'hui. Le planning a été retiré — la date d'un événement se règle dans
+/// ses paramètres — et la place attend la discussion.
 class CoquilleEvenement extends ConsumerStatefulWidget {
   const CoquilleEvenement({required this.eventId, super.key});
 
@@ -57,11 +59,6 @@ class _CoquilleEvenementState extends ConsumerState<CoquilleEvenement> {
         libelle: l10n.ongletDepenses,
         icone: Icons.euro_rounded,
         icoineActive: Icons.euro_rounded,
-      ),
-      (
-        libelle: l10n.ongletPlanning,
-        icone: Icons.event_outlined,
-        icoineActive: Icons.event_rounded,
       ),
       (
         libelle: l10n.ongletPlus,
@@ -108,12 +105,6 @@ class _CoquilleEvenementState extends ConsumerState<CoquilleEvenement> {
           TableauDeBordPage(evenementId: widget.eventId),
           CoursesPage(evenementId: widget.eventId),
           DepensesPage(evenementId: widget.eventId),
-          // Le planning arrive au sous-projet suivant.
-          PpEmptyState(
-            titre: onglets[3].libelle,
-            explication: PpL10n.of(context).ongletBientot,
-            icone: onglets[3].icoineActive,
-          ),
             _MenuPlus(evenementId: widget.eventId),
           ],
         ),

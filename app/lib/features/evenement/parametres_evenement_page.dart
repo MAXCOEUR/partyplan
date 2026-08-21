@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -7,6 +8,7 @@ import '../../core/models/evenement.dart';
 import '../../core/models/membre.dart';
 import '../../core/providers.dart';
 import '../../design/components/pp_card.dart';
+import '../../design/components/pp_choix_date_heure.dart';
 import '../../design/components/pp_form.dart';
 import '../../design/components/pp_states.dart';
 import '../../design/tokens.dart';
@@ -33,8 +35,16 @@ class _ParametresEvenementPageState
   final _lieu = TextEditingController();
   final _description = TextEditingController();
 
+  /// Date et heure de la soirée. Modifiables ici, et nulle part ailleurs : une date
+  /// fixée à la création se décale souvent, et recréer l'événement ferait perdre les
+  /// présences, les courses et les dépenses déjà saisies.
+  DateTime? _debut;
+  DateTime? _fin;
+
   bool _initialise = false;
   bool _enCours = false;
+
+  static final _formatDate = DateFormat('dd/MM/yyyy', 'fr_FR');
 
   @override
   void dispose() {
@@ -63,6 +73,8 @@ class _ParametresEvenementPageState
             _nom.text = resume.nom;
             _lieu.text = resume.adresse ?? '';
             _description.text = resume.description ?? '';
+            _debut = resume.debut;
+            _fin = resume.fin;
             _initialise = true;
           }
 
@@ -104,6 +116,28 @@ class _ParametresEvenementPageState
           label: l10n.creationChampDescription,
           controller: _description,
           lignes: 4,
+        ),
+        const SizedBox(height: PpSpacing.md),
+        PpChoixDateHeure(
+          libelle: 'Début',
+          valeur: _debut,
+          format: _formatDate,
+          onChange: (valeur) => setState(() {
+            _debut = valeur;
+            // La fin ne peut pas précéder le début : la laisser en arrière donnerait
+            // une soirée qui se termine avant de commencer.
+            if (_fin != null && _fin!.isBefore(valeur)) {
+              _fin = null;
+            }
+          }),
+        ),
+        const SizedBox(height: PpSpacing.md),
+        PpChoixDateHeure(
+          libelle: 'Fin (facultative)',
+          valeur: _fin,
+          format: _formatDate,
+          minimum: _debut,
+          onChange: (valeur) => setState(() => _fin = valeur),
         ),
         const SizedBox(height: PpSpacing.sm),
         Text(
@@ -185,6 +219,8 @@ class _ParametresEvenementPageState
             nom: _nom.text.trim(),
             adresse: _lieu.text.trim(),
             description: _description.text.trim(),
+            debut: _debut,
+            fin: _fin,
           );
 
       ref

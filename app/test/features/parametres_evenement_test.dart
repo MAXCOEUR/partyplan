@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:partyplan/core/models/membre.dart';
 import 'package:partyplan/core/providers.dart';
+import 'package:partyplan/design/components/pp_choix_date_heure.dart';
 import 'package:partyplan/features/evenement/parametres_evenement_page.dart';
 
 import '../aide/fabriques.dart';
@@ -11,6 +12,24 @@ import '../doubles/session_store_double.dart';
 
 void main() {
   group('Paramètres de l’événement', () {
+    testWidgets('la date de l’événement se change ici', (tester) async {
+      // C'est le seul endroit où la corriger : une date fixée à la création se
+      // décale souvent d'un jour ou d'une heure, et recréer l'événement ferait
+      // perdre les présences, les courses et les dépenses.
+      await _monter(tester, monRole: RoleMembre.proprietaire);
+
+      expect(find.byType(PpChoixDateHeure), findsWidgets);
+      // La date en cours est affichée au format français.
+      expect(find.textContaining('12/09/2026'), findsWidgets);
+    });
+
+    testWidgets('un simple membre ne change pas la date', (tester) async {
+      // Décaler la soirée de quelqu'un d'autre n'appartient pas à un invité.
+      await _monter(tester, monRole: RoleMembre.membre);
+
+      expect(find.byType(PpChoixDateHeure), findsNothing);
+    });
+
     testWidgets('RG-ROLE-02 : le transfert précède « quitter »', (
       tester,
     ) async {

@@ -7,6 +7,7 @@ import 'package:intl/intl.dart';
 
 import '../../app/router.dart';
 import '../../core/providers.dart';
+import '../../design/components/pp_choix_date_heure.dart';
 import '../../design/components/pp_form.dart';
 import '../../design/tokens.dart';
 import '../../l10n/generated/pp_localisations.dart';
@@ -150,7 +151,7 @@ class _CreationEvenementPageState extends ConsumerState<CreationEvenementPage> {
       const SizedBox(height: PpSpacing.xl),
       Text(l10n.creationQuestionQuand, style: _question(context)),
       const SizedBox(height: PpSpacing.xl),
-      _ChoixDateHeure(
+      PpChoixDateHeure(
         libelle: l10n.creationChampDate,
         valeur: _debut,
         format: _dateFr,
@@ -162,7 +163,7 @@ class _CreationEvenementPageState extends ConsumerState<CreationEvenementPage> {
         }),
       ),
       const SizedBox(height: PpSpacing.lg),
-      _ChoixDateHeure(
+      PpChoixDateHeure(
         libelle: l10n.creationChampFinDate,
         valeur: _fin,
         format: _dateFr,
@@ -337,91 +338,6 @@ class _BarreProgression extends StatelessWidget {
               ),
             ),
         ],
-      ),
-    );
-  }
-}
-
-/// Choix d'une date et d'une heure. Affichage en JJ/MM/AAAA.
-class _ChoixDateHeure extends StatelessWidget {
-  const _ChoixDateHeure({
-    required this.libelle,
-    required this.valeur,
-    required this.format,
-    required this.onChange,
-    this.minimum,
-  });
-
-  final String libelle;
-  final DateTime? valeur;
-  final DateFormat format;
-  final DateTime? minimum;
-  final void Function(DateTime) onChange;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final courant = valeur;
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(libelle, style: theme.textTheme.labelLarge),
-        const SizedBox(height: PpSpacing.xs),
-        Row(
-          children: [
-            Expanded(
-              child: OutlinedButton.icon(
-                onPressed: () => _choisir(context),
-                icon: const Icon(Icons.calendar_today_rounded),
-                label: Text(courant == null ? '—' : format.format(courant)),
-              ),
-            ),
-            const SizedBox(width: PpSpacing.sm),
-            Expanded(
-              child: OutlinedButton.icon(
-                onPressed: () => _choisir(context),
-                icon: const Icon(Icons.schedule_rounded),
-                label: Text(
-                  courant == null
-                      ? '—'
-                      : '${courant.hour.toString().padLeft(2, '0')}:'
-                            '${courant.minute.toString().padLeft(2, '0')}',
-                ),
-              ),
-            ),
-          ],
-        ),
-      ],
-    );
-  }
-
-  Future<void> _choisir(BuildContext context) async {
-    final depart = valeur ?? minimum ?? DateTime.now();
-
-    final date = await showDatePicker(
-      context: context,
-      initialDate: depart,
-      firstDate: minimum ?? DateTime.now().subtract(const Duration(days: 365)),
-      lastDate: DateTime.now().add(const Duration(days: 365 * 5)),
-    );
-
-    if (date == null || !context.mounted) {
-      return;
-    }
-
-    final heure = await showTimePicker(
-      context: context,
-      initialTime: TimeOfDay.fromDateTime(depart),
-    );
-
-    onChange(
-      DateTime(
-        date.year,
-        date.month,
-        date.day,
-        heure?.hour ?? depart.hour,
-        heure?.minute ?? depart.minute,
       ),
     );
   }
