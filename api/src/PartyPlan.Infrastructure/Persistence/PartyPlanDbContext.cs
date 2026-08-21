@@ -124,6 +124,8 @@ public sealed class PartyPlanDbContext(
 
     public DbSet<PinnedMessage> PinnedMessages => Set<PinnedMessage>();
 
+    public DbSet<MessageRead> MessageReads => Set<MessageRead>();
+
     // --- Notifications ---
     public DbSet<Notification> Notifications => Set<Notification>();
 

@@ -15,5 +15,7 @@ public interface IMessagesDbContext
 
     DbSet<PinnedMessage> PinnedMessages { get; }
 
+    DbSet<MessageRead> MessageReads { get; }
+
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

@@ -202,6 +202,20 @@ internal sealed class PinnedMessageConfiguration : IEntityTypeConfiguration<Pinn
     }
 }
 
+internal sealed class MessageReadConfiguration : IEntityTypeConfiguration<MessageRead>
+{
+    public void Configure(EntityTypeBuilder<MessageRead> builder)
+    {
+        ArgumentNullException.ThrowIfNull(builder);
+
+        builder.HasKey(r => r.Id);
+
+        // Un seul repère par membre et par événement : deux lignes se contrediraient, et
+        // le fil ouvrirait au hasard de l'une ou de l'autre.
+        builder.HasIndex(r => new { r.EventId, r.MemberId }).IsUnique();
+    }
+}
+
 internal sealed class MessageReactionConfiguration : IEntityTypeConfiguration<MessageReaction>
 {
     public void Configure(EntityTypeBuilder<MessageReaction> builder)

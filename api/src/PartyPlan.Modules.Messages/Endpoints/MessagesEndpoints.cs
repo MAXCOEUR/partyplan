@@ -8,6 +8,9 @@ using PartyPlan.Modules.Messages.Application;
 using PartyPlan.SharedKernel.Contracts;
 using PartyPlan.SharedKernel.Http;
 
+/// <summary>Jusqu'où la discussion a été lue.</summary>
+public sealed record LectureBody(Guid MessageId);
+
 public sealed record MessageBody(
     [MaxLength(4000)] string? Body,
     [MaxLength(512)] string? AttachmentUrl,
@@ -41,13 +44,31 @@ internal static class MessagesEndpoints
 
         groupe.MapGet("/", async (
                 Guid eventId,
+                Guid? before,
+                int? limit,
                 MessageService service,
                 CancellationToken cancellationToken) =>
             ResultatHttp.Repondre(
-                await service.ListerAsync(eventId, cancellationToken).ConfigureAwait(false)))
+                await service.ListerAsync(eventId, before, limit, cancellationToken)
+                    .ConfigureAwait(false)))
             .WithName("ListMessages")
-            .WithSummary("Fil de discussion, du plus ancien au plus récent.")
+            .WithSummary(
+                "Fil de discussion : les derniers messages, du plus ancien au plus "
+                + "récent. `before` remonte vers les plus anciens.")
             .Produces<MessagePage>();
+
+        // Repère de lecture. Sans corps de réponse : l'application connaît déjà le
+        // message qu'elle vient de marquer, et le fil rendra le nouveau compte.
+        groupe.MapPost("/read", async (
+                Guid eventId,
+                LectureBody corps,
+                MessageService service,
+                CancellationToken cancellationToken) =>
+            ResultatHttp.Repondre(
+                await service.MarquerLuAsync(eventId, corps.MessageId, cancellationToken)
+                    .ConfigureAwait(false)))
+            .WithName("MarkMessagesRead")
+            .WithSummary("Avance le repère de lecture jusqu'à ce message.");
 
         // Sans idempotence obligatoire, à la différence d'une dépense : un message
         // envoyé deux fois se voit et se supprime, tandis qu'une dépense en double

@@ -39,8 +39,19 @@ public sealed record MessageView(
     bool Pinned,
     DateTimeOffset CreatedAt);
 
-/// <summary>Fil de discussion.</summary>
-public sealed record MessagePage(IReadOnlyList<MessageView> Items);
+/// <summary>
+/// Une page du fil, du plus ancien au plus récent.
+/// <para>
+/// <paramref name="HasMore"/> dit s'il reste des messages plus anciens à demander. Sans
+/// lui, l'application redemanderait indéfiniment une page qui n'existe pas chaque fois
+/// que la personne remonte le fil.
+/// </para>
+/// </summary>
+public sealed record MessagePage(
+    IReadOnlyList<MessageView> Items,
+    bool HasMore,
+    int UnreadCount,
+    Guid? FirstUnreadId);
 
 /// <summary>Envoi ou modification d'un message.</summary>
 public sealed record MessageRequest(
@@ -88,6 +99,15 @@ public sealed class MessageService(
 {
     /// <summary>Longueur du corps d'un message cité, au-delà de laquelle il est coupé.</summary>
     private const int LongueurCitation = 120;
+
+    /// <summary>Messages rendus quand l'appelant n'en demande pas un nombre précis.</summary>
+    private const int TaillePageParDefaut = 50;
+
+    /// <summary>
+    /// Plafond du nombre de messages par page. Sans lui, la pagination ne protège rien :
+    /// il suffirait de demander cent mille messages pour retrouver le fil entier.
+    /// </summary>
+    private const int TaillePageMaximale = 100;
 
     public static readonly DomainError EventNotFound = DomainError.NotFound(
         "event.not_found",
@@ -137,6 +157,8 @@ public sealed class MessageService(
 
     public async Task<Result<MessagePage>> ListerAsync(
         Guid eventId,
+        Guid? before,
+        int? limit,
         CancellationToken cancellationToken)
     {
         var moi = await membership.FindCurrentAsync(eventId, cancellationToken)
@@ -149,17 +171,56 @@ public sealed class MessageService(
 
         var noms = await NomsAsync(eventId, cancellationToken).ConfigureAwait(false);
 
-        // Ordre chronologique : une conversation se lit dans l'ordre où elle s'est
-        // tenue, sans quoi une réponse précède la question qu'elle traite.
-        var messages = await db.Messages
+        var taille = Math.Clamp(limit ?? TaillePageParDefaut, 1, TaillePageMaximale);
+
+        var jusqua = db.Messages
             .IgnoreQueryFilters()
-            .Where(m => m.EventId == eventId)
+            .Where(m => m.EventId == eventId);
+
+        // Curseur par valeurs, non par décalage : un `Skip` se décale d'un rang dès
+        // qu'un message arrive pendant la lecture, et fait sauter ou répéter une ligne.
+        // La date seule ne suffit pas — deux messages envoyés dans la même
+        // milliseconde ordonneraient au hasard, et la page suivante en perdrait un.
+        if (before is not null)
+        {
+            var repere = await db.Messages
+                .IgnoreQueryFilters()
+                .Where(m => m.EventId == eventId && m.Id == before)
+                .Select(m => new { m.CreatedAt, m.Id })
+                .FirstOrDefaultAsync(cancellationToken)
+                .ConfigureAwait(false);
+
+            if (repere is null)
+            {
+                return NotFound;
+            }
+
+            jusqua = jusqua.Where(m =>
+                m.CreatedAt < repere.CreatedAt
+                || (m.CreatedAt == repere.CreatedAt && m.Id.CompareTo(repere.Id) < 0));
+        }
+
+        // Une ligne de plus que demandé : c'est elle qui dit s'il reste du fil au-dessus,
+        // sans le second COUNT(*) qu'un total exigerait à chaque page.
+        var lot = await jusqua
             .Include(m => m.Reactions)
             .Include(m => m.Mentions)
             .AsSplitQuery()
-            .OrderBy(m => m.CreatedAt)
+            .OrderByDescending(m => m.CreatedAt)
+            .ThenByDescending(m => m.Id)
+            .Take(taille + 1)
             .ToListAsync(cancellationToken)
             .ConfigureAwait(false);
+
+        var encore = lot.Count > taille;
+
+        // Rendu du plus ancien au plus récent : une conversation se lit dans l'ordre où
+        // elle s'est tenue, sans quoi une réponse précède la question qu'elle traite.
+        var messages = lot
+            .Take(taille)
+            .OrderBy(m => m.CreatedAt)
+            .ThenBy(m => m.Id)
+            .ToList();
 
         var epingles = await db.PinnedMessages
             .Where(p => p.EventId == eventId)
@@ -169,15 +230,131 @@ public sealed class MessageService(
 
         var parIdentifiant = messages.ToDictionary(m => m.Id);
 
+        var (nonLus, premierNonLu) = await LectureAsync(
+            eventId,
+            moi.MemberId,
+            cancellationToken).ConfigureAwait(false);
+
         return Result<MessagePage>.Success(new MessagePage(
-        [
-            .. messages.Select(m => Vue(
-                m,
-                moi.MemberId,
-                noms,
-                parIdentifiant,
-                epingles.Contains(m.Id))),
-        ]));
+            [
+                .. messages.Select(m => Vue(
+                    m,
+                    moi.MemberId,
+                    noms,
+                    parIdentifiant,
+                    epingles.Contains(m.Id))),
+            ],
+            encore,
+            nonLus,
+            premierNonLu));
+    }
+
+    /// <summary>
+    /// Ce qu'il reste à lire pour ce membre : combien, et à partir d'où.
+    /// <para>
+    /// Ses propres messages ne comptent jamais : écrire, c'est avoir lu, et un compteur
+    /// qui s'incrémente sur ses propres envois afficherait une pastille que rien ne peut
+    /// faire disparaître.
+    /// </para>
+    /// </summary>
+    private async Task<(int NonLus, Guid? Premier)> LectureAsync(
+        Guid eventId,
+        Guid memberId,
+        CancellationToken cancellationToken)
+    {
+        var repere = await db.MessageReads
+            .IgnoreQueryFilters()
+            .Where(r => r.EventId == eventId && r.MemberId == memberId)
+            .Select(r => (DateTimeOffset?)r.LastReadAt)
+            .FirstOrDefaultAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        var nonLus = db.Messages
+            .IgnoreQueryFilters()
+            .Where(m => m.EventId == eventId
+                && m.MemberId != memberId
+                && m.DeletedAt == null
+                && (repere == null || m.CreatedAt > repere));
+
+        var compte = await nonLus.CountAsync(cancellationToken).ConfigureAwait(false);
+
+        if (compte == 0)
+        {
+            return (0, null);
+        }
+
+        // Le plus ancien des non-lus, même s'il est loin au-dessus de la page rendue :
+        // c'est là que la discussion doit s'ouvrir, et sans cet identifiant
+        // l'application n'aurait rien pour s'y rendre.
+        var premier = await nonLus
+            .OrderBy(m => m.CreatedAt)
+            .ThenBy(m => m.Id)
+            .Select(m => (Guid?)m.Id)
+            .FirstOrDefaultAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        return (compte, premier);
+    }
+
+    /// <summary>
+    /// Avance le repère de lecture jusqu'à ce message.
+    /// <para>
+    /// Jamais en arrière : deux appareils lisent le même fil, et celui resté sur un vieux
+    /// message ne doit pas faire réapparaître comme non lu ce que l'autre a déjà lu.
+    /// </para>
+    /// </summary>
+    public async Task<Result> MarquerLuAsync(
+        Guid eventId,
+        Guid messageId,
+        CancellationToken cancellationToken)
+    {
+        var moi = await membership.FindCurrentAsync(eventId, cancellationToken)
+            .ConfigureAwait(false);
+
+        if (moi is null)
+        {
+            return EventNotFound;
+        }
+
+        var message = await db.Messages
+            .IgnoreQueryFilters()
+            .Where(m => m.EventId == eventId && m.Id == messageId)
+            .Select(m => new { m.Id, m.CreatedAt })
+            .FirstOrDefaultAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        if (message is null)
+        {
+            return NotFound;
+        }
+
+        var repere = await db.MessageReads
+            .IgnoreQueryFilters()
+            .FirstOrDefaultAsync(
+                r => r.EventId == eventId && r.MemberId == moi.MemberId,
+                cancellationToken)
+            .ConfigureAwait(false);
+
+        if (repere is null)
+        {
+            db.MessageReads.Add(new MessageRead
+            {
+                Id = Guid.CreateVersion7(),
+                EventId = eventId,
+                MemberId = moi.MemberId,
+                LastReadMessageId = message.Id,
+                LastReadAt = message.CreatedAt,
+            });
+        }
+        else if (message.CreatedAt > repere.LastReadAt)
+        {
+            repere.LastReadMessageId = message.Id;
+            repere.LastReadAt = message.CreatedAt;
+        }
+
+        await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+
+        return Result.Success();
     }
 
     public async Task<Result<MessageView>> EnvoyerAsync(

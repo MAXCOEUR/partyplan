@@ -115,3 +115,36 @@ public sealed class MessageReaction
 
     public DateTimeOffset CreatedAt { get; set; }
 }
+
+/// <summary>
+/// Jusqu'où un membre a lu la discussion d'un événement.
+/// <para>
+/// Une ligne par membre et par événement : le repère est celui d'une personne, non d'un
+/// appareil. Ouvrir la discussion sur son téléphone puis sur son ordinateur ne doit pas
+/// faire réapparaître comme non lu ce qui vient d'être lu.
+/// </para>
+/// <para>
+/// Le membre, jamais le compte : un invité sans compte lit la discussion comme les
+/// autres (règle 7 du projet).
+/// </para>
+/// </summary>
+public sealed class MessageRead : IEventScoped
+{
+    public Guid Id { get; set; }
+
+    public Guid EventId { get; set; }
+
+    public Guid MemberId { get; set; }
+
+    /// <summary>Dernier message lu. Ce repère n'est jamais reculé.</summary>
+    public Guid LastReadMessageId { get; set; }
+
+    /// <summary>
+    /// Date du message repéré, recopiée ici.
+    /// <para>
+    /// Comparer des dates plutôt que remonter au message permet de compter les non-lus
+    /// en une requête, et le compte survit à la suppression du message repéré.
+    /// </para>
+    /// </summary>
+    public DateTimeOffset LastReadAt { get; set; }
+}
