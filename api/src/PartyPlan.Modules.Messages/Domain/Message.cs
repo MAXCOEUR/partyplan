@@ -21,6 +21,15 @@ public sealed class Message : IEventScoped, ISoftDeletable
     /// <summary>Message auquel celui-ci répond (EF-MSG-04).</summary>
     public Guid? ReplyToMessageId { get; set; }
 
+    /// <summary>
+    /// Sondage porté par ce message.
+    /// <para>
+    /// Simple identifiant, sans clé étrangère : les sondages appartiennent à un autre
+    /// module, et une relation posée ici franchirait la frontière (ADR 0002).
+    /// </para>
+    /// </summary>
+    public Guid? PollId { get; set; }
+
     public DateTimeOffset CreatedAt { get; set; }
 
     public DateTimeOffset? EditedAt { get; set; }
@@ -28,6 +37,70 @@ public sealed class Message : IEventScoped, ISoftDeletable
     public DateTimeOffset? DeletedAt { get; set; }
 
     public ICollection<MessageReaction> Reactions { get; } = new List<MessageReaction>();
+
+    public ICollection<MessageMention> Mentions { get; } = new List<MessageMention>();
+}
+
+/// <summary>
+/// Personne nommée dans un message.
+/// <para>
+/// Enregistrée plutôt que relue dans le texte à chaque affichage : c'est ce qui
+/// permettra de notifier la personne citée sans réanalyser tout l'historique, et un nom
+/// changé entre-temps ne doit pas défaire la mention.
+/// </para>
+/// </summary>
+public sealed class MessageMention
+{
+    public Guid Id { get; set; }
+
+    public Guid MessageId { get; set; }
+
+    /// <summary>Membre cité. Un invité sans compte se cite comme les autres.</summary>
+    public Guid MemberId { get; set; }
+}
+
+/// <summary>
+/// Dossier de rangement des messages épinglés.
+/// <para>
+/// Toujours partagé : la décision produit du 21/08/2026 écarte les épingles privées.
+/// Un dossier sert à ce que le groupe retrouve le code du portail que quelqu'un
+/// d'autre a donné.
+/// </para>
+/// </summary>
+public sealed class PinFolder : IEventScoped
+{
+    public Guid Id { get; set; }
+
+    public Guid EventId { get; set; }
+
+    public string Name { get; set; } = string.Empty;
+
+    public Guid CreatedByMemberId { get; set; }
+
+    public DateTimeOffset CreatedAt { get; set; }
+}
+
+/// <summary>
+/// Message épinglé, avec ou sans dossier.
+/// <para>
+/// <see cref="FolderId"/> nul signifie « épinglé sans rangement » : classer est un
+/// travail, et l'imposer au moment où l'on veut simplement retenir une information
+/// ferait renoncer à épingler.
+/// </para>
+/// </summary>
+public sealed class PinnedMessage : IEventScoped
+{
+    public Guid Id { get; set; }
+
+    public Guid EventId { get; set; }
+
+    public Guid MessageId { get; set; }
+
+    public Guid? FolderId { get; set; }
+
+    public Guid PinnedByMemberId { get; set; }
+
+    public DateTimeOffset CreatedAt { get; set; }
 }
 
 public sealed class MessageReaction

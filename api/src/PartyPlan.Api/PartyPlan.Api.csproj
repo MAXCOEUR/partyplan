@@ -14,6 +14,10 @@
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" />
+    <!-- Exigé par les outils EF Core lorsque ce projet sert de projet de démarrage,
+         c'est-à-dire pour « make migration » et « make migrate ». PrivateAssets :
+         l'outillage ne part pas en production. -->
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design"><PrivateAssets>all</PrivateAssets></PackageReference>
   </ItemGroup>
 
 </Project>

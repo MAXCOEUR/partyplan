@@ -118,6 +118,12 @@ public sealed class PartyPlanDbContext(
 
     public DbSet<MessageReaction> MessageReactions => Set<MessageReaction>();
 
+    public DbSet<MessageMention> MessageMentions => Set<MessageMention>();
+
+    public DbSet<PinFolder> PinFolders => Set<PinFolder>();
+
+    public DbSet<PinnedMessage> PinnedMessages => Set<PinnedMessage>();
+
     // --- Notifications ---
     public DbSet<Notification> Notifications => Set<Notification>();
 

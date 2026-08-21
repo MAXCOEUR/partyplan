@@ -594,6 +594,10 @@ namespace PartyPlan.Infrastructure.Persistence.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("member_id");
 
+                    b.Property<Guid?>("PollId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("poll_id");
+
                     b.Property<Guid?>("ReplyToMessageId")
                         .HasColumnType("uuid")
                         .HasColumnName("reply_to_message_id");
@@ -606,6 +610,31 @@ namespace PartyPlan.Infrastructure.Persistence.Migrations
                         .HasDatabaseName("ix_messages_event_id_created_at");
 
                     b.ToTable("messages");
+                });
+
+            modelBuilder.Entity("PartyPlan.Modules.Messages.Domain.MessageMention", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("MemberId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("member_id");
+
+                    b.Property<Guid>("MessageId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("message_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_message_mentions");
+
+                    b.HasIndex("MessageId", "MemberId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_message_mentions_message_id_member_id");
+
+                    b.ToTable("message_mentions");
                 });
 
             modelBuilder.Entity("PartyPlan.Modules.Messages.Domain.MessageReaction", b =>
@@ -641,6 +670,84 @@ namespace PartyPlan.Infrastructure.Persistence.Migrations
                         .HasDatabaseName("ix_message_reactions_message_id_member_id_emoji");
 
                     b.ToTable("message_reactions");
+                });
+
+            modelBuilder.Entity("PartyPlan.Modules.Messages.Domain.PinFolder", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid>("CreatedByMemberId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("created_by_member_id");
+
+                    b.Property<Guid>("EventId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("event_id");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(60)
+                        .HasColumnType("character varying(60)")
+                        .HasColumnName("name");
+
+                    b.HasKey("Id")
+                        .HasName("pk_pin_folders");
+
+                    b.HasIndex("EventId", "Name")
+                        .IsUnique()
+                        .HasDatabaseName("ix_pin_folders_event_id_name");
+
+                    b.ToTable("pin_folders");
+                });
+
+            modelBuilder.Entity("PartyPlan.Modules.Messages.Domain.PinnedMessage", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid>("EventId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("event_id");
+
+                    b.Property<Guid?>("FolderId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("folder_id");
+
+                    b.Property<Guid>("MessageId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("message_id");
+
+                    b.Property<Guid>("PinnedByMemberId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("pinned_by_member_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_pinned_messages");
+
+                    b.HasIndex("FolderId")
+                        .HasDatabaseName("ix_pinned_messages_folder_id");
+
+                    b.HasIndex("MessageId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_pinned_messages_message_id");
+
+                    b.HasIndex("EventId", "FolderId")
+                        .HasDatabaseName("ix_pinned_messages_event_id_folder_id");
+
+                    b.ToTable("pinned_messages");
                 });
 
             modelBuilder.Entity("PartyPlan.Modules.Notifications.Domain.EventMuteSetting", b =>
@@ -1655,6 +1762,16 @@ namespace PartyPlan.Infrastructure.Persistence.Migrations
                         .HasConstraintName("fk_messages_events_event_id");
                 });
 
+            modelBuilder.Entity("PartyPlan.Modules.Messages.Domain.MessageMention", b =>
+                {
+                    b.HasOne("PartyPlan.Modules.Messages.Domain.Message", null)
+                        .WithMany("Mentions")
+                        .HasForeignKey("MessageId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_message_mentions_messages_message_id");
+                });
+
             modelBuilder.Entity("PartyPlan.Modules.Messages.Domain.MessageReaction", b =>
                 {
                     b.HasOne("PartyPlan.Modules.Messages.Domain.Message", null)
@@ -1663,6 +1780,32 @@ namespace PartyPlan.Infrastructure.Persistence.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired()
                         .HasConstraintName("fk_message_reactions_messages_message_id");
+                });
+
+            modelBuilder.Entity("PartyPlan.Modules.Messages.Domain.PinFolder", b =>
+                {
+                    b.HasOne("PartyPlan.Modules.Events.Domain.Event", null)
+                        .WithMany()
+                        .HasForeignKey("EventId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_pin_folders_events_event_id");
+                });
+
+            modelBuilder.Entity("PartyPlan.Modules.Messages.Domain.PinnedMessage", b =>
+                {
+                    b.HasOne("PartyPlan.Modules.Messages.Domain.PinFolder", null)
+                        .WithMany()
+                        .HasForeignKey("FolderId")
+                        .OnDelete(DeleteBehavior.SetNull)
+                        .HasConstraintName("fk_pinned_messages_pin_folders_folder_id");
+
+                    b.HasOne("PartyPlan.Modules.Messages.Domain.Message", null)
+                        .WithMany()
+                        .HasForeignKey("MessageId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_pinned_messages_messages_message_id");
                 });
 
             modelBuilder.Entity("PartyPlan.Modules.Notifications.Domain.NotificationPreference", b =>
@@ -1829,6 +1972,8 @@ namespace PartyPlan.Infrastructure.Persistence.Migrations
 
             modelBuilder.Entity("PartyPlan.Modules.Messages.Domain.Message", b =>
                 {
+                    b.Navigation("Mentions");
+
                     b.Navigation("Reactions");
                 });
 

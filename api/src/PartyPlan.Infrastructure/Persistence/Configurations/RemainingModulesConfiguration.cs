@@ -129,6 +129,72 @@ internal sealed class MessageConfiguration : IEntityTypeConfiguration<Message>
             .WithOne()
             .HasForeignKey(r => r.MessageId)
             .OnDelete(DeleteBehavior.Cascade);
+
+        builder.HasMany(m => m.Mentions)
+            .WithOne()
+            .HasForeignKey(m => m.MessageId)
+            .OnDelete(DeleteBehavior.Cascade);
+    }
+}
+
+internal sealed class MessageMentionConfiguration : IEntityTypeConfiguration<MessageMention>
+{
+    public void Configure(EntityTypeBuilder<MessageMention> builder)
+    {
+        ArgumentNullException.ThrowIfNull(builder);
+
+        builder.HasKey(m => m.Id);
+
+        // Une personne n'est citée qu'une fois par message, même si son nom y figure
+        // deux fois : sans cette contrainte, elle serait notifiée en double.
+        builder.HasIndex(m => new { m.MessageId, m.MemberId }).IsUnique();
+    }
+}
+
+internal sealed class PinFolderConfiguration : IEntityTypeConfiguration<PinFolder>
+{
+    public void Configure(EntityTypeBuilder<PinFolder> builder)
+    {
+        ArgumentNullException.ThrowIfNull(builder);
+
+        builder.HasKey(f => f.Id);
+        builder.Property(f => f.Name).HasMaxLength(60).IsRequired();
+
+        // Deux dossiers de même nom dans un même événement rendraient le rangement
+        // ambigu : on ne saurait plus lequel on ouvre.
+        builder.HasIndex(f => new { f.EventId, f.Name }).IsUnique();
+
+        builder.HasOne<Event>()
+            .WithMany()
+            .HasForeignKey(f => f.EventId)
+            .OnDelete(DeleteBehavior.Cascade);
+    }
+}
+
+internal sealed class PinnedMessageConfiguration : IEntityTypeConfiguration<PinnedMessage>
+{
+    public void Configure(EntityTypeBuilder<PinnedMessage> builder)
+    {
+        ArgumentNullException.ThrowIfNull(builder);
+
+        builder.HasKey(p => p.Id);
+
+        // Un message n'est épinglé qu'une fois. Le rangement se change en déplaçant
+        // l'épingle, pas en en créant une seconde.
+        builder.HasIndex(p => p.MessageId).IsUnique();
+        builder.HasIndex(p => new { p.EventId, p.FolderId });
+
+        builder.HasOne<Message>()
+            .WithMany()
+            .HasForeignKey(p => p.MessageId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        // Un dossier supprimé ne fait pas disparaître les épingles qu'il contenait :
+        // elles reviennent au rangement libre.
+        builder.HasOne<PinFolder>()
+            .WithMany()
+            .HasForeignKey(p => p.FolderId)
+            .OnDelete(DeleteBehavior.SetNull);
     }
 }
 
