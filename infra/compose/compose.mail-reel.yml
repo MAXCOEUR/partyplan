@@ -1,0 +1,24 @@
+# Envoi réel des courriels, par le relais Brevo.
+#
+# À demander explicitement, jamais actif par défaut :
+#
+#   docker compose -f compose.yml -f compose.mail-reel.yml up -d api
+#
+# Le développement passe autrement par Mailpit, où aucun message ne quitte la
+# machine (NF-DEV-03, règle 5 du projet). Cette surcharge sert à vérifier une
+# chaîne d'envoi réelle — inscription, réinitialisation — avant une mise en
+# production, et à faire tourner un déploiement qui envoie vraiment.
+#
+# Brevo n'accepte le relais que depuis une adresse IP autorisée dans le compte
+# (Paramètres → SMTP & API → IP autorisées). Sinon la réponse est
+# « 525 Unauthorized IP address », et l'API journalise l'échec sans interrompre
+# l'inscription.
+services:
+  api:
+    environment:
+      Smtp__Host: ${BREVO_SMTP_HOST:-smtp-relay.brevo.com}
+      Smtp__Port: ${BREVO_SMTP_PORT:-587}
+      Smtp__User: ${BREVO_SMTP_USER:?identifiant Brevo absent de .env}
+      Smtp__Password: ${BREVO_SMTP_PASSWORD:?cle SMTP Brevo absente de .env}
+      Smtp__UseStartTls: "true"
+      Smtp__From: ${BREVO_SMTP_FROM:?expediteur absent de .env}

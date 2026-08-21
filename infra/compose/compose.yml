@@ -50,7 +50,10 @@ services:
       # documentés : RG-ADM-11 les refuse en production.
       Admin__Email: ${ADMIN_EMAIL:-admin@partyplan.local}
       Admin__Password: ${ADMIN_PASSWORD:-MotDePasseDeDeveloppement}
-      # Courriel capturé par Mailpit — NF-DEV-03
+      # Courriel capturé par Mailpit — NF-DEV-03. Écrit en dur, sans variable :
+      # aucun réglage laissé dans .env ne doit pouvoir envoyer un vrai message
+      # depuis un poste de développement. Pour un envoi réel, la surcharge
+      # compose.mail-reel.yml se demande explicitement.
       Smtp__Host: mail
       Smtp__Port: 1025
       Smtp__From: PartyPlan (dev) <dev@partyplan.local>
