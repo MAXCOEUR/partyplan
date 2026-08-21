@@ -80,6 +80,11 @@ public sealed class EvenementsTests(PartyPlanApiFixture fixture)
         var organisateur = await CompteAsync();
         var (eventId, jeton, code) = await CreerAsync(organisateur, "Soirée privée");
 
+        var invitation = await organisateur.GetFromJsonAsync<JsonDocument>(
+            $"/v1/events/{eventId}/invitation");
+        invitation!.RootElement.GetProperty("joinUrl").GetString()
+            .ShouldStartWith("http://localhost:5173/join/");
+
         using var inconnu = fixture.CreateClient();
 
         var apercu = await inconnu.GetAsync(new Uri($"/v1/join/{jeton}", UriKind.Relative));

@@ -75,7 +75,8 @@ api: ## Lance l'API en rechargement à chaud (base et courriel en conteneur)
 	@# avant les substitutions de commande, si bien qu'un $$(...) placé en préfixe
 	@# serait interprété comme un nom de commande et non comme une affectation.
 	ASPNETCORE_ENVIRONMENT=Development ASPNETCORE_URLS=$(API_URLS) \
-	  env $$(./tools/verifier-inotify.sh --env) \
+	  env App__PublicBaseUrl=http://localhost:$(WEB_DEV_PORT) \
+	  $$(./tools/verifier-inotify.sh --env) \
 	  dotnet watch --project $(API_PROJ) run
 
 app: ## Lance l'application Flutter sur Chrome, en rechargement à chaud
