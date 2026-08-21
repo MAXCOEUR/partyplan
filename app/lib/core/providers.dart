@@ -2,6 +2,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 import 'models/article_course.dart';
+import 'models/depense.dart';
+import 'models/reglement.dart';
 import 'models/evenement.dart';
 import 'models/invitation.dart';
 import 'models/membre.dart';
@@ -10,6 +12,8 @@ import 'models/profil.dart';
 import 'network/api_client.dart';
 import 'network/comptes_api.dart';
 import 'network/courses_api.dart';
+import 'network/depenses_api.dart';
+import 'network/reglements_api.dart';
 import 'network/evenements_api.dart';
 import 'offline/cache_lecture.dart';
 import 'offline/etat_reseau.dart';
@@ -323,6 +327,39 @@ final coursesApiProvider = Provider<CoursesApi>(
 /// Liste de courses d'un événement, avec son avancement (EF-CRS-09).
 final listeCoursesProvider = FutureProvider.family<ListeCourses, String>(
   (ref, evenementId) => ref.watch(coursesApiProvider).lister(evenementId),
+);
+
+// ------------------------------------------------------------------ dépenses ----
+
+final depensesApiProvider = Provider<DepensesApi>(
+  (ref) => DepensesApi(ref.watch(apiClientProvider)),
+);
+
+/// Dépenses d'un événement et leurs totaux (EF-DEP-04).
+final depensesProvider = FutureProvider.family<PageDepenses, String>(
+  (ref, evenementId) => ref.watch(depensesApiProvider).lister(evenementId),
+);
+
+/// Détail d'une dépense : payeur, participants, part de chacun (EF-DEP-05).
+final detailDepenseProvider =
+    FutureProvider.family<DetailDepense, ({String evenementId, String depenseId})>(
+      (ref, cle) => ref
+          .watch(depensesApiProvider)
+          .detail(cle.evenementId, cle.depenseId),
+    );
+
+// --------------------------------------------------------------- règlements ----
+
+final reglementsApiProvider = Provider<ReglementsApi>(
+  (ref) => ReglementsApi(ref.watch(apiClientProvider)),
+);
+
+/// Soldes et remboursements proposés d'un événement (EF-RMB-01, EF-RMB-02).
+///
+/// Recalculé à chaque lecture : aucun solde n'est conservé, côté serveur comme côté
+/// application (RG-RMB-02).
+final reglementsProvider = FutureProvider.family<PageReglements, String>(
+  (ref, evenementId) => ref.watch(reglementsApiProvider).lire(evenementId),
 );
 
 /// Aperçu d'une invitation, par jeton de lien ou par code court.

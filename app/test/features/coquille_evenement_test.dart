@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:partyplan/core/models/article_course.dart';
+import 'package:partyplan/core/models/depense.dart';
 import 'package:partyplan/core/models/evenement.dart';
 import 'package:partyplan/core/providers.dart';
 import 'package:partyplan/features/evenement/coquille_evenement.dart';
@@ -29,6 +30,13 @@ Future<void> _monter(WidgetTester tester, {required Size taille}) async {
     overrides: [
       evenementProvider(_evenement).overrideWith((ref) async => _resume),
       membresProvider(_evenement).overrideWith((ref) async => []),
+      // Chaque onglet de la coquille est construit d'emblée par l'IndexedStack : un
+      // provider laissé au vrai réseau lance un appel dont le délai d'attente survit
+      // à la fin du test.
+      depensesProvider(_evenement).overrideWith(
+        (ref) async =>
+            const PageDepenses(total: 0, maPart: 0, depenses: []),
+      ),
       listeCoursesProvider(_evenement).overrideWith(
         (ref) async => const ListeCourses(
           avancement: AvancementCourses(total: 0, pris: 0, achetes: 0),

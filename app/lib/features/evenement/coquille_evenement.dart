@@ -12,6 +12,8 @@ import '../../design/tokens.dart';
 import '../../l10n/generated/pp_localisations.dart';
 import '../courses/article_feuille.dart';
 import '../courses/courses_page.dart';
+import '../depenses/depense_feuille.dart';
+import '../depenses/depenses_page.dart';
 import 'tableau_de_bord_page.dart';
 
 /// Coquille de navigation d'un événement.
@@ -105,12 +107,8 @@ class _CoquilleEvenementState extends ConsumerState<CoquilleEvenement> {
         children: [
           TableauDeBordPage(evenementId: widget.eventId),
           CoursesPage(evenementId: widget.eventId),
-          // Dépenses et Planning arrivent aux sous-projets suivants.
-          PpEmptyState(
-            titre: onglets[2].libelle,
-            explication: PpL10n.of(context).ongletBientot,
-            icone: onglets[2].icoineActive,
-          ),
+          DepensesPage(evenementId: widget.eventId),
+          // Le planning arrive au sous-projet suivant.
           PpEmptyState(
             titre: onglets[3].libelle,
             explication: PpL10n.of(context).ongletBientot,
@@ -121,13 +119,19 @@ class _CoquilleEvenementState extends ConsumerState<CoquilleEvenement> {
         ),
       ),
       floatingActionButtonLocation: const PpFabDansLeRail(),
-      floatingActionButton: _onglet == 1
-          ? FloatingActionButton.extended(
-              onPressed: () => ouvrirFeuilleArticle(context, widget.eventId),
-              icon: const Icon(Icons.add_rounded),
-              label: const Text('Ajouter'),
-            )
-          : null,
+      floatingActionButton: switch (_onglet) {
+        1 => FloatingActionButton.extended(
+          onPressed: () => ouvrirFeuilleArticle(context, widget.eventId),
+          icon: const Icon(Icons.add_rounded),
+          label: const Text('Ajouter'),
+        ),
+        2 => FloatingActionButton.extended(
+          onPressed: () => ouvrirFeuilleDepense(context, widget.eventId),
+          icon: const Icon(Icons.add_rounded),
+          label: const Text('Dépense'),
+        ),
+        _ => null,
+      },
       bottomNavigationBar: large
           ? null
           : NavigationBar(
