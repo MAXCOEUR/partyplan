@@ -23,7 +23,14 @@ abstract final class RetourAuth {
     }
 
     final segments = uri.pathSegments;
-    if (segments.length != 2 || segments.any((segment) => segment.isEmpty)) {
+    if (segments.length != 2 ||
+        segments.any(
+          (segment) =>
+              segment.isEmpty ||
+              segment.contains('/') ||
+              segment.contains('?') ||
+              segment.contains('#'),
+        )) {
       return PpRoutes.accueil;
     }
 
