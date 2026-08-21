@@ -1185,6 +1185,411 @@
         }
       }
     },
+    "/v1/events/{eventId}/messages": {
+      "get": {
+        "tags": [
+          "Messages"
+        ],
+        "summary": "Fil de discussion, du plus ancien au plus récent.",
+        "operationId": "ListMessages",
+        "parameters": [
+          {
+            "name": "eventId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MessagePage"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Messages"
+        ],
+        "summary": "Envoie un message : texte, image, réponse, mentions.",
+        "operationId": "SendMessage",
+        "parameters": [
+          {
+            "name": "eventId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MessageBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MessageView"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/events/{eventId}/messages/{messageId}": {
+      "patch": {
+        "tags": [
+          "Messages"
+        ],
+        "summary": "Modifie son propre message. La modification reste visible.",
+        "operationId": "EditMessage",
+        "parameters": [
+          {
+            "name": "eventId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "messageId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MessageBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MessageView"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Messages"
+        ],
+        "summary": "Supprime un message. Sa place subsiste, sans son contenu.",
+        "operationId": "DeleteMessage",
+        "parameters": [
+          {
+            "name": "eventId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "messageId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/v1/events/{eventId}/messages/{messageId}/reactions": {
+      "put": {
+        "tags": [
+          "Messages"
+        ],
+        "summary": "Pose ou retire sa réaction.",
+        "operationId": "ToggleReaction",
+        "parameters": [
+          {
+            "name": "eventId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "messageId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReactionBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MessageView"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/events/{eventId}/messages/{messageId}/pin": {
+      "post": {
+        "tags": [
+          "Messages"
+        ],
+        "summary": "Épingle un message, dans un dossier ou sans rangement.",
+        "operationId": "PinMessage",
+        "parameters": [
+          {
+            "name": "eventId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "messageId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PinBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PinView"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Messages"
+        ],
+        "summary": "Retire l'épingle d'un message.",
+        "operationId": "UnpinMessage",
+        "parameters": [
+          {
+            "name": "eventId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "messageId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/v1/events/{eventId}/pins": {
+      "get": {
+        "tags": [
+          "Messages"
+        ],
+        "summary": "Messages épinglés et dossiers. Filtrable par dossier.",
+        "operationId": "ListPins",
+        "parameters": [
+          {
+            "name": "eventId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "folderId",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PinPage"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/events/{eventId}/pins/folders": {
+      "post": {
+        "tags": [
+          "Messages"
+        ],
+        "summary": "Crée un dossier de rangement, partagé avec tout l'événement.",
+        "operationId": "CreatePinFolder",
+        "parameters": [
+          {
+            "name": "eventId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FolderBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PinFolderView"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/events/{eventId}/pins/folders/{folderId}": {
+      "delete": {
+        "tags": [
+          "Messages"
+        ],
+        "summary": "Supprime un dossier. Ses épingles reviennent au rangement libre.",
+        "operationId": "DeletePinFolder",
+        "parameters": [
+          {
+            "name": "eventId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "folderId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
     "/v1/events/{eventId}/settlements": {
       "get": {
         "tags": [
@@ -2929,6 +3334,17 @@
         },
         "description": "Jeton d'identité obtenu auprès du fournisseur par le client."
       },
+      "FolderBody": {
+        "required": [
+          "name"
+        ],
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          }
+        }
+      },
       "ForgotPasswordRequest": {
         "required": [
           "email"
@@ -3341,6 +3757,176 @@
         },
         "description": "Membre tel qu'il apparaît dans la liste des invités (EF-PRES-04)."
       },
+      "MentionView": {
+        "required": [
+          "memberId",
+          "displayName"
+        ],
+        "type": "object",
+        "properties": {
+          "memberId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "displayName": {
+            "type": "string"
+          }
+        },
+        "description": "Personne citée dans un message."
+      },
+      "MessageBody": {
+        "required": [
+          "body",
+          "attachmentUrl",
+          "replyToMessageId",
+          "pollId",
+          "mentionedMemberIds"
+        ],
+        "type": "object",
+        "properties": {
+          "body": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "attachmentUrl": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "replyToMessageId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "pollId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "mentionedMemberIds": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        }
+      },
+      "MessagePage": {
+        "required": [
+          "items"
+        ],
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MessageView"
+            }
+          }
+        },
+        "description": "Fil de discussion."
+      },
+      "MessageView": {
+        "required": [
+          "id",
+          "authorMemberId",
+          "authorDisplayName",
+          "body",
+          "attachmentUrl",
+          "pollId",
+          "replyTo",
+          "reactions",
+          "mentions",
+          "mine",
+          "edited",
+          "deleted",
+          "pinned",
+          "createdAt"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "authorMemberId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "authorDisplayName": {
+            "type": "string"
+          },
+          "body": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "attachmentUrl": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "pollId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "replyTo": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/ReplyView"
+              }
+            ]
+          },
+          "reactions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ReactionView"
+            }
+          },
+          "mentions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MentionView"
+            }
+          },
+          "mine": {
+            "type": "boolean"
+          },
+          "edited": {
+            "type": "boolean"
+          },
+          "deleted": {
+            "type": "boolean"
+          },
+          "pinned": {
+            "type": "boolean"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "description": "Message du fil, tel que l'interface l'affiche."
+      },
       "MfaVerifyRequest": {
         "required": [
           "challengeToken",
@@ -3469,6 +4055,106 @@
         },
         "description": "Session active, telle que présentée à son titulaire (EF-AUTH-10)."
       },
+      "PinBody": {
+        "required": [
+          "folderId"
+        ],
+        "type": "object",
+        "properties": {
+          "folderId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          }
+        }
+      },
+      "PinFolderView": {
+        "required": [
+          "id",
+          "name",
+          "count"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "count": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        },
+        "description": "Dossier d'épingles."
+      },
+      "PinPage": {
+        "required": [
+          "folders",
+          "items"
+        ],
+        "type": "object",
+        "properties": {
+          "folders": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PinFolderView"
+            }
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PinView"
+            }
+          }
+        },
+        "description": "Épingles et dossiers d'un événement."
+      },
+      "PinView": {
+        "required": [
+          "id",
+          "folderId",
+          "folderName",
+          "message",
+          "createdAt"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "folderId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "folderName": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "message": {
+            "$ref": "#/components/schemas/MessageView"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "description": "Message épinglé, avec son rangement."
+      },
       "PlatformRole": {
         "type": "integer",
         "description": "Rôle de portée « instance entière » (§3.1). Sans rapport avec EventMemberRole :\nun PlatformRole.PlatformAdmin n'a aucun droit dans un événement dont il n'est pas membre."
@@ -3561,6 +4247,42 @@
           }
         }
       },
+      "ReactionBody": {
+        "required": [
+          "emoji"
+        ],
+        "type": "object",
+        "properties": {
+          "emoji": {
+            "type": "string"
+          }
+        }
+      },
+      "ReactionView": {
+        "required": [
+          "emoji",
+          "count",
+          "mine"
+        ],
+        "type": "object",
+        "properties": {
+          "emoji": {
+            "type": "string"
+          },
+          "count": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "mine": {
+            "type": "boolean"
+          }
+        },
+        "description": "Réaction agrégée : un emoji, son décompte, et si l'appelant l'a posée."
+      },
       "RefreshRequest": {
         "required": [
           "refreshToken"
@@ -3591,6 +4313,30 @@
           }
         },
         "description": "Corps des requêtes d'authentification et de compte."
+      },
+      "ReplyView": {
+        "required": [
+          "id",
+          "authorDisplayName",
+          "body"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "authorDisplayName": {
+            "type": "string"
+          },
+          "body": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        },
+        "description": "            Message cité par une réponse, réduit à ce qu'il faut pour s'y retrouver.\n            Le corps est tronqué : afficher un message de quatre mille caractères au-dessus\nd'une réponse de trois mots noierait la réponse."
       },
       "ResetPasswordRequest": {
         "required": [
@@ -4288,6 +5034,9 @@
     },
     {
       "name": "Expenses"
+    },
+    {
+      "name": "Messages"
     },
     {
       "name": "Settlements"

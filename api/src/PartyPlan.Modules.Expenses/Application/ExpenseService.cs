@@ -91,6 +91,10 @@ public sealed class ExpenseService(
         "event.not_found",
         "Cet événement est introuvable.");
 
+    public static readonly DomainError NotMine = DomainError.Rule(
+        "expense.not_mine",
+        "Seule la personne qui a payé, ou l'organisateur, modifie cette dépense.");
+
     public static readonly DomainError LabelRequired = DomainError.Validation(
         "expense.label_required",
         "Donne un libellé à la dépense.");
@@ -284,6 +288,15 @@ public sealed class ExpenseService(
             return FromShoppingItem;
         }
 
+        // Corriger la dépense d'autrui change ce qu'il a avancé, donc ce que chacun lui
+        // doit : c'est le geste qui rend les comptes contestables. Une personne qui gère
+        // l'événement en est dispensée — elle arbitre, et sans elle l'erreur d'un invité
+        // parti depuis resterait inscrite pour toujours.
+        if (depense.PaidByMemberId != moi.MemberId && !moi.CanManage)
+        {
+            return NotMine;
+        }
+
         var validation = Valider(requete);
         if (validation is not null)
         {
@@ -348,6 +361,11 @@ public sealed class ExpenseService(
         if (depense.ShoppingItemId is not null)
         {
             return FromShoppingItem;
+        }
+
+        if (depense.PaidByMemberId != moi.MemberId && !moi.CanManage)
+        {
+            return NotMine;
         }
 
         depense.DeletedAt = clock.UtcNow;

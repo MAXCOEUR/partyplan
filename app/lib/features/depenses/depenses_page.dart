@@ -5,12 +5,14 @@ import 'package:intl/intl.dart';
 
 import '../../app/router.dart';
 import '../../core/models/depense.dart';
+import '../../core/network/api_exception.dart';
 import '../../core/providers.dart';
 import '../../design/components/pp_card.dart';
 import '../../design/components/pp_money.dart';
 import '../../design/components/pp_states.dart';
 import '../../design/tokens.dart';
 import '../../design/typography.dart';
+import 'depense_feuille.dart';
 
 /// Dépenses d'un événement (`EF-DEP-04`).
 ///
@@ -77,7 +79,7 @@ class _Liste extends ConsumerWidget {
           _AccesReglements(evenementId: evenementId),
           const SizedBox(height: PpSpacing.lg),
           for (final depense in depenses) ...[
-            _CarteDepense(depense: depense),
+            _CarteDepense(evenementId: evenementId, depense: depense),
             const SizedBox(height: PpSpacing.sm),
           ],
         ],
@@ -166,16 +168,24 @@ class _Chiffre extends StatelessWidget {
 }
 
 /// Une dépense : ce qui a été payé, par qui, et pour combien de personnes.
-class _CarteDepense extends StatelessWidget {
-  const _CarteDepense({required this.depense});
+class _CarteDepense extends ConsumerWidget {
+  const _CarteDepense({required this.evenementId, required this.depense});
 
   static final _jour = DateFormat('d MMM', 'fr_FR');
 
+  final String evenementId;
   final Depense depense;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
+    final moi = ref.watch(monMembreProvider(evenementId)).value;
+
+    // Le geste n'est proposé qu'à qui peut l'accomplir. Corriger la dépense d'autrui
+    // change ce qu'il a avancé, donc ce que chacun lui doit ; le proposer pour le voir
+    // refuser vaudrait moins que ne rien proposer.
+    final laMienne = moi != null && depense.payeurMembreId == moi.id;
+    final jePeuxAgir = laMienne || (moi?.role.peutGerer ?? false);
 
     return PpCard(
       child: Row(
@@ -214,9 +224,110 @@ class _CarteDepense extends StatelessWidget {
               fontFeatures: PpTypography.chiffresTabulaires,
             ),
           ),
+          if (jePeuxAgir)
+            _MenuDepense(evenementId: evenementId, depense: depense),
         ],
       ),
     );
+  }
+}
+
+/// Actions d'une dépense : corriger le montant, ou la retirer.
+class _MenuDepense extends ConsumerWidget {
+  const _MenuDepense({required this.evenementId, required this.depense});
+
+  final String evenementId;
+  final Depense depense;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) => PopupMenuButton<String>(
+    key: Key('menu-depense-${depense.id}'),
+    icon: const Icon(Icons.more_vert_rounded, size: 18),
+    onSelected: (choix) => _agir(context, ref, choix),
+    itemBuilder: (_) => [
+      // Une dépense née d'un achat de courses ne se modifie pas ici : son montant est
+      // le prix payé sur la liste, et le corriger ailleurs créerait deux vérités.
+      if (depense.issueDesCourses)
+        const PopupMenuItem(
+          value: 'courses',
+          child: Text('Se corrige sur la liste de courses'),
+        )
+      else ...[
+        const PopupMenuItem(value: 'modifier', child: Text('Modifier')),
+        const PopupMenuItem(value: 'supprimer', child: Text('Supprimer')),
+      ],
+    ],
+  );
+
+  Future<void> _agir(BuildContext context, WidgetRef ref, String choix) async {
+    switch (choix) {
+      case 'modifier':
+        await ouvrirFeuilleDepense(
+          context,
+          evenementId,
+          depense: depense,
+        );
+
+      case 'supprimer':
+        await _supprimer(context, ref);
+
+      case 'courses':
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Corrige le prix payé sur l’article, dans la liste de courses.',
+            ),
+          ),
+        );
+    }
+  }
+
+  Future<void> _supprimer(BuildContext context, WidgetRef ref) async {
+    final confirme = await showDialog<bool>(
+      context: context,
+      builder: (contexte) => AlertDialog(
+        title: Text('Supprimer « ${depense.libelle} » ?'),
+        content: const Text(
+          'Les soldes de chacun seront recalculés en conséquence.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(contexte).pop(false),
+            child: const Text('Annuler'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(contexte).pop(true),
+            child: const Text('Supprimer la dépense'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirme != true) {
+      return;
+    }
+
+    try {
+      await ref
+          .read(depensesApiProvider)
+          .supprimer(evenementId, depense.id);
+    } on ApiException catch (erreur) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(erreur.title)));
+      }
+    } on Exception {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Suppression impossible pour le moment.')),
+        );
+      }
+    } finally {
+      ref
+        ..invalidate(depensesProvider(evenementId))
+        ..invalidate(reglementsProvider(evenementId));
+    }
   }
 }
 

@@ -374,6 +374,84 @@ void main() {
       expect(find.text('Épingler'), findsOneWidget);
     });
 
+    testWidgets('taper @ propose les participants', (tester) async {
+      // Écrire le nom parfaitement est impraticable : une faute de frappe et la
+      // personne n'est pas citée, sans que rien ne le signale.
+      await _monter(tester, const []);
+
+      await tester.enterText(find.byKey(const Key('discussion-saisie')), '@');
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('mention-choix-m2')), findsOneWidget);
+      expect(find.byKey(const Key('mention-choix-m1')), findsOneWidget);
+    });
+
+    testWidgets('la liste se réduit à mesure qu’on tape', (tester) async {
+      await _monter(tester, const []);
+
+      await tester.enterText(find.byKey(const Key('discussion-saisie')), '@Luc');
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('mention-choix-m2')), findsOneWidget);
+      expect(find.byKey(const Key('mention-choix-m1')), findsNothing);
+    });
+
+    testWidgets('la casse et les accents ne font pas échouer la recherche', (
+      tester,
+    ) async {
+      // « @luc » doit trouver Lucas : personne ne pense à la casse en tapant vite.
+      await _monter(tester, const []);
+
+      await tester.enterText(find.byKey(const Key('discussion-saisie')), '@luc');
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('mention-choix-m2')), findsOneWidget);
+    });
+
+    testWidgets('choisir dans la liste complète le nom', (tester) async {
+      final api = await _monter(tester, const []);
+
+      await tester.enterText(
+        find.byKey(const Key('discussion-saisie')),
+        'salut @Luc',
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('mention-choix-m2')));
+      await tester.pumpAndSettle();
+
+      // Le nom est complété et suivi d'une espace : on continue d'écrire sans avoir à
+      // repositionner le curseur.
+      await tester.tap(find.byKey(const Key('discussion-envoyer')));
+      await tester.pumpAndSettle();
+
+      expect(api.appels, contains('envoyer|salut @Lucas|null|m2'));
+    });
+
+    testWidgets('la liste disparaît une fois le nom choisi', (tester) async {
+      await _monter(tester, const []);
+
+      await tester.enterText(find.byKey(const Key('discussion-saisie')), '@Luc');
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('mention-choix-m2')));
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('mention-choix-m2')), findsNothing);
+    });
+
+    testWidgets('une adresse électronique n’ouvre pas la liste', (tester) async {
+      // « ecris-moi@exemple.fr » contient un @ collé à du texte : ce n'est pas une
+      // tentative de citer quelqu'un.
+      await _monter(tester, const []);
+
+      await tester.enterText(
+        find.byKey(const Key('discussion-saisie')),
+        'ecris-moi@exemple.fr',
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('mention-choix-m2')), findsNothing);
+    });
+
     testWidgets('offre une reprise après une erreur de chargement', (
       tester,
     ) async {

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../../core/models/membre.dart';
 import '../../core/models/message.dart';
 import '../../core/network/api_exception.dart';
 import '../../core/providers.dart';
@@ -140,6 +141,7 @@ class _DiscussionPageState extends ConsumerState<DiscussionPage> {
         _Saisie(
           controleur: _saisie,
           enCours: _envoiEnCours,
+          membres: ref.watch(membresProvider(widget.evenementId)).value ?? [],
           onEnvoyer: _envoyer,
         ),
       ],
@@ -565,22 +567,206 @@ class _RappelCitation extends StatelessWidget {
   }
 }
 
-/// Barre de saisie.
-class _Saisie extends StatelessWidget {
+/// Barre de saisie, avec le choix des personnes à citer.
+class _Saisie extends StatefulWidget {
   const _Saisie({
     required this.controleur,
     required this.enCours,
+    required this.membres,
     required this.onEnvoyer,
   });
 
   final TextEditingController controleur;
   final bool enCours;
+  final List<Membre> membres;
   final VoidCallback onEnvoyer;
+
+  @override
+  State<_Saisie> createState() => _SaisieState();
+}
+
+class _SaisieState extends State<_Saisie> {
+  /// Nom partiel en cours de frappe après un « @ ». Nul quand on n'est pas en train
+  /// de citer quelqu'un.
+  String? _recherche;
+
+  @override
+  void initState() {
+    super.initState();
+    widget.controleur.addListener(_surFrappe);
+  }
+
+  @override
+  void dispose() {
+    widget.controleur.removeListener(_surFrappe);
+    super.dispose();
+  }
+
+  /// Repère une citation en cours de frappe.
+  ///
+  /// Le « @ » doit ouvrir un mot : « ecris-moi@exemple.fr » n'est pas une tentative de
+  /// citer quelqu'un, et proposer la liste là serait une gêne à chaque adresse tapée.
+  void _surFrappe() {
+    final texte = widget.controleur.text;
+    final curseur = widget.controleur.selection.baseOffset;
+    final position = curseur < 0 || curseur > texte.length ? texte.length : curseur;
+    final avant = texte.substring(0, position);
+
+    final arobase = avant.lastIndexOf('@');
+
+    String? recherche;
+
+    if (arobase >= 0) {
+      final debutDeMot = arobase == 0 || avant[arobase - 1] == ' ' || avant[arobase - 1] == '\n';
+      final fragment = avant.substring(arobase + 1);
+
+      // Un nom ne contient pas d'espace ici : passée la première, la citation est
+      // terminée et la liste n'a plus de raison de rester ouverte.
+      if (debutDeMot && !fragment.contains(' ') && !fragment.contains('\n')) {
+        recherche = fragment;
+      }
+    }
+
+    if (recherche != _recherche) {
+      setState(() => _recherche = recherche);
+    }
+  }
+
+  /// Membres correspondant à la recherche, accents et casse ignorés.
+  List<Membre> get _propositions {
+    final recherche = _recherche;
+
+    if (recherche == null) {
+      return const [];
+    }
+
+    final motif = _sansAccent(recherche);
+
+    return widget.membres
+        .where((m) => _sansAccent(m.nomAffiche).contains(motif))
+        .toList();
+  }
+
+  /// Remplace le nom partiel par le nom complet, suivi d'une espace.
+  void _choisir(Membre membre) {
+    final texte = widget.controleur.text;
+    final curseur = widget.controleur.selection.baseOffset;
+    final position = curseur < 0 || curseur > texte.length ? texte.length : curseur;
+    final avant = texte.substring(0, position);
+    final arobase = avant.lastIndexOf('@');
+
+    if (arobase < 0) {
+      return;
+    }
+
+    final complet = '@${membre.nomAffiche} ';
+    final nouveau = texte.replaceRange(arobase, position, complet);
+
+    widget.controleur
+      ..text = nouveau
+      // Le curseur se replace après l'espace : on continue d'écrire sans avoir à le
+      // déplacer soi-même.
+      ..selection = TextSelection.collapsed(offset: arobase + complet.length);
+
+    setState(() => _recherche = null);
+  }
+
+  /// Comparaison indulgente : personne ne pense à la casse ni aux accents en tapant
+  /// vite, et « @luc » doit trouver Lucas.
+  static String _sansAccent(String valeur) {
+    const accents = 'àáâäãåçèéêëìíîïñòóôöõùúûüýÿ';
+    const nus = 'aaaaaaceeeeiiiinooooouuuuyy';
+
+    var propre = valeur.toLowerCase();
+
+    for (var i = 0; i < accents.length; i++) {
+      propre = propre.replaceAll(accents[i], nus[i]);
+    }
+
+    return propre;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final propositions = _propositions;
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        if (propositions.isNotEmpty)
+          _ListeMentions(membres: propositions, onChoisir: _choisir),
+        _BarreSaisie(
+          controleur: widget.controleur,
+          enCours: widget.enCours,
+          onEnvoyer: widget.onEnvoyer,
+          theme: theme,
+        ),
+      ],
+    );
+  }
+}
+
+/// Participants proposés pendant qu'on tape une citation.
+class _ListeMentions extends StatelessWidget {
+  const _ListeMentions({required this.membres, required this.onChoisir});
+
+  final List<Membre> membres;
+  final void Function(Membre) onChoisir;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
+    return Container(
+      constraints: const BoxConstraints(maxHeight: 220),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surface,
+        border: Border(top: BorderSide(color: theme.colorScheme.outline)),
+      ),
+      child: ListView(
+        shrinkWrap: true,
+        padding: const EdgeInsets.symmetric(vertical: PpSpacing.xs),
+        children: [
+          Padding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: PpSpacing.lg,
+              vertical: PpSpacing.xs,
+            ),
+            child: Text(
+              'PARTICIPANTS',
+              style: theme.textTheme.labelSmall?.copyWith(letterSpacing: 1.2),
+            ),
+          ),
+          for (final membre in membres)
+            ListTile(
+              key: Key('mention-choix-${membre.id}'),
+              dense: true,
+              leading: PpAvatar(nom: membre.nomAffiche, taille: 28),
+              title: Text(membre.nomAffiche),
+              onTap: () => onChoisir(membre),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _BarreSaisie extends StatelessWidget {
+  const _BarreSaisie({
+    required this.controleur,
+    required this.enCours,
+    required this.onEnvoyer,
+    required this.theme,
+  });
+
+  final TextEditingController controleur;
+  final bool enCours;
+  final VoidCallback onEnvoyer;
+  final ThemeData theme;
+
+  @override
+  Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(PpSpacing.sm),
       decoration: BoxDecoration(

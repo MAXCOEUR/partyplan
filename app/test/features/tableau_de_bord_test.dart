@@ -19,6 +19,64 @@ void main() {
       expect(find.text('12 rue des Lilas, Lyon'), findsOneWidget);
     });
 
+    testWidgets('nomme chaque participant et sa réponse', (tester) async {
+      // « 2 présents sur 2 invités » ne dit pas qui vient. C'est la question la plus
+      // posée en préparant une soirée, et y répondre demandait d'ouvrir un autre
+      // écran.
+      await _monter(
+        tester,
+        membres: [
+          membre(id: 'm1', nom: 'Moi', statut: StatutPresence.present, cestMoi: true),
+          membre(id: 'm2', nom: 'Lucas', statut: StatutPresence.absent),
+          membre(id: 'm3', nom: 'Léa', statut: StatutPresence.peutEtre),
+          membre(id: 'm4', nom: 'Emma', statut: StatutPresence.inconnu),
+        ],
+      );
+
+      expect(find.text('Lucas'), findsWidgets);
+      expect(find.text('Léa'), findsWidgets);
+      expect(find.text('Emma'), findsWidgets);
+    });
+
+    testWidgets('les présents viennent avant ceux qui n’ont pas répondu', (
+      tester,
+    ) async {
+      // On cherche d'abord qui vient. Mêler les sans-réponse aux présents obligerait
+      // à lire chaque ligne pour faire le compte.
+      await _monter(
+        tester,
+        membres: [
+          membre(id: 'm4', nom: 'Emma', statut: StatutPresence.inconnu),
+          membre(id: 'm1', nom: 'Moi', statut: StatutPresence.present, cestMoi: true),
+        ],
+      );
+
+      final present = tester.getTopLeft(find.text('Moi').first).dy;
+      final sansReponse = tester.getTopLeft(find.text('Emma').first).dy;
+
+      expect(present, lessThan(sansReponse));
+    });
+
+    testWidgets('un accompagnant est annoncé sur la ligne du participant', (
+      tester,
+    ) async {
+      // RG-PRES-04 : les têtes comptent pour les courses. Une ligne qui n'annonce pas
+      // les accompagnants fait acheter pour trop peu de monde.
+      await _monter(
+        tester,
+        membres: [
+          membre(
+            id: 'm1',
+            nom: 'Lucas',
+            statut: StatutPresence.present,
+            accompagnants: 2,
+          ),
+        ],
+      );
+
+      expect(find.textContaining('+2'), findsOneWidget);
+    });
+
     testWidgets(
       'RG-PRES-01 : pose la question tant qu’il n’y a pas de réponse',
       (tester) async {

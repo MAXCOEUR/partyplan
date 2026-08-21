@@ -417,6 +417,59 @@ void main() {
       expect(api.appels, contains('supprimer:a'));
     });
 
+    testWidgets('un prix payé se corrige après coup', (tester) async {
+      // Le ticket ne correspond jamais tout à fait à ce qu'on avait annoncé, et la
+      // dépense engendrée porte ce montant : sans correction, les comptes restent faux.
+      await _monter(
+        tester,
+        avancement: const AvancementCourses(total: 1, pris: 1, achetes: 1),
+        articles: [
+          _article(
+            id: 'a',
+            prisParMoi: true,
+            nomAttributaire: 'Moi',
+            estAchete: true,
+            quantiteObtenue: 24,
+            quantiteRestante: 0,
+            prixPaye: 28.40,
+          ),
+        ],
+      );
+
+      expect(find.text('Corriger le prix'), findsOneWidget);
+
+      await tester.tap(find.text('Corriger le prix'));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(AchatFeuille), findsOneWidget);
+    });
+
+    testWidgets('la correction du prix part du montant déjà payé', (
+      tester,
+    ) async {
+      await _monter(
+        tester,
+        avancement: const AvancementCourses(total: 1, pris: 1, achetes: 1),
+        articles: [
+          _article(
+            id: 'a',
+            prisParMoi: true,
+            nomAttributaire: 'Moi',
+            estAchete: true,
+            quantiteObtenue: 24,
+            quantiteRestante: 0,
+            prixPaye: 28.40,
+          ),
+        ],
+      );
+
+      await tester.tap(find.text('Corriger le prix'));
+      await tester.pumpAndSettle();
+
+      // Le champ est prérempli : on corrige quelques centimes, on ne ressaisit pas.
+      expect(find.text('28,40'), findsOneWidget);
+    });
+
     testWidgets('offre une reprise après une erreur de chargement', (
       tester,
     ) async {

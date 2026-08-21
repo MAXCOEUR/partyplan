@@ -23,3 +23,10 @@ double? nombreDepuisTexte(String? texte) {
 String nombreVersTexte(double valeur) => valeur == valeur.roundToDouble()
     ? valeur.toStringAsFixed(0)
     : valeur.toString().replaceAll('.', ',');
+
+/// Rend un montant pour l'affichage dans un champ : « 28,40 », jamais « 28,4 ».
+///
+/// Distinct de [nombreVersTexte], qui sert aux quantités : « 24 bouteilles » ne
+/// s'écrit pas « 24,00 », mais un prix amputé de son dernier zéro paraît faux.
+String montantVersTexte(double valeur) =>
+    valeur.toStringAsFixed(2).replaceAll('.', ',');

@@ -59,8 +59,7 @@ class _Liste extends ConsumerWidget {
     final groupes = liste.parCategorie;
 
     return RefreshIndicator(
-      onRefresh: () async =>
-          ref.invalidate(listeCoursesProvider(evenementId)),
+      onRefresh: () async => ref.invalidate(listeCoursesProvider(evenementId)),
       child: ListView(
         padding: const EdgeInsets.all(PpSpacing.lg),
         children: [
@@ -228,7 +227,9 @@ class _CarteArticleState extends ConsumerState<_CarteArticle> {
     } on Exception {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Suppression impossible pour le moment.')),
+          const SnackBar(
+            content: Text('Suppression impossible pour le moment.'),
+          ),
         );
       }
     } finally {
@@ -244,87 +245,87 @@ class _CarteArticleState extends ConsumerState<_CarteArticle> {
     final article = _article;
 
     return PpCard(
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    if (article.estAchete) ...[
-                      const Icon(
-                        Icons.check_circle_rounded,
-                        size: 18,
-                        color: PpColors.vert,
-                      ),
-                      const SizedBox(width: PpSpacing.xs),
-                    ],
-                    Flexible(
-                      child: Text(
-                        article.nom,
-                        style: theme.textTheme.titleSmall,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: PpSpacing.xs),
-                Text(
-                  article.quantiteLisible,
-                  style: theme.textTheme.bodySmall,
-                ),
-                if (article.achatPartiel)
-                  Padding(
-                    padding: const EdgeInsets.only(top: PpSpacing.xs),
-                    child: Text(
-                      'Il reste ${_nombre(article.quantiteRestante)} à prendre',
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: PpColors.orange,
-                      ),
-                    ),
-                  ),
-                if (article.note != null && article.note!.isNotEmpty)
-                  Padding(
-                    padding: const EdgeInsets.only(top: PpSpacing.xs),
-                    child: Text(
-                      article.note!,
-                      style: theme.textTheme.bodySmall,
-                    ),
-                  ),
-                if (article.prixPaye != null)
-                  Padding(
-                    padding: const EdgeInsets.only(top: PpSpacing.xs),
-                    child: Row(
+                    Row(
                       children: [
-                        Text('Payé ', style: theme.textTheme.bodySmall),
-                        PpMoney(
-                          article.prixPaye!,
-                          style: theme.textTheme.bodySmall,
+                        if (article.estAchete) ...[
+                          const Icon(
+                            Icons.check_circle_rounded,
+                            size: 18,
+                            color: PpColors.vert,
+                          ),
+                          const SizedBox(width: PpSpacing.xs),
+                        ],
+                        Flexible(
+                          child: Text(
+                            article.nom,
+                            style: theme.textTheme.titleSmall,
+                            overflow: TextOverflow.ellipsis,
+                          ),
                         ),
                       ],
                     ),
-                  )
-                // Le prix estimé est annoncé comme tel et jamais additionné : il
-                // n'entre dans aucun calcul de répartition (`RG-CRS-03`).
-                else if (article.prixEstime != null)
-                  Padding(
-                    padding: const EdgeInsets.only(top: PpSpacing.xs),
-                    child: Text(
-                      'Prix estimé ${_euros(article.prixEstime!)}',
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: theme.colorScheme.onSurfaceVariant,
-                      ),
+                    const SizedBox(height: PpSpacing.xs),
+                    Text(
+                      article.quantiteLisible,
+                      style: theme.textTheme.bodySmall,
                     ),
-                  ),
-              ],
-            ),
-          ),
-          const SizedBox(width: PpSpacing.sm),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
+                    if (article.achatPartiel)
+                      Padding(
+                        padding: const EdgeInsets.only(top: PpSpacing.xs),
+                        child: Text(
+                          'Il reste ${_nombre(article.quantiteRestante)} à prendre',
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: PpColors.orange,
+                          ),
+                        ),
+                      ),
+                    if (article.note != null && article.note!.isNotEmpty)
+                      Padding(
+                        padding: const EdgeInsets.only(top: PpSpacing.xs),
+                        child: Text(
+                          article.note!,
+                          style: theme.textTheme.bodySmall,
+                        ),
+                      ),
+                    if (article.prixPaye != null)
+                      Padding(
+                        padding: const EdgeInsets.only(top: PpSpacing.xs),
+                        child: Row(
+                          children: [
+                            Text('Payé ', style: theme.textTheme.bodySmall),
+                            PpMoney(
+                              article.prixPaye!,
+                              style: theme.textTheme.bodySmall,
+                            ),
+                          ],
+                        ),
+                      )
+                    // Le prix estimé est annoncé comme tel et jamais additionné : il
+                    // n'entre dans aucun calcul de répartition (`RG-CRS-03`).
+                    else if (article.prixEstime != null)
+                      Padding(
+                        padding: const EdgeInsets.only(top: PpSpacing.xs),
+                        child: Text(
+                          'Prix estimé ${_euros(article.prixEstime!)}',
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: theme.colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: PpSpacing.sm),
               PpClaimChip(
                 libelleLibre: 'À prendre',
                 nomAttributaire: article.nomAttributaire,
@@ -333,36 +334,46 @@ class _CarteArticleState extends ConsumerState<_CarteArticle> {
                     ? null
                     : _basculerAttribution,
               ),
-              // Déclarer l'achat n'est proposé qu'à celui qui s'en occupe : le faire
-              // pour autrui créerait une dépense à son nom.
-              if (article.prisParMoi && !article.estAchete)
-                TextButton.icon(
-                  onPressed: () => ouvrirFeuilleAchat(
+              PopupMenuButton<String>(
+                icon: const Icon(Icons.more_vert_rounded),
+                onSelected: (choix) => switch (choix) {
+                  'modifier' => ouvrirFeuilleArticle(
                     context,
                     widget.evenementId,
-                    article,
+                    article: article,
                   ),
-                  icon: const Icon(Icons.shopping_bag_outlined, size: 18),
-                  label: const Text('Acheté'),
-                ),
-            ],
-          ),
-          PopupMenuButton<String>(
-            icon: const Icon(Icons.more_vert_rounded),
-            onSelected: (choix) => switch (choix) {
-              'modifier' => ouvrirFeuilleArticle(
-                context,
-                widget.evenementId,
-                article: article,
+                  'supprimer' => _supprimer(),
+                  _ => null,
+                },
+                itemBuilder: (_) => const [
+                  PopupMenuItem(value: 'modifier', child: Text('Modifier')),
+                  PopupMenuItem(value: 'supprimer', child: Text('Supprimer')),
+                ],
               ),
-              'supprimer' => _supprimer(),
-              _ => null,
-            },
-            itemBuilder: (_) => const [
-              PopupMenuItem(value: 'modifier', child: Text('Modifier')),
-              PopupMenuItem(value: 'supprimer', child: Text('Supprimer')),
             ],
           ),
+          // Déclarer l'achat n'est proposé qu'à celui qui s'en occupe : le faire pour
+          // autrui créerait une dépense à son nom. Une fois l'achat déclaré, le même
+          // geste sert à corriger le prix — la dépense engendrée porte ce montant, et
+          // sans correction les comptes restent faux.
+          //
+          // Sur sa propre ligne, en pleine largeur : à l'étroit, un bouton glissé
+          // entre la pastille d'attribution et le menu débordait de la carte.
+          if (article.prisParMoi)
+            Align(
+              alignment: Alignment.centerRight,
+              child: TextButton.icon(
+                onPressed: () =>
+                    ouvrirFeuilleAchat(context, widget.evenementId, article),
+                icon: Icon(
+                  article.estAchete
+                      ? Icons.edit_outlined
+                      : Icons.shopping_bag_outlined,
+                  size: 18,
+                ),
+                label: Text(article.estAchete ? 'Corriger le prix' : 'Acheté'),
+              ),
+            ),
         ],
       ),
     );

@@ -19,9 +19,15 @@ import '../courses/nombre_saisi.dart';
 /// est présélectionné : demander à chaque saisie qui participe alourdirait le geste le
 /// plus courant.
 class DepenseFeuille extends ConsumerStatefulWidget {
-  const DepenseFeuille({required this.evenementId, super.key});
+  const DepenseFeuille({required this.evenementId, this.depense, super.key});
 
   final String evenementId;
+
+  /// Dépense à corriger. Nulle pour une saisie neuve.
+  ///
+  /// Une somme se saisit vite et se trompe souvent : sans correction, il faudrait
+  /// supprimer puis ressaisir, en perdant l'assiette au passage.
+  final Depense? depense;
 
   @override
   ConsumerState<DepenseFeuille> createState() => _DepenseFeuilleState();
@@ -43,6 +49,23 @@ class _DepenseFeuilleState extends ConsumerState<DepenseFeuille> {
 
   bool _enCours = false;
   String? _erreur;
+
+  bool get _correction => widget.depense != null;
+
+  @override
+  void initState() {
+    super.initState();
+
+    final depense = widget.depense;
+
+    if (depense != null) {
+      _libelle.text = depense.libelle;
+      _montant.text = montantVersTexte(depense.montant);
+      // L'assiette d'origine n'est pas rejouable depuis la liste : la correction repart
+      // du partage entre présents, et le détail se réajuste si besoin.
+      _payeur = depense.payeurMembreId;
+    }
+  }
 
   @override
   void dispose() {
@@ -100,20 +123,37 @@ class _DepenseFeuilleState extends ConsumerState<DepenseFeuille> {
       _erreur = null;
     });
 
+    final parts = _mode == ModeAssiette.tousLesPresents
+        ? null
+        : [
+            for (final entree in _parts.entries)
+              PartDemandee(entree.key, entree.value),
+          ];
+
     try {
-      await ref.read(depensesApiProvider).creer(
-        widget.evenementId,
-        libelle: _libelle.text.trim(),
-        montant: montant,
-        mode: _mode,
-        payeurMembreId: _payeur,
-        parts: _mode == ModeAssiette.tousLesPresents
-            ? null
-            : [
-                for (final entree in _parts.entries)
-                  PartDemandee(entree.key, entree.value),
-              ],
-      );
+      final api = ref.read(depensesApiProvider);
+      final depense = widget.depense;
+
+      if (depense == null) {
+        await api.creer(
+          widget.evenementId,
+          libelle: _libelle.text.trim(),
+          montant: montant,
+          mode: _mode,
+          payeurMembreId: _payeur,
+          parts: parts,
+        );
+      } else {
+        await api.modifier(
+          widget.evenementId,
+          depense.id,
+          libelle: _libelle.text.trim(),
+          montant: montant,
+          mode: _mode,
+          payeurMembreId: _payeur,
+          parts: parts,
+        );
+      }
 
       ref.invalidate(depensesProvider(widget.evenementId));
       // Les soldes découlent des dépenses : les laisser en cache afficherait des
@@ -147,7 +187,10 @@ class _DepenseFeuilleState extends ConsumerState<DepenseFeuille> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text('Nouvelle dépense', style: theme.textTheme.titleMedium),
+            Text(
+              _correction ? 'Corriger la dépense' : 'Nouvelle dépense',
+              style: theme.textTheme.titleMedium,
+            ),
             const SizedBox(height: PpSpacing.lg),
             if (_erreur != null) ...[
               PpFormError(_erreur!),
@@ -221,10 +264,18 @@ class _DepenseFeuilleState extends ConsumerState<DepenseFeuille> {
             ],
             const SizedBox(height: PpSpacing.xl),
             PpPrimaryButton(
-              label: 'Ajouter la dépense',
+              label: _correction ? 'Enregistrer' : 'Ajouter la dépense',
               enCours: _enCours,
               onPressed: _enregistrer,
             ),
+            if (_correction) ...[
+              const SizedBox(height: PpSpacing.sm),
+              Text(
+                'La version précédente est conservée : un montant qui change sans '
+                'trace rendrait un désaccord insoluble.',
+                style: theme.textTheme.bodySmall,
+              ),
+            ],
           ],
         ),
       ),
@@ -366,16 +417,17 @@ class _ChoixParticipants extends StatelessWidget {
   }
 }
 
-/// Ouvre la feuille de saisie d'une dépense.
-Future<void> ouvrirFeuilleDepense(BuildContext context, String evenementId) =>
-    showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      useSafeArea: true,
-      builder: (contexte) => Padding(
-        padding: EdgeInsets.only(
-          bottom: MediaQuery.viewInsetsOf(contexte).bottom,
-        ),
-        child: DepenseFeuille(evenementId: evenementId),
-      ),
-    );
+/// Ouvre la feuille de saisie, ou de correction si [depense] est fournie.
+Future<void> ouvrirFeuilleDepense(
+  BuildContext context,
+  String evenementId, {
+  Depense? depense,
+}) => showModalBottomSheet<void>(
+  context: context,
+  isScrollControlled: true,
+  useSafeArea: true,
+  builder: (contexte) => Padding(
+    padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(contexte).bottom),
+    child: DepenseFeuille(evenementId: evenementId, depense: depense),
+  ),
+);

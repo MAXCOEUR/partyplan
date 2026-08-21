@@ -114,7 +114,17 @@ class PpPrimaryButton extends StatelessWidget {
                   Icon(icone, size: 18),
                   const SizedBox(width: PpSpacing.sm),
                 ],
-                Text(label),
+                // Flexible et non Text nu : un libellé long — « Enregistrer la
+                // correction » — débordait du bouton sur un téléphone étroit, et
+                // corriger cela dans chaque écran aurait fini par être oublié quelque
+                // part.
+                Flexible(
+                  child: Text(
+                    label,
+                    textAlign: TextAlign.center,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
               ],
             ),
     ),

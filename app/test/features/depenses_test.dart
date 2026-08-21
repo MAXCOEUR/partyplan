@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:partyplan/core/models/depense.dart';
+import 'package:partyplan/core/models/membre.dart';
 import 'package:partyplan/core/providers.dart';
 import 'package:partyplan/features/depenses/depenses_page.dart';
 
@@ -16,12 +17,13 @@ Depense _depense({
   String payeur = 'Lucas',
   int participants = 4,
   bool issueDesCourses = false,
+  bool leMien = false,
   DateTime? date,
 }) => Depense(
   id: id,
   libelle: libelle,
   montant: montant,
-  payeurMembreId: 'm-$id',
+  payeurMembreId: leMien ? 'moi' : 'm-$id',
   payeurNom: payeur,
   date: date ?? DateTime(2026, 8, 20, 18),
   nombreParticipants: participants,
@@ -33,6 +35,7 @@ Future<void> _monter(
   required double total,
   required double maPart,
   required List<Depense> depenses,
+  bool jeGere = true,
 }) async {
   final conteneur = ProviderContainer(
     overrides: [
@@ -40,6 +43,21 @@ Future<void> _monter(
         (ref) async =>
             PageDepenses(total: total, maPart: maPart, depenses: depenses),
       ),
+      monMembreProvider(_evenement).overrideWith(
+        (ref) async => Membre(
+          id: 'moi',
+          nomAffiche: 'Moi',
+          avatarUrl: null,
+          statut: StatutPresence.present,
+          heureArrivee: null,
+          heureDepart: null,
+          accompagnants: 0,
+          role: jeGere ? RoleMembre.proprietaire : RoleMembre.membre,
+          aUnCompte: true,
+          cestMoi: true,
+        ),
+      ),
+      membresProvider(_evenement).overrideWith((ref) async => []),
     ],
   );
   addTearDown(conteneur.dispose);
@@ -134,6 +152,78 @@ void main() {
       );
 
       expect(find.text('Qui rend quoi'), findsOneWidget);
+    });
+
+    testWidgets('la dépense que j’ai payée s’ouvre pour correction', (
+      tester,
+    ) async {
+      // Une somme se saisit vite et se trompe souvent : ne pas pouvoir la corriger
+      // oblige à supprimer puis ressaisir, en perdant l'assiette.
+      await _monter(
+        tester,
+        total: 24,
+        maPart: 12,
+        depenses: [_depense(id: 'a', leMien: true)],
+      );
+
+      await tester.tap(find.byKey(const Key('menu-depense-a')));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Modifier'), findsOneWidget);
+      expect(find.text('Supprimer'), findsOneWidget);
+    });
+
+    testWidgets('la dépense d’un autre n’offre rien à un simple membre', (
+      tester,
+    ) async {
+      // Corriger la dépense d'autrui change ce qu'il a avancé, donc ce que chacun lui
+      // doit. Proposer le geste pour le voir refuser vaudrait moins que ne rien
+      // proposer.
+      await _monter(
+        tester,
+        total: 24,
+        maPart: 12,
+        depenses: [_depense(id: 'a', leMien: false)],
+        jeGere: false,
+      );
+
+      expect(find.byKey(const Key('menu-depense-a')), findsNothing);
+    });
+
+    testWidgets('l’organisateur corrige la dépense de n’importe qui', (
+      tester,
+    ) async {
+      await _monter(
+        tester,
+        total: 24,
+        maPart: 12,
+        depenses: [_depense(id: 'a', leMien: false)],
+        jeGere: true,
+      );
+
+      await tester.tap(find.byKey(const Key('menu-depense-a')));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Modifier'), findsOneWidget);
+    });
+
+    testWidgets('une dépense née des courses renvoie vers l’article', (
+      tester,
+    ) async {
+      // Le serveur refuse de la modifier directement : son montant vient du prix payé
+      // sur la liste de courses, et le corriger ailleurs créerait deux vérités.
+      await _monter(
+        tester,
+        total: 28.4,
+        maPart: 28.4,
+        depenses: [_depense(id: 'a', leMien: true, issueDesCourses: true)],
+      );
+
+      await tester.tap(find.byKey(const Key('menu-depense-a')));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Modifier'), findsNothing);
+      expect(find.textContaining('liste de courses'), findsOneWidget);
     });
 
     testWidgets('offre une reprise après une erreur de chargement', (

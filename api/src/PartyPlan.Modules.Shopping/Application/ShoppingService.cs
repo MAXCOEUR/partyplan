@@ -337,6 +337,17 @@ public sealed class ShoppingService(
 
         var article = contexte.Article!;
 
+        // Déclarer l'achat d'autrui créerait une dépense à son nom, donc une créance
+        // qu'il n'a jamais avancée. Une personne qui gère l'événement peut le faire à sa
+        // place — la dépense reste alors au nom de celui qui s'en occupait, puisque
+        // c'est lui qui a sorti l'argent.
+        if (article.AssignedMemberId is { } attributaire
+            && attributaire != contexte.MoiId
+            && !contexte.JeGere)
+        {
+            return NotClaimedByMe;
+        }
+
         // Acheter vaut s'attribuer : personne ne paie un article qu'il n'a pas pris.
         article.AssignedMemberId ??= contexte.MoiId;
         article.AssignedAt ??= clock.UtcNow;
@@ -372,15 +383,21 @@ public sealed class ShoppingService(
 
     // --------------------------------------------------------------- outils ----
 
-    private async Task<(ShoppingItem? Article, Guid MoiId, DomainError? Erreur)> ContexteAsync(
-        Guid eventId,
-        Guid itemId,
-        CancellationToken cancellationToken)
+    /// <summary>
+    /// Article visé, appelant, et droit de gestion. <c>JeGere</c> distingue une
+    /// personne qui arbitre l'événement d'un simple participant : elle seule agit sur
+    /// ce qui appartient à autrui.
+    /// </summary>
+    private async Task<(ShoppingItem? Article, Guid MoiId, bool JeGere, DomainError? Erreur)>
+        ContexteAsync(
+            Guid eventId,
+            Guid itemId,
+            CancellationToken cancellationToken)
     {
         var moi = await membership.FindCurrentAsync(eventId, cancellationToken).ConfigureAwait(false);
         if (moi is null)
         {
-            return (null, Guid.Empty, EventNotFound);
+            return (null, Guid.Empty, false, EventNotFound);
         }
 
         var article = await db.ShoppingItems
@@ -388,8 +405,8 @@ public sealed class ShoppingService(
             .ConfigureAwait(false);
 
         return article is null
-            ? (null, moi.MemberId, NotFound)
-            : (article, moi.MemberId, null);
+            ? (null, moi.MemberId, moi.CanManage, NotFound)
+            : (article, moi.MemberId, moi.CanManage, null);
     }
 
     private async Task<Result<ShoppingItemView>> RelireAsync(

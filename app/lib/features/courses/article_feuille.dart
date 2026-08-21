@@ -57,7 +57,7 @@ class _ArticleFeuilleState extends ConsumerState<ArticleFeuille> {
     _prix = TextEditingController(
       text: article?.prixEstime == null
           ? ''
-          : nombreVersTexte(article!.prixEstime!),
+          : montantVersTexte(article!.prixEstime!),
     );
     _note = TextEditingController(text: article?.note ?? '');
 

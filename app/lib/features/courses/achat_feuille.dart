@@ -40,11 +40,20 @@ class _AchatFeuilleState extends ConsumerState<AchatFeuille> {
   void initState() {
     super.initState();
 
-    // Préremplie avec ce qui était demandé : le cas courant est d'avoir tout trouvé,
-    // et la saisie ne doit servir qu'à corriger.
+    // Préremplie avec ce qui était demandé, ou avec ce qui a réellement été obtenu si
+    // l'achat est déjà déclaré : le cas courant est d'avoir tout trouvé, et la saisie
+    // ne doit servir qu'à corriger.
     _quantite = TextEditingController(
-      text: nombreVersTexte(widget.article.quantite),
+      text: nombreVersTexte(
+        widget.article.quantiteObtenue ?? widget.article.quantite,
+      ),
     );
+
+    // Le ticket ne correspond jamais tout à fait à ce qu'on avait annoncé : corriger
+    // quelques centimes ne doit pas obliger à ressaisir le montant.
+    if (widget.article.prixPaye != null) {
+      _prix.text = montantVersTexte(widget.article.prixPaye!);
+    }
 
     _prix.addListener(_rafraichirAnnonce);
   }
@@ -110,7 +119,12 @@ class _AchatFeuilleState extends ConsumerState<AchatFeuille> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text(widget.article.nom, style: theme.textTheme.titleMedium),
+            Text(
+              widget.article.estAchete
+                  ? 'Corriger « ${widget.article.nom} »'
+                  : widget.article.nom,
+              style: theme.textTheme.titleMedium,
+            ),
             const SizedBox(height: PpSpacing.xs),
             Text(
               'Demandé : ${widget.article.quantiteLisible}',
@@ -142,7 +156,9 @@ class _AchatFeuilleState extends ConsumerState<AchatFeuille> {
               keyboardType: const TextInputType.numberWithOptions(
                 decimal: true,
               ),
-              aide: 'Laisse vide si tu ne veux rien te faire rembourser.',
+              aide: widget.article.prixPaye == null
+                  ? 'Laisse vide si tu ne veux rien te faire rembourser.'
+                  : 'Vider le champ retire la dépense engendrée.',
               validator: _nombrePositif,
             ),
             if (montant != null && montant > 0) ...[
@@ -151,7 +167,9 @@ class _AchatFeuilleState extends ConsumerState<AchatFeuille> {
             ],
             const SizedBox(height: PpSpacing.xl),
             PpPrimaryButton(
-              label: 'C’est acheté',
+              label: widget.article.estAchete
+                  ? 'Enregistrer la correction'
+                  : 'C’est acheté',
               enCours: _enCours,
               onPressed: _valider,
             ),
