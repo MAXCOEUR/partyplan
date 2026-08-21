@@ -117,6 +117,21 @@ abstract final class PpElevation {
   ];
 }
 
+/// Seuils de mise en page.
+///
+/// PartyPlan est d'abord une application de téléphone, mais elle est aussi servie sur
+/// navigateur : sans ces seuils, la même interface s'étire sur toute la largeur d'un
+/// écran de bureau, le libellé d'un article se retrouvant à un mètre de son bouton.
+abstract final class PpBreakpoints {
+  /// Au-delà, la navigation passe sur le côté et le contenu se pose dans un rail.
+  /// En dessous, une navigation latérale mangerait la moitié de l'écran.
+  static const large = 840.0;
+
+  /// Largeur maximale d'une colonne de contenu. Choisie pour qu'une carte reste
+  /// lisible d'un seul regard : au-delà, l'œil doit balayer.
+  static const railContenu = 600.0;
+}
+
 /// Cible tactile minimale exigée par NF-A11Y-02.
 abstract final class PpA11y {
   static const cibleMinimale = 44.0;

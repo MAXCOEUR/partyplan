@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/dates.dart';
 import '../../../core/models/evenement.dart';
 import '../../../design/components/pp_card.dart';
 import '../../../design/tokens.dart';
@@ -20,14 +21,7 @@ class SectionCompteARebours extends StatelessWidget {
       return const SizedBox.shrink();
     }
 
-    // Différence en jours calendaires, et non en tranches de 24 heures : « demain »
-    // doit s'afficher pour une soirée du lendemain, même s'il ne reste que huit heures.
-    final jours =
-        DateTime(resume.debut.year, resume.debut.month, resume.debut.day)
-            .difference(
-              DateTime(maintenant.year, maintenant.month, maintenant.day),
-            )
-            .inDays;
+    final jours = joursCalendairesJusqua(resume.debut, depuis: maintenant);
 
     return Padding(
       padding: const EdgeInsets.only(top: PpSpacing.md),

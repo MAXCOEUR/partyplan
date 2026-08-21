@@ -4,11 +4,15 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../app/router.dart';
+import '../../core/dates.dart';
 import '../../core/models/evenement.dart';
 import '../../core/models/membre.dart';
 import '../../core/providers.dart';
 import '../../design/components/pp_bandeau_hors_ligne.dart';
+import '../../design/components/pp_barre_app.dart';
 import '../../design/components/pp_card.dart';
+import '../../design/components/pp_date_pastille.dart';
+import '../../design/components/pp_rail.dart';
 import '../../design/components/pp_states.dart';
 import '../../design/components/pp_status_chip.dart';
 import '../../design/tokens.dart';
@@ -26,17 +30,19 @@ class AccueilPage extends ConsumerWidget {
     final evenements = ref.watch(mesEvenementsProvider);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text(PpMarque.nom),
+      appBar: PpBarreApp(
+        titre: const Text(PpMarque.nom),
         actions: [
           IconButton(
             onPressed: () => context.push(PpRoutes.profilEdition),
             icon: const Icon(Icons.person_outline_rounded),
             tooltip: l10n.accueilMonProfil,
           ),
-          const SizedBox(width: PpSpacing.sm),
         ],
       ),
+      // Le bouton suit le rail : collé à l'angle de l'écran, il se retrouverait loin
+      // de la liste sur laquelle il agit.
+      floatingActionButtonLocation: const PpFabDansLeRail(),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => context.push(PpRoutes.creationEvenement),
         icon: const Icon(Icons.add_rounded),
@@ -48,15 +54,20 @@ class AccueilPage extends ConsumerWidget {
             onReessayer: () => ref.invalidate(mesEvenementsProvider),
           ),
           Expanded(
-            child: evenements.when(
-              loading: () => const PpLoadingState(),
-              error: (_, _) => PpErrorState(
-                message: l10n.accueilChargementErreur,
-                onRetry: () => ref.invalidate(mesEvenementsProvider),
+            // Le rail borne la largeur : étirée sur un écran de bureau, une carte
+            // d'événement place son titre à gauche et son état de présence à l'autre
+            // bout, et la liste ne se lit plus d'un regard.
+            child: PpRail(
+              child: evenements.when(
+                loading: () => const PpLoadingState(),
+                error: (_, _) => PpErrorState(
+                  message: l10n.accueilChargementErreur,
+                  onRetry: () => ref.invalidate(mesEvenementsProvider),
+                ),
+                data: (liste) => liste.isEmpty
+                    ? _etatVide(context)
+                    : _Liste(evenements: liste),
               ),
-              data: (liste) => liste.isEmpty
-                  ? _etatVide(context)
-                  : _Liste(evenements: liste),
             ),
           ),
         ],
@@ -118,6 +129,8 @@ class _Liste extends ConsumerWidget {
         ),
         children: [
           if (aVenir.isNotEmpty) ...[
+            _ProchaineSoiree(evenement: aVenir.first),
+            const SizedBox(height: PpSpacing.lg),
             PpEyebrow(l10n.evenementsAVenir),
             const SizedBox(height: PpSpacing.sm),
             for (final e in aVenir) _Carte(evenement: e),
@@ -134,10 +147,73 @@ class _Liste extends ConsumerWidget {
   }
 }
 
+/// Annonce la soirée la plus proche, et dans combien de temps elle tombe.
+///
+/// C'est la question que l'on se pose en ouvrant l'application : « c'est bientôt ? ».
+/// Une liste, même bien rangée, ne répond à rien — il faut lire, comparer les dates,
+/// et faire soi-même le calcul.
+///
+/// Le dégradé de marque n'apparaît qu'ici, sur cette annonce et sur la pastille de la
+/// soirée à venir. Étendu aux autres surfaces, il cesserait de désigner quoi que ce
+/// soit.
+class _ProchaineSoiree extends StatelessWidget {
+  const _ProchaineSoiree({required this.evenement});
+
+  final EvenementDeLaListe evenement;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final jours = joursCalendairesJusqua(evenement.debut);
+
+    return Container(
+      padding: const EdgeInsets.all(PpSpacing.lg),
+      decoration: BoxDecoration(
+        gradient: PpColors.degradeMarque,
+        borderRadius: BorderRadius.circular(PpRadius.card),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'PROCHAINE SOIRÉE',
+            style: theme.textTheme.labelSmall?.copyWith(
+              color: Colors.white.withValues(alpha: 0.85),
+              letterSpacing: 1.4,
+            ),
+          ),
+          const SizedBox(height: PpSpacing.sm),
+          Text(
+            PpL10n.of(context).tdbDansNJours(jours),
+            style: theme.textTheme.headlineSmall?.copyWith(
+              color: Colors.white,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: PpSpacing.xs),
+          Text(
+            evenement.nom,
+            style: theme.textTheme.bodyLarge?.copyWith(
+              color: Colors.white.withValues(alpha: 0.92),
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Carton d'invitation d'une soirée.
+///
+/// La date est traitée comme un objet, à gauche, et non comme une ligne de texte : on
+/// cherche « c'est quand » avant de lire le nom. Le reste — heure, lieu, présences —
+/// se lit ensuite, dans cet ordre.
 class _Carte extends StatelessWidget {
   const _Carte({required this.evenement, this.estompee = false});
 
-  static final _dateFr = DateFormat('EEEE d MMMM, HH:mm', 'fr_FR');
+  static final _heureEtLieu = DateFormat('EEEE, HH:mm', 'fr_FR');
 
   final EvenementDeLaListe evenement;
   final bool estompee;
@@ -153,45 +229,56 @@ class _Carte extends StatelessWidget {
         opacity: estompee ? 0.7 : 1,
         child: PpCard(
           onTap: () => context.push(PpRoutes.versEvenement(evenement.id)),
-          child: Column(
+          child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              if (evenement.monRole.peutGerer)
-                PpEyebrow(
-                  evenement.monRole == RoleMembre.proprietaire
-                      ? l10n.roleProprietaire
-                      : l10n.roleAdministrateur,
-                  couleur: PpColors.violet,
-                ),
-              // Le rôle est placé au-dessus du titre et non à côté : un nom long et une
-              // étiquette « CO-ORGANISATEUR » ne tiennent pas sur une ligne de
-              // téléphone, et tronquer le nom de l'événement serait le pire choix.
-              Text(evenement.nom, style: theme.textTheme.titleLarge),
-              const SizedBox(height: PpSpacing.xs),
-              Text(
-                [
-                  _dateFr.format(evenement.debut),
-                  ?evenement.adresse,
-                ].join(' · '),
-                style: theme.textTheme.bodySmall,
-              ),
-              const SizedBox(height: PpSpacing.md),
-              // Wrap et non Row : sur un téléphone étroit, « Arrive plus tard » suivi
-              // de « 12 présents sur 24 invités » dépasse la largeur disponible.
-              Wrap(
-                spacing: PpSpacing.sm,
-                runSpacing: PpSpacing.xs,
-                crossAxisAlignment: WrapCrossAlignment.center,
-                children: [
-                  PpStatusChip(presence: versPastille(evenement.monStatut)),
-                  Text(
-                    l10n.presencesSurInvites(
-                      evenement.presents,
-                      evenement.invites,
+              PpDatePastille(date: evenement.debut, estompee: estompee),
+              const SizedBox(width: PpSpacing.lg),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (evenement.monRole.peutGerer)
+                      PpEyebrow(
+                        evenement.monRole == RoleMembre.proprietaire
+                            ? l10n.roleProprietaire
+                            : l10n.roleAdministrateur,
+                        couleur: PpColors.violet,
+                      ),
+                    // Le rôle est placé au-dessus du titre et non à côté : un nom long et une
+                    // étiquette « CO-ORGANISATEUR » ne tiennent pas sur une ligne de
+                    // téléphone, et tronquer le nom de l'événement serait le pire choix.
+                    Text(evenement.nom, style: theme.textTheme.titleLarge),
+                    const SizedBox(height: PpSpacing.xs),
+                    Text(
+                      [
+                        _heureEtLieu.format(evenement.debut),
+                        ?evenement.adresse,
+                      ].join(' · '),
+                      style: theme.textTheme.bodySmall,
                     ),
-                    style: theme.textTheme.bodySmall,
-                  ),
-                ],
+                    const SizedBox(height: PpSpacing.md),
+                    // Wrap et non Row : sur un téléphone étroit, « Arrive plus tard » suivi
+                    // de « 12 présents sur 24 invités » dépasse la largeur disponible.
+                    Wrap(
+                      spacing: PpSpacing.sm,
+                      runSpacing: PpSpacing.xs,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      children: [
+                        PpStatusChip(
+                          presence: versPastille(evenement.monStatut),
+                        ),
+                        Text(
+                          l10n.presencesSurInvites(
+                            evenement.presents,
+                            evenement.invites,
+                          ),
+                          style: theme.textTheme.bodySmall,
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
               ),
             ],
           ),
