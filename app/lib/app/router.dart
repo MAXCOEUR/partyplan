@@ -23,6 +23,7 @@ import '../features/profil/profil_edition_page.dart';
 import '../features/profil/second_facteur_reglage_page.dart';
 import '../features/profil/securite_page.dart';
 import '../features/reglements/reglements_page.dart';
+import '../features/sondages/sondages_page.dart';
 import '../features/rejoindre/adhesion_page.dart';
 import '../features/rejoindre/apercu_invitation_page.dart';
 import '../features/rejoindre/rejoindre_page.dart';
@@ -74,6 +75,7 @@ abstract final class PpRoutes {
   static const evenementParametres = '/events/:eventId/parametres';
   static const evenementReglements = '/events/:eventId/reglements';
   static const evenementEpingles = '/events/:eventId/epingle';
+  static const evenementSondages = '/events/:eventId/sondages';
 
   static String versEvenement(String eventId) => '/events/$eventId';
 
@@ -93,6 +95,8 @@ abstract final class PpRoutes {
   static String versReglements(String eventId) => '/events/$eventId/reglements';
 
   static String versEpingles(String eventId) => '/events/$eventId/epingle';
+
+  static String versSondages(String eventId) => '/events/$eventId/sondages';
 
   static String versRejoindre(String token) => '/join/$token';
 
@@ -267,6 +271,11 @@ GoRouter creerRouteur(Ref ref) => GoRouter(
       path: PpRoutes.evenementInvitation,
       builder: (context, state) =>
           InvitationPage(evenementId: state.pathParameters['eventId']!),
+    ),
+    GoRoute(
+      path: PpRoutes.evenementSondages,
+      builder: (context, state) =>
+          SondagesPage(evenementId: state.pathParameters['eventId']!),
     ),
     GoRoute(
       path: PpRoutes.evenementEpingles,

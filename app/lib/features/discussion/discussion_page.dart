@@ -14,6 +14,7 @@ import '../../design/components/pp_selecteur_emoji.dart';
 import '../../design/components/pp_states.dart';
 import '../../design/components/pp_texte_message.dart';
 import '../../design/tokens.dart';
+import '../sondages/sondages_page.dart';
 import 'epingler_feuille.dart';
 
 /// Discussion d'un événement (EF-MSG-01 à EF-MSG-06).
@@ -327,7 +328,11 @@ class _Bulle extends ConsumerWidget {
                   ),
                 if (message.citation != null)
                   _Citation(citation: message.citation!),
-                _Corps(message: message, surLien: surLien),
+                _Corps(
+                  evenementId: evenementId,
+                  message: message,
+                  surLien: surLien,
+                ),
                 if (message.reactions.isNotEmpty)
                   _Reactions(evenementId: evenementId, message: message),
               ],
@@ -346,8 +351,13 @@ class _Bulle extends ConsumerWidget {
 
 /// Corps d'un message, ou la trace de sa suppression.
 class _Corps extends StatelessWidget {
-  const _Corps({required this.message, required this.surLien});
+  const _Corps({
+    required this.evenementId,
+    required this.message,
+    required this.surLien,
+  });
 
+  final String evenementId;
   final Message message;
   final void Function(String) surLien;
 
@@ -391,6 +401,16 @@ class _Corps extends StatelessWidget {
             texte: message.corps!,
             mentions: message.mentions,
             surLien: surLien,
+          ),
+        // Le sondage se répond dans le fil : quitter la conversation pour voter
+        // ferait perdre le contexte de la question.
+        if (message.sondageId != null)
+          Padding(
+            padding: const EdgeInsets.only(top: PpSpacing.sm),
+            child: _SondageDuMessage(
+              evenementId: evenementId,
+              sondageId: message.sondageId!,
+            ),
           ),
         if (message.modifie)
           Text(
@@ -903,5 +923,37 @@ class _BarreSaisie extends StatelessWidget {
         ],
       ),
     );
+  }
+}
+
+
+/// Sondage porté par un message, chargé depuis la liste des sondages.
+///
+/// La liste est déjà en mémoire pour l'écran des sondages : la relire ici évite un
+/// appel par message et garde les décomptes cohérents entre les deux écrans.
+class _SondageDuMessage extends ConsumerWidget {
+  const _SondageDuMessage({
+    required this.evenementId,
+    required this.sondageId,
+  });
+
+  final String evenementId;
+  final String sondageId;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final sondages = ref.watch(sondagesProvider(evenementId));
+
+    final sondage = sondages.value?.sondages
+        .where((s) => s.id == sondageId)
+        .firstOrNull;
+
+    // Sondage supprimé depuis, ou pas encore chargé : le message reste lisible sans
+    // lui, et une carte d'erreur ici encombrerait le fil.
+    if (sondage == null) {
+      return const SizedBox.shrink();
+    }
+
+    return CarteSondage(evenementId: evenementId, sondage: sondage);
   }
 }

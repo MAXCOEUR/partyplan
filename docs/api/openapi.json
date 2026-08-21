@@ -1391,6 +1391,31 @@
         }
       }
     },
+    "/v1/events/{eventId}/messages/images": {
+      "post": {
+        "tags": [
+          "Messages"
+        ],
+        "summary": "Dépose une image, réduite et débarrassée de ses métadonnées.",
+        "operationId": "UploadMessageImage",
+        "parameters": [
+          {
+            "name": "eventId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
     "/v1/events/{eventId}/messages/{messageId}/pin": {
       "post": {
         "tags": [
@@ -1575,6 +1600,204 @@
           },
           {
             "name": "folderId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/v1/events/{eventId}/polls": {
+      "get": {
+        "tags": [
+          "Polls"
+        ],
+        "summary": "Sondages de l'événement, les ouverts d'abord.",
+        "operationId": "ListPolls",
+        "parameters": [
+          {
+            "name": "eventId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PollPage"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Polls"
+        ],
+        "summary": "Lance un sondage, annoncé dans la discussion.",
+        "operationId": "CreatePoll",
+        "parameters": [
+          {
+            "name": "eventId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PollBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PollView"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/events/{eventId}/polls/{pollId}/votes": {
+      "put": {
+        "tags": [
+          "Polls"
+        ],
+        "summary": "Enregistre ses choix. Une liste vide annule son vote.",
+        "operationId": "Vote",
+        "parameters": [
+          {
+            "name": "eventId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "pollId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VoteBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PollView"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/events/{eventId}/polls/{pollId}/close": {
+      "post": {
+        "tags": [
+          "Polls"
+        ],
+        "summary": "Clôt le sondage. Son auteur, ou l'organisateur.",
+        "operationId": "ClosePoll",
+        "parameters": [
+          {
+            "name": "eventId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "pollId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PollView"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/events/{eventId}/polls/{pollId}": {
+      "delete": {
+        "tags": [
+          "Polls"
+        ],
+        "summary": "Supprime le sondage.",
+        "operationId": "DeletePoll",
+        "parameters": [
+          {
+            "name": "eventId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "pollId",
             "in": "path",
             "required": true,
             "schema": {
@@ -4159,6 +4382,127 @@
         "type": "integer",
         "description": "Rôle de portée « instance entière » (§3.1). Sans rapport avec EventMemberRole :\nun PlatformRole.PlatformAdmin n'a aucun droit dans un événement dont il n'est pas membre."
       },
+      "PollBody": {
+        "required": [
+          "question",
+          "options",
+          "allowMultiple"
+        ],
+        "type": "object",
+        "properties": {
+          "question": {
+            "type": "string"
+          },
+          "options": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "allowMultiple": {
+            "type": "boolean"
+          }
+        }
+      },
+      "PollOptionView": {
+        "required": [
+          "id",
+          "label",
+          "votes",
+          "mine"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "label": {
+            "type": "string"
+          },
+          "votes": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "mine": {
+            "type": "boolean"
+          }
+        },
+        "description": "Option d'un sondage, avec son décompte."
+      },
+      "PollPage": {
+        "required": [
+          "items"
+        ],
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PollView"
+            }
+          }
+        },
+        "description": "Sondages d'un événement."
+      },
+      "PollView": {
+        "required": [
+          "id",
+          "question",
+          "allowMultiple",
+          "closed",
+          "iVoted",
+          "voters",
+          "createdByDisplayName",
+          "createdAt",
+          "options"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "question": {
+            "type": "string"
+          },
+          "allowMultiple": {
+            "type": "boolean"
+          },
+          "closed": {
+            "type": "boolean"
+          },
+          "iVoted": {
+            "type": "boolean"
+          },
+          "voters": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "createdByDisplayName": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "options": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PollOptionView"
+            }
+          }
+        },
+        "description": "Sondage tel que l'interface l'affiche."
+      },
       "ProblemDetails": {
         "type": "object",
         "properties": {
@@ -5016,6 +5360,24 @@
             "type": "string"
           }
         }
+      },
+      "VoteBody": {
+        "required": [
+          "optionIds"
+        ],
+        "type": "object",
+        "properties": {
+          "optionIds": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        }
       }
     }
   },
@@ -5037,6 +5399,9 @@
     },
     {
       "name": "Messages"
+    },
+    {
+      "name": "Polls"
     },
     {
       "name": "Settlements"

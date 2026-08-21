@@ -5,6 +5,7 @@ import 'models/article_course.dart';
 import 'models/depense.dart';
 import 'models/message.dart';
 import 'models/reglement.dart';
+import 'models/sondage.dart';
 import 'models/evenement.dart';
 import 'models/invitation.dart';
 import 'models/membre.dart';
@@ -16,6 +17,7 @@ import 'network/courses_api.dart';
 import 'network/depenses_api.dart';
 import 'network/discussion_api.dart';
 import 'network/reglements_api.dart';
+import 'network/sondages_api.dart';
 import 'network/evenements_api.dart';
 import 'offline/cache_lecture.dart';
 import 'offline/etat_reseau.dart';
@@ -378,6 +380,17 @@ final filDiscussionProvider = FutureProvider.family<FilDiscussion, String>(
 /// Messages épinglés et dossiers de rangement.
 final epinglesProvider = FutureProvider.family<PageEpingles, String>(
   (ref, evenementId) => ref.watch(discussionApiProvider).lireEpingles(evenementId),
+);
+
+// ---------------------------------------------------------------- sondages ----
+
+final sondagesApiProvider = Provider<SondagesApi>(
+  (ref) => SondagesApi(ref.watch(apiClientProvider)),
+);
+
+/// Sondages d'un événement, les ouverts d'abord.
+final sondagesProvider = FutureProvider.family<PageSondages, String>(
+  (ref, evenementId) => ref.watch(sondagesApiProvider).lister(evenementId),
 );
 
 /// Aperçu d'une invitation, par jeton de lien ou par code court.
