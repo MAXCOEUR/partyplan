@@ -121,6 +121,71 @@ void main() {
       expect(routeur.state.uri.toString(), PpRoutes.versEvenement(_evenement));
     });
 
+    testWidgets('le retour du système remonte aussi à l’événement', (
+      tester,
+    ) async {
+      // Le bouton matériel d'Android et le « précédent » du navigateur ne passent pas
+      // par le bouton affiché : ils demandent un pop au routeur. Sans pile, celui-ci
+      // n'a rien à dépiler — l'application se refermait sur Android, et le navigateur
+      // quittait vers la page d'entrée.
+      final conteneur = _conteneur();
+      final routeur = conteneur.read(routeurProvider);
+
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: conteneur,
+          child: const PartyPlanApp(),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      routeur.go(PpRoutes.versSondages(_evenement));
+      await tester.pumpAndSettle();
+
+      // Ce que déclenchent le bouton matériel et le « précédent » du navigateur.
+      await tester.binding.handlePopRoute();
+      await tester.pumpAndSettle();
+
+      expect(routeur.state.uri.toString(), PpRoutes.versEvenement(_evenement));
+    });
+
+    testWidgets('chaque écran annexe remonte à son parent', (tester) async {
+      // La règle vaut pour tous : un écran atteint depuis un autre ne doit jamais
+      // renvoyer à la liste des soirées, ni fermer l'application.
+      final conteneur = _conteneur();
+      final routeur = conteneur.read(routeurProvider);
+
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: conteneur,
+          child: const PartyPlanApp(),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final attendus = {
+        PpRoutes.versSondages(_evenement): PpRoutes.versEvenement(_evenement),
+        PpRoutes.versEpingles(_evenement): PpRoutes.versEvenement(_evenement),
+        PpRoutes.versReglements(_evenement): PpRoutes.versEvenement(_evenement),
+        PpRoutes.versInvites(_evenement): PpRoutes.versEvenement(_evenement),
+        PpRoutes.profil: PpRoutes.accueil,
+      };
+
+      for (final entree in attendus.entries) {
+        routeur.go(entree.key);
+        await tester.pumpAndSettle();
+
+        await tester.binding.handlePopRoute();
+        await tester.pumpAndSettle();
+
+        expect(
+          routeur.state.uri.toString(),
+          entree.value,
+          reason: 'depuis ${entree.key}',
+        );
+      }
+    });
+
     testWidgets('revenir ramène à l’écran précédent, pas à l’accueil', (
       tester,
     ) async {

@@ -3,10 +3,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/models/sondage.dart';
 import '../../core/network/api_exception.dart';
+import '../../app/router.dart';
 import '../../core/providers.dart';
 import '../../design/components/pp_barre_evenement.dart';
 import '../../design/components/pp_card.dart';
 import '../../design/components/pp_rail.dart';
+import '../../design/components/pp_remonte_au_parent.dart';
 import '../../design/components/pp_states.dart';
 import '../../design/tokens.dart';
 import 'sondage_feuille.dart';
@@ -25,54 +27,54 @@ class SondagesPage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final sondages = ref.watch(sondagesProvider(evenementId));
 
-    return Scaffold(
-      appBar: PpBarreEvenement(
-        evenementId: evenementId,
-        section: 'SONDAGES',
-      ),
-      floatingActionButtonLocation: const PpFabDansLeRail(),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => ouvrirFeuilleSondage(context, evenementId),
-        icon: const Icon(Icons.add_rounded),
-        label: const Text('Sondage'),
-      ),
-      body: PpRail(
-        child: sondages.when(
-          loading: () => const PpLoadingState(),
-          error: (_, _) => PpErrorState(
-            message: 'Impossible de charger les sondages.',
-            onRetry: () => ref.invalidate(sondagesProvider(evenementId)),
-          ),
-          data: (page) => page.estVide
-              ? const PpEmptyState(
-                  titre: 'Aucun sondage',
-                  explication:
-                      'Pose une question à choix multiples : ce qu’on commande, '
-                      'qui apporte quoi. Le sondage apparaît dans la discussion '
-                      'et se retrouve ici.',
-                  icone: Icons.how_to_vote_rounded,
-                )
-              : RefreshIndicator(
-                  onRefresh: () async =>
-                      ref.invalidate(sondagesProvider(evenementId)),
-                  child: ListView(
-                    padding: const EdgeInsets.fromLTRB(
-                      PpSpacing.lg,
-                      PpSpacing.lg,
-                      PpSpacing.lg,
-                      PpSpacing.xxxl * 2,
-                    ),
-                    children: [
-                      for (final sondage in page.sondages) ...[
-                        CarteSondage(
-                          evenementId: evenementId,
-                          sondage: sondage,
-                        ),
-                        const SizedBox(height: PpSpacing.md),
+    return PpRemonteAuParent(
+      versParent: PpRoutes.versEvenement(evenementId),
+      child: Scaffold(
+        appBar: PpBarreEvenement(evenementId: evenementId, section: 'SONDAGES'),
+        floatingActionButtonLocation: const PpFabDansLeRail(),
+        floatingActionButton: FloatingActionButton.extended(
+          onPressed: () => ouvrirFeuilleSondage(context, evenementId),
+          icon: const Icon(Icons.add_rounded),
+          label: const Text('Sondage'),
+        ),
+        body: PpRail(
+          child: sondages.when(
+            loading: () => const PpLoadingState(),
+            error: (_, _) => PpErrorState(
+              message: 'Impossible de charger les sondages.',
+              onRetry: () => ref.invalidate(sondagesProvider(evenementId)),
+            ),
+            data: (page) => page.estVide
+                ? const PpEmptyState(
+                    titre: 'Aucun sondage',
+                    explication:
+                        'Pose une question à choix multiples : ce qu’on commande, '
+                        'qui apporte quoi. Le sondage apparaît dans la discussion '
+                        'et se retrouve ici.',
+                    icone: Icons.how_to_vote_rounded,
+                  )
+                : RefreshIndicator(
+                    onRefresh: () async =>
+                        ref.invalidate(sondagesProvider(evenementId)),
+                    child: ListView(
+                      padding: const EdgeInsets.fromLTRB(
+                        PpSpacing.lg,
+                        PpSpacing.lg,
+                        PpSpacing.lg,
+                        PpSpacing.xxxl * 2,
+                      ),
+                      children: [
+                        for (final sondage in page.sondages) ...[
+                          CarteSondage(
+                            evenementId: evenementId,
+                            sondage: sondage,
+                          ),
+                          const SizedBox(height: PpSpacing.md),
+                        ],
                       ],
-                    ],
+                    ),
                   ),
-                ),
+          ),
         ),
       ),
     );
@@ -115,9 +117,7 @@ class _CarteSondageState extends ConsumerState<CarteSondage> {
     final choix = <String>[];
 
     if (_sondage.choixMultiple) {
-      choix.addAll(
-        _sondage.options.where((o) => o.laMienne).map((o) => o.id),
-      );
+      choix.addAll(_sondage.options.where((o) => o.laMienne).map((o) => o.id));
 
       if (choix.contains(option.id)) {
         choix.remove(option.id);
@@ -169,7 +169,10 @@ class _CarteSondageState extends ConsumerState<CarteSondage> {
           Row(
             children: [
               Expanded(
-                child: Text(sondage.question, style: theme.textTheme.titleSmall),
+                child: Text(
+                  sondage.question,
+                  style: theme.textTheme.titleSmall,
+                ),
               ),
               if (sondage.clos)
                 Container(

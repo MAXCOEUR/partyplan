@@ -4,11 +4,13 @@ import 'package:intl/intl.dart';
 
 import '../../core/models/message.dart';
 import '../../core/network/api_exception.dart';
+import '../../app/router.dart';
 import '../../core/providers.dart';
 import '../../design/components/pp_avatar.dart';
 import '../../design/components/pp_barre_evenement.dart';
 import '../../design/components/pp_card.dart';
 import '../../design/components/pp_rail.dart';
+import '../../design/components/pp_remonte_au_parent.dart';
 import '../../design/components/pp_states.dart';
 import '../../design/tokens.dart';
 import 'epingler_feuille.dart';
@@ -39,27 +41,31 @@ class _EpinglesPageState extends ConsumerState<EpinglesPage> {
   Widget build(BuildContext context) {
     final epingles = ref.watch(epinglesProvider(widget.evenementId));
 
-    return Scaffold(
-      appBar: PpBarreEvenement(
-        evenementId: widget.evenementId,
-        section: 'ÉPINGLÉ',
-      ),
-      body: PpRail(
-        child: epingles.when(
-          loading: () => const PpLoadingState(),
-          error: (_, _) => PpErrorState(
-            message: 'Impossible de charger les messages épinglés.',
-            onRetry: () => ref.invalidate(epinglesProvider(widget.evenementId)),
-          ),
-          data: (page) => _Contenu(
-            evenementId: widget.evenementId,
-            page: page,
-            filtre: _filtre,
-            sansDossier: _sansDossier,
-            onFiltre: (dossierId, sansDossier) => setState(() {
-              _filtre = dossierId;
-              _sansDossier = sansDossier;
-            }),
+    return PpRemonteAuParent(
+      versParent: PpRoutes.versEvenement(widget.evenementId),
+      child: Scaffold(
+        appBar: PpBarreEvenement(
+          evenementId: widget.evenementId,
+          section: 'ÉPINGLÉ',
+        ),
+        body: PpRail(
+          child: epingles.when(
+            loading: () => const PpLoadingState(),
+            error: (_, _) => PpErrorState(
+              message: 'Impossible de charger les messages épinglés.',
+              onRetry: () =>
+                  ref.invalidate(epinglesProvider(widget.evenementId)),
+            ),
+            data: (page) => _Contenu(
+              evenementId: widget.evenementId,
+              page: page,
+              filtre: _filtre,
+              sansDossier: _sansDossier,
+              onFiltre: (dossierId, sansDossier) => setState(() {
+                _filtre = dossierId;
+                _sansDossier = sansDossier;
+              }),
+            ),
           ),
         ),
       ),
@@ -219,7 +225,10 @@ class _CarteEpingle extends ConsumerWidget {
                 icon: const Icon(Icons.more_vert_rounded, size: 18),
                 onSelected: (choix) => _agir(context, ref, choix),
                 itemBuilder: (_) => const [
-                  PopupMenuItem(value: 'ranger', child: Text('Ranger ailleurs')),
+                  PopupMenuItem(
+                    value: 'ranger',
+                    child: Text('Ranger ailleurs'),
+                  ),
                   PopupMenuItem(
                     value: 'retirer',
                     child: Text('Retirer l’épingle'),
@@ -302,7 +311,10 @@ class _Rangement extends StatelessWidget {
     final range = nom != null;
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: PpSpacing.sm, vertical: 2),
+      padding: const EdgeInsets.symmetric(
+        horizontal: PpSpacing.sm,
+        vertical: 2,
+      ),
       decoration: BoxDecoration(
         color: range
             ? PpColors.violet.withValues(alpha: 0.12)

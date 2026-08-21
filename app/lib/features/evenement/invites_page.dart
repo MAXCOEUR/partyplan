@@ -10,6 +10,7 @@ import '../../design/components/pp_retour.dart';
 import '../../design/components/pp_card.dart';
 import '../../design/components/pp_optimistic.dart';
 import '../../design/components/pp_rail.dart';
+import '../../design/components/pp_remonte_au_parent.dart';
 import '../../design/components/pp_states.dart';
 import '../../design/components/pp_status_chip.dart';
 import '../../design/tokens.dart';
@@ -52,12 +53,15 @@ class InvitesPage extends ConsumerWidget {
       return corps;
     }
 
-    return Scaffold(
-      appBar: PpBarreApp(
-        bouton: PpRetour(versParent: PpRoutes.versEvenement(evenementId)),
-        titre: Text(l10n.invitesTitre),
+    return PpRemonteAuParent(
+      versParent: PpRoutes.versEvenement(evenementId),
+      child: Scaffold(
+        appBar: PpBarreApp(
+          bouton: PpRetour(versParent: PpRoutes.versEvenement(evenementId)),
+          titre: Text(l10n.invitesTitre),
+        ),
+        body: PpRail(child: corps),
       ),
-      body: PpRail(child: corps),
     );
   }
 }

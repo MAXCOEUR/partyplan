@@ -8,7 +8,9 @@ import '../../design/components/pp_avatar.dart';
 import '../../design/components/pp_barre_evenement.dart';
 import '../../design/components/pp_card.dart';
 import '../../design/components/pp_money.dart';
+import '../../app/router.dart';
 import '../../design/components/pp_rail.dart';
+import '../../design/components/pp_remonte_au_parent.dart';
 import '../../design/components/pp_states.dart';
 import '../../design/tokens.dart';
 
@@ -75,10 +77,7 @@ class _Contenu extends ConsumerWidget {
           if (page.proposes.isNotEmpty) ...[
             const _Titre('À rembourser'),
             for (final reglement in page.proposes) ...[
-              _CarteReglement(
-                evenementId: evenementId,
-                reglement: reglement,
-              ),
+              _CarteReglement(evenementId: evenementId, reglement: reglement),
               const SizedBox(height: PpSpacing.sm),
             ],
             const SizedBox(height: PpSpacing.lg),
@@ -86,10 +85,7 @@ class _Contenu extends ConsumerWidget {
           if (page.effectues.isNotEmpty) ...[
             const _Titre('Déjà réglé'),
             for (final reglement in page.effectues) ...[
-              _CarteReglement(
-                evenementId: evenementId,
-                reglement: reglement,
-              ),
+              _CarteReglement(evenementId: evenementId, reglement: reglement),
               const SizedBox(height: PpSpacing.sm),
             ],
             const SizedBox(height: PpSpacing.lg),
@@ -308,9 +304,7 @@ class _LigneSolde extends StatelessWidget {
         children: [
           PpAvatar(nom: solde.nom, taille: 32),
           const SizedBox(width: PpSpacing.md),
-          Expanded(
-            child: Text(solde.nom, style: theme.textTheme.bodyMedium),
-          ),
+          Expanded(child: Text(solde.nom, style: theme.textTheme.bodyMedium)),
           PpMoney(
             solde.montant,
             sense: sens,
@@ -360,7 +354,6 @@ class _Avertissement extends StatelessWidget {
   }
 }
 
-
 /// Écran autonome des remboursements, atteint depuis les dépenses ou le menu.
 ///
 /// Distinct de [ReglementsPage] : celle-ci s'insère aussi dans une coquille qui
@@ -371,11 +364,14 @@ class ReglementsEcran extends StatelessWidget {
   final String evenementId;
 
   @override
-  Widget build(BuildContext context) => Scaffold(
-    appBar: PpBarreEvenement(
-      evenementId: evenementId,
-      section: 'QUI REND QUOI',
+  Widget build(BuildContext context) => PpRemonteAuParent(
+    versParent: PpRoutes.versEvenement(evenementId),
+    child: Scaffold(
+      appBar: PpBarreEvenement(
+        evenementId: evenementId,
+        section: 'QUI REND QUOI',
+      ),
+      body: PpRail(child: ReglementsPage(evenementId: evenementId)),
     ),
-    body: PpRail(child: ReglementsPage(evenementId: evenementId)),
   );
 }

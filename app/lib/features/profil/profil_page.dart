@@ -11,6 +11,7 @@ import '../../design/components/pp_barre_app.dart';
 import '../../design/components/pp_card.dart';
 import '../../design/components/pp_retour.dart';
 import '../../design/components/pp_rail.dart';
+import '../../design/components/pp_remonte_au_parent.dart';
 import '../../design/components/pp_states.dart';
 import '../../design/tokens.dart';
 import '../../l10n/generated/pp_localisations.dart';
@@ -28,89 +29,92 @@ class ProfilPage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final profil = ref.watch(profilProvider);
 
-    return Scaffold(
-      // La déconnexion n'est plus une icône de barre : elle est nommée en bas de
-      // l'écran, avec la suppression du compte.
-      appBar: const PpBarreApp(
-        bouton: PpRetour(versParent: PpRoutes.accueil),
-        titre: Text('Mon compte'),
-      ),
-      body: profil.when(
-        loading: () => const PpLoadingState(),
-        error: (erreur, _) => PpErrorState(
-          message: PpL10n.of(context).erreurReseau,
-          onRetry: () => ref.invalidate(profilProvider),
+    return PpRemonteAuParent(
+      versParent: PpRoutes.accueil,
+      child: Scaffold(
+        // La déconnexion n'est plus une icône de barre : elle est nommée en bas de
+        // l'écran, avec la suppression du compte.
+        appBar: const PpBarreApp(
+          bouton: PpRetour(versParent: PpRoutes.accueil),
+          titre: Text('Mon compte'),
         ),
-        data: (donnees) => PpRail(
-          child: RefreshIndicator(
-            onRefresh: () async => ref.invalidate(profilProvider),
-            child: ListView(
-              padding: const EdgeInsets.all(PpSpacing.lg),
-              children: [
-                _EnTeteProfil(profil: donnees),
-                const SizedBox(height: PpSpacing.lg),
-                if (!donnees.emailVerifie) ...[
-                  const _RappelVerification(),
+        body: profil.when(
+          loading: () => const PpLoadingState(),
+          error: (erreur, _) => PpErrorState(
+            message: PpL10n.of(context).erreurReseau,
+            onRetry: () => ref.invalidate(profilProvider),
+          ),
+          data: (donnees) => PpRail(
+            child: RefreshIndicator(
+              onRefresh: () async => ref.invalidate(profilProvider),
+              child: ListView(
+                padding: const EdgeInsets.all(PpSpacing.lg),
+                children: [
+                  _EnTeteProfil(profil: donnees),
                   const SizedBox(height: PpSpacing.lg),
-                ],
-                _Section(
-                  titre: 'Mon compte',
-                  entrees: [
-                    _Entree(
-                      icone: Icons.person_outline_rounded,
-                      libelle: 'Modifier mon profil',
-                      detail: donnees.nomAffiche,
-                      onTap: () => context.push(PpRoutes.profilEdition),
-                    ),
-                    _Entree(
-                      icone: Icons.shield_outlined,
-                      libelle: 'Sécurité et sessions',
-                      detail: donnees.aUnMotDePasse
-                          ? 'Mot de passe défini'
-                          : 'Aucun mot de passe défini',
-                      onTap: () => context.push(PpRoutes.securite),
-                    ),
-                    _Entree(
-                      icone: Icons.privacy_tip_outlined,
-                      libelle: 'Mes données et confidentialité',
-                      detail: 'Export, suppression du compte',
-                      onTap: () => context.push(PpRoutes.confidentialite),
-                    ),
+                  if (!donnees.emailVerifie) ...[
+                    const _RappelVerification(),
+                    const SizedBox(height: PpSpacing.lg),
                   ],
-                ),
-                if (donnees.estPersonnelPlateforme) ...[
-                  const SizedBox(height: PpSpacing.lg),
                   _Section(
-                    titre: 'Administration',
+                    titre: 'Mon compte',
                     entrees: [
                       _Entree(
-                        icone: Icons.groups_outlined,
-                        libelle: 'Gestion des comptes',
-                        detail: donnees.estAdministrateur
-                            ? 'Tous les droits'
-                            : 'Consultation et dépannage',
-                        onTap: () => context.push(PpRoutes.adminComptes),
+                        icone: Icons.person_outline_rounded,
+                        libelle: 'Modifier mon profil',
+                        detail: donnees.nomAffiche,
+                        onTap: () => context.push(PpRoutes.profilEdition),
                       ),
                       _Entree(
-                        icone: Icons.history_rounded,
-                        libelle: 'Journal d’audit',
-                        detail: 'Trace de toutes les actions',
-                        onTap: () => context.push(PpRoutes.adminAudit),
+                        icone: Icons.shield_outlined,
+                        libelle: 'Sécurité et sessions',
+                        detail: donnees.aUnMotDePasse
+                            ? 'Mot de passe défini'
+                            : 'Aucun mot de passe défini',
+                        onTap: () => context.push(PpRoutes.securite),
+                      ),
+                      _Entree(
+                        icone: Icons.privacy_tip_outlined,
+                        libelle: 'Mes données et confidentialité',
+                        detail: 'Export, suppression du compte',
+                        onTap: () => context.push(PpRoutes.confidentialite),
                       ),
                     ],
                   ),
-                ],
-                const SizedBox(height: PpSpacing.lg),
-                _FinDeSession(profil: donnees),
-                const SizedBox(height: PpSpacing.xl),
-                Center(
-                  child: Text(
-                    'Compte créé le ${_dateFr.format(donnees.creeLe.toLocal())}',
-                    style: Theme.of(context).textTheme.bodySmall,
+                  if (donnees.estPersonnelPlateforme) ...[
+                    const SizedBox(height: PpSpacing.lg),
+                    _Section(
+                      titre: 'Administration',
+                      entrees: [
+                        _Entree(
+                          icone: Icons.groups_outlined,
+                          libelle: 'Gestion des comptes',
+                          detail: donnees.estAdministrateur
+                              ? 'Tous les droits'
+                              : 'Consultation et dépannage',
+                          onTap: () => context.push(PpRoutes.adminComptes),
+                        ),
+                        _Entree(
+                          icone: Icons.history_rounded,
+                          libelle: 'Journal d’audit',
+                          detail: 'Trace de toutes les actions',
+                          onTap: () => context.push(PpRoutes.adminAudit),
+                        ),
+                      ],
+                    ),
+                  ],
+                  const SizedBox(height: PpSpacing.lg),
+                  _FinDeSession(profil: donnees),
+                  const SizedBox(height: PpSpacing.xl),
+                  Center(
+                    child: Text(
+                      'Compte créé le ${_dateFr.format(donnees.creeLe.toLocal())}',
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
                   ),
-                ),
-                const SizedBox(height: PpSpacing.xl),
-              ],
+                  const SizedBox(height: PpSpacing.xl),
+                ],
+              ),
             ),
           ),
         ),
