@@ -20,6 +20,19 @@ public sealed class AdminSeedSettings
     public string? Email { get; set; }
 
     public string? Password { get; set; }
+
+    /// <summary>
+    /// Réapplique le mot de passe d'amorçage à chaque démarrage, et n'impose pas son
+    /// changement.
+    /// <para>
+    /// Faux par défaut, et jamais vrai en production : le mot de passe figure dans un
+    /// fichier de configuration, il doit y être changé une fois puis retiré (RG-ADM-10,
+    /// RG-ADM-12). En développement cette prudence se retourne contre son but — le
+    /// compte documenté dans le README cesse de fonctionner dès qu'on a changé son mot
+    /// de passe une fois, et plus rien ne permet d'entrer.
+    /// </para>
+    /// </summary>
+    public bool ReapplyPassword { get; set; }
 }
 
 /// <summary>
@@ -29,6 +42,12 @@ public sealed class AdminSeedSettings
 /// si un administrateur existe déjà, rien n'est fait et le mot de passe d'amorçage n'est
 /// jamais réappliqué — sans quoi chaque redémarrage annulerait le changement de mot de
 /// passe imposé par RG-ADM-10.
+/// </para>
+/// <para>
+/// Hors production, <see cref="AdminSeedSettings.ReapplyPassword"/> renverse ce choix :
+/// l'identifiant du fichier d'environnement redevient valable à chaque démarrage. C'est
+/// ce qu'attend quiconque suit le README, et la garde de production refuse de toute
+/// façon de démarrer avec un secret de développement (RG-ADM-11).
 /// </para>
 /// </summary>
 public sealed class AdminSeeder(
@@ -48,14 +67,14 @@ public sealed class AdminSeeder(
                 cancellationToken)
             .ConfigureAwait(false);
 
-        if (existant)
+        var parametres = settings.Value;
+
+        if (existant && !parametres.ReapplyPassword)
         {
             logger.LogInformation(
                 "Un administrateur de plateforme existe déjà : amorçage ignoré (RG-ADM-09).");
             return false;
         }
-
-        var parametres = settings.Value;
 
         // RG-ADM-11 : plutôt qu'un démarrage silencieux avec un identifiant par défaut,
         // l'application refuse de démarrer et dit ce qui manque.
@@ -100,7 +119,11 @@ public sealed class AdminSeeder(
         // RG-ADM-10 : changement de mot de passe imposé à la première connexion. Le mot
         // de passe d'amorçage figure dans un fichier de configuration, donc lisible par
         // quiconque accède au serveur.
-        compte.MustChangePassword = true;
+        //
+        // Sauf lorsque le mot de passe est réappliqué à chaque démarrage : l'imposer
+        // ferait tomber sur le formulaire de changement à chaque lancement de
+        // l'environnement local, pour un mot de passe déjà écrit dans le fichier.
+        compte.MustChangePassword = !parametres.ReapplyPassword;
         compte.EmailVerifiedAt ??= clock.UtcNow;
 
         await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);

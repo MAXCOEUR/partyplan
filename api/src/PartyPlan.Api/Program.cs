@@ -4,6 +4,7 @@ using PartyPlan.Api.Setup;
 using PartyPlan.Infrastructure;
 using PartyPlan.Infrastructure.Http;
 using PartyPlan.Infrastructure.Idempotency;
+using PartyPlan.Modules.Users.Application;
 using PartyPlan.SharedKernel.Modules;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -20,6 +21,13 @@ builder.Logging.AddJsonConsole(options =>
 
 // --- Refus de démarrage sur configuration dangereuse (RG-DEV-01, RG-ADM-11) ------
 ProductionGuard.Validate(builder.Environment, builder.Configuration);
+
+// Hors production, l'identifiant d'amorçage reste valable à chaque démarrage : c'est ce
+// qu'attend quiconque suit le README, et le compte devenait sinon inutilisable dès son
+// premier changement de mot de passe. La valeur est décidée ici et non lue dans la
+// configuration : aucun fichier d'environnement ne peut l'activer en production.
+builder.Services.PostConfigure<AdminSeedSettings>(
+    options => options.ReapplyPassword = !builder.Environment.IsProduction());
 
 builder.Services.AddInfrastructure(builder.Configuration);
 
