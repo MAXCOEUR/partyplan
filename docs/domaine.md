@@ -58,12 +58,15 @@ et non laissé à la discrétion de chaque requête.
 ni de `DELETE`. L'adresse de l'auteur y est recopiée à l'écriture, afin que la trace
 reste lisible après suppression de son compte.
 
-## Invités sans compte
+## Compte obligatoire et lignes historiques
 
-Un `event_member` peut exister sans `user_id` : un `DisplayName` et un jeton de session
-signé suffisent pour participer. La liaison à un compte créé ultérieurement se fait
-en conservant le même `event_member`, afin de ne pas perdre les dépenses ni les
-attributions d'articles.
+Toute nouvelle adhésion crée un `event_member` rattaché à un `user_id`. Le nom affiché
+est copié depuis le profil du compte et le statut initial est `Unknown`.
+
+`event_members.user_id` reste nullable uniquement pour les lignes historiques créées
+avant l'ADR 0006. Elles restent listables et conservent leurs dépenses, attributions et
+autres références financières ; elles ne peuvent ouvrir aucune session, être rattachées
+automatiquement à un compte ni servir à une nouvelle adhésion.
 
 ## Remboursements
 

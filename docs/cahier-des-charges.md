@@ -64,9 +64,9 @@ calculés, planning.
 ### 1.4 Facteur de différenciation
 
 L'acquisition est portée par l'usage : un organisateur amène mécaniquement 5 à 15
-personnes dans le produit en envoyant un lien. Toute décision produit qui augmente la
-friction de ce parcours (obligation de compte, installation, formulaire long) est
-contraire à l'objectif et doit être rejetée.
+personnes dans le produit en envoyant un lien. L'aperçu doit rester immédiatement
+accessible et le retour après connexion ou inscription doit conserver ce lien ; toute
+nouvelle adhésion exige néanmoins un compte, conformément à l'ADR 0006.
 
 ---
 
@@ -81,7 +81,7 @@ compte administrateur amorcé par variables d'environnement, back-office de gest
 comptes avec journal d'audit.
 
 **Socle événementiel (V1.0)** : création d'événement · invitation par lien, QR code et
-code court · participation sans compte · statuts de présence détaillés · liste de courses
+code court · aperçu public restreint puis adhésion avec compte · statuts de présence détaillés · liste de courses
 collaborative avec attribution · saisie des montants payés · calcul et simplification des
 remboursements · planning de l'événement · notifications · synchronisation temps réel ·
 application Web (PWA) et Android.
@@ -133,8 +133,8 @@ plateforme.
 |---|---|---|
 | **Propriétaire** (`Owner`) | Créateur de l'événement | Tous droits, y compris suppression de l'événement et transfert de propriété. Un seul par événement. |
 | **Administrateur** (`Admin`) | Promu par le propriétaire | Modifier l'événement, inviter, exclure un membre, modifier toute dépense, régénérer le lien d'invitation. |
-| **Membre** (`Member`) | A rejoint via une invitation | Modifier son propre statut, ajouter/prendre des articles, créer des dépenses, marquer ses remboursements. |
-| **Invité sans compte** | A rejoint via lien sans s'inscrire | Droits identiques à `Member` sur cet événement uniquement. Aucun accès à un tableau de bord multi-événements. |
+| **Membre** (`Member`) | Compte ayant rejoint via une invitation | Modifier son propre statut, ajouter/prendre des articles, créer des dépenses, marquer ses remboursements. |
+| **Membre historique sans compte** | Ligne créée avant l'ADR 0006 | Conservé et listable avec ses références financières, sans session ni possibilité de nouvelle adhésion. |
 | **Visiteur** | Détient un lien d'invitation non encore utilisé | Lecture du nom, de la date et du lieu de l'événement uniquement, afin de décider s'il rejoint. |
 
 **RG-ROLE-01** — Un administrateur ne peut ni exclure le propriétaire, ni se promouvoir
@@ -144,8 +144,8 @@ propriétaire, ni supprimer l'événement.
 propriété à un autre membre. Le transfert est donc une opération de premier plan et non
 un raffinement : sans elle, la règle enfermerait l'organisateur dans son propre événement.
 
-Le repreneur doit posséder un compte : un invité sans compte ne retrouverait pas
-l'événement depuis un autre appareil, et plus personne ne pourrait l'administrer.
+Le repreneur doit posséder un compte. Les membres historiques sans compte ne sont pas
+éligibles au transfert de propriété.
 L'ancien propriétaire devient administrateur, et non membre ordinaire — il vient
 d'organiser l'événement, lui retirer tout droit dans le même geste serait absurde.
 
@@ -160,7 +160,7 @@ financiers jusqu'à règlement complet.
 | Terme | Définition |
 |---|---|
 | Événement | Unité d'organisation : une soirée, un week-end, un festival, un voyage. |
-| Membre | Personne rattachée à un événement, avec ou sans compte utilisateur. |
+| Membre | Compte utilisateur rattaché à un événement. Les lignes historiques sans compte sont conservées uniquement pour leur historique financier. |
 | Article | Ligne de la liste de courses (produit, quantité, unité, catégorie). |
 | Attribution | Engagement d'un membre à se charger d'un article. |
 | Dépense | Montant réellement payé par un membre, à répartir entre plusieurs membres. |
@@ -200,7 +200,7 @@ Cette section couvre l'identité : elle est développée avant toute fonctionnal
 | EF-AUTH-08 | P0 | Rattacher ou détacher une connexion tierce d'un compte existant. |
 | EF-AUTH-09 | P0 | Session conservée 90 jours sans reconnexion, prolongée à chaque usage. |
 | EF-AUTH-10 | P0 | Lister ses sessions actives et en révoquer une, ou toutes. |
-| EF-AUTH-11 | P0 | Un invité sans compte peut convertir sa participation en compte permanent, en conservant l'historique de ses événements, dépenses et attributions. |
+| EF-AUTH-11 | P0 | Après connexion ou inscription depuis un aperçu d'invitation, conserver le chemin d'invitation afin que le compte rejoigne l'événement. |
 | EF-AUTH-12 | P0 | Activer une double authentification par code temporel (TOTP). Obligatoire pour les rôles plateforme. |
 | EF-AUTH-13 | P0 | Recevoir huit codes de secours à l'activation, régénérables, chacun à usage unique. |
 
@@ -234,9 +234,10 @@ silencieux, la réponse de l'endpoint étant de toute façon invariable (`RG-AUT
 **RG-AUTH-06** — La réinitialisation d'un mot de passe et le changement d'adresse e-mail
 révoquent toutes les sessions actives, sauf celle en cours.
 
-**RG-AUTH-07** — La liaison entre un `event_member` sans compte et un compte créé ensuite
-se fait sur le jeton de session invité présent sur l'appareil, jamais sur le prénom.
-Deux membres homonymes ne doivent jamais fusionner.
+**RG-AUTH-07** — Aucun nouveau jeton invité n'est créé et aucune ligne historique sans
+`user_id` n'est rattachée automatiquement à un compte. Ces lignes restent conservées et
+listables avec leurs références financières ; elles ne permettent ni session ni nouvelle
+adhésion.
 
 **RG-AUTH-08** — Un compte créé par connexion tierce sans mot de passe peut en définir un
 à tout moment, par le parcours de réinitialisation.
@@ -266,9 +267,9 @@ plateforme rendrait l'instance ingérable. La régénération invalide le lot pr
 jeton volé suffirait à retirer la protection qu'il est censé compléter. Elle est refusée
 tant que le compte porte un rôle plateforme (`RG-ADM-04`).
 
-*Critères d'acceptation EF-AUTH-11* : un invité ayant rejoint un événement, saisi une
-dépense et pris deux articles, puis créé un compte, retrouve l'événement dans sa liste ;
-la dépense reste rattachée à lui ; aucun doublon de membre n'apparaît dans l'événement.
+*Critères d'acceptation EF-AUTH-11* : depuis un aperçu d'invitation, après connexion ou
+inscription, le retour conserve le chemin ; le compte rejoint l'événement une fois avec
+son nom de profil et le statut `Unknown`, puis ouvre son tableau de bord.
 
 #### 5.1.2 Compte et profil
 
@@ -330,7 +331,7 @@ Deux axes de rôle indépendants coexistent, et ne doivent jamais être confondu
 | EF-ADM-07 | P0 | Supprimer un compte, avec la même anonymisation que l'auto-suppression. |
 | EF-ADM-08 | P0 | Promouvoir un compte en `Support` ou `PlatformAdmin`, et révoquer ce rôle. |
 | EF-ADM-09 | P0 | Consulter le journal d'audit des actions d'administration. |
-| EF-ADM-10 | P0 | Consulter les indicateurs d'instance : comptes, événements actifs, invités sans compte, volume de stockage. |
+| EF-ADM-10 | P0 | Consulter les indicateurs d'instance : comptes, événements actifs, lignes historiques sans compte, volume de stockage. |
 | EF-ADM-11 | P1 | Forcer la vérification d'une adresse e-mail, en cas de courriel non délivré. |
 | EF-ADM-12 | P1 | Exporter les données d'un utilisateur à sa demande, lorsqu'il ne peut plus se connecter. |
 | EF-ADM-13 | P1 | Supprimer une photo de profil signalée comme inappropriée. |
@@ -444,7 +445,7 @@ rafraîchissement manuel.
 | EF-INV-01 | P0 | Générer un lien d'invitation partageable de la forme `https://partyplan.maxencecoeur.fr/join/{token}`. |
 | EF-INV-02 | P0 | Afficher un QR code correspondant au lien, exportable en image. |
 | EF-INV-03 | P0 | Afficher un code court saisissable manuellement, au format `PLAN-XXXXXX`. |
-| EF-INV-04 | P0 | Rejoindre un événement en saisissant uniquement un prénom, sans création de compte. |
+| EF-INV-04 | P0 | Après l'aperçu public restreint, se connecter ou créer un compte avant de rejoindre ; le serveur prend le nom du profil et crée le statut `Unknown`. |
 | EF-INV-05 | P0 | Régénérer le lien d'invitation, ce qui invalide le précédent. |
 | EF-INV-06 | P0 | Désactiver les nouvelles arrivées (événement fermé). |
 | EF-INV-07 | P1 | Inviter par e-mail depuis l'application. |
@@ -461,15 +462,18 @@ non archivés. En cas de collision à la génération, une nouvelle valeur est t
 par adresse IP, et 100 par jour. Au-delà, réponse 429 pendant 15 minutes. Cette
 limitation est la contre-mesure au caractère devinable d'un code à 6 caractères.
 
-**RG-INV-04** — Avant d'avoir rejoint, un visiteur ne voit que le nom, la date, le lieu
-et le nombre de participants. Ni la liste nominative, ni les dépenses, ni la discussion.
+**RG-INV-04** — Avant d'avoir rejoint, un visiteur ne voit que le nom, les dates, le
+lieu, la description et le nombre de participants. Ni la liste nominative, ni les
+dépenses, ni la discussion.
 
-**RG-INV-05** — Le parcours de participation sans compte compte au maximum deux écrans :
-saisie du prénom, puis choix du statut de présence.
+**RG-INV-05** — Les POST d'adhésion exigent un compte authentifié, sont idempotents et
+ne reçoivent ni prénom ni statut. Le lien d'invitation est conservé pendant
+l'authentification, puis le compte rejoint automatiquement avec le statut `Unknown`.
 
-*Critères d'acceptation EF-INV-04* : depuis un navigateur sans session, l'ouverture du
-lien jusqu'à l'affichage du tableau de bord de l'événement nécessite au maximum trois
-interactions et aucune saisie d'adresse e-mail.
+*Critères d'acceptation EF-INV-04* : depuis un navigateur sans session, l'aperçu affiche
+« Se connecter » et « Créer un compte ». Après authentification, l'application revient
+à l'invitation, rejoint une seule fois avec le nom du profil et ouvre le tableau de bord ;
+aucun formulaire de prénom ou de statut ne précède l'entrée dans la soirée.
 
 ### 5.4 Présences
 
@@ -902,14 +906,14 @@ Index : `(starts_at)`, `(invite_token)`, `(short_code) where archived_at is null
 |---|---|---|
 | id | uuid | PK |
 | event_id | uuid | FK events, non null |
-| user_id | uuid | FK users, null (invité sans compte) |
+| user_id | uuid | FK users, null uniquement pour une ligne historique sans compte, conservée avec ses références financières |
 | display_name | text | non null |
 | status | text | `Unknown`\|`Going`\|`Maybe`\|`NotGoing`\|`Late`\|`EarlyLeave` |
 | arrival_time | time | null |
 | departure_time | time | null |
 | extra_guests | smallint | défaut 0 |
 | role | text | `Owner`\|`Admin`\|`Member` |
-| guest_session_hash | text | null, empreinte du jeton invité |
+| guest_session_hash | text | null, donnée historique d'un ancien jeton invité |
 | joined_at | timestamptz | non null |
 | removed_at | timestamptz | null |
 
@@ -1015,11 +1019,11 @@ autre événement reçoit 404 et non 403 — afin de ne pas confirmer l'existenc
 ### 8.1 Principes
 
 - REST, JSON, versionnée par préfixe `/v1`.
-- Authentification par jeton porteur (`Authorization: Bearer`). Le jeton invité suit le
-  même mécanisme, avec une portée limitée à un événement.
+- Authentification par jeton porteur (`Authorization: Bearer`) pour toute écriture
+  d'adhésion. Aucun nouveau jeton invité n'est émis.
 - Erreurs au format RFC 9457 (`application/problem+json`).
 - Idempotence : les créations acceptent un en-tête `Idempotency-Key`, obligatoire pour
-  les dépenses et les règlements.
+  les dépenses, les règlements et les adhésions.
 - Pagination par curseur pour les listes susceptibles de croître (messages, activité).
 - Contrat OpenAPI publié, source de la génération du client Dart.
 
@@ -1044,7 +1048,6 @@ POST   /v1/auth/google
 POST   /v1/auth/apple
 POST   /v1/auth/providers/{provider}/link
 DELETE /v1/auth/providers/{provider}
-POST   /v1/auth/guest/upgrade              conversion invité → compte
 GET    /v1/auth/sessions
 DELETE /v1/auth/sessions/{id}
 DELETE /v1/auth/sessions                   révocation de toutes les autres sessions
@@ -1081,8 +1084,9 @@ POST   /v1/events/{id}/invite/rotate
 PATCH  /v1/events/{id}/join-enabled
 
 GET    /v1/join/{token}                    aperçu public restreint
-POST   /v1/join/{token}                    rejoindre (prénom + statut)
+POST   /v1/join/{token}                    rejoindre avec un compte ; sans corps métier
 GET    /v1/join/code/{shortCode}           résolution du code court
+POST   /v1/join/code/{shortCode}           rejoindre avec un compte ; sans corps métier
 
 GET    /v1/events/{id}/members
 PATCH  /v1/events/{id}/members/me          statut, horaires
@@ -1266,8 +1270,9 @@ en aucun cas applicatif d'entreprise.
 détruire la comptabilité d'événements auxquels d'autres personnes participent. Ce point
 est explicité dans la politique de confidentialité.
 
-**RG-RGPD-02** — Un invité sans compte dispose des mêmes droits, exerçables depuis le
-lien de l'événement sur son appareil.
+**RG-RGPD-02** — Les lignes historiques sans compte restent conservées avec leurs
+références financières ; elles ne constituent pas un nouveau parcours d'accès sans
+compte. Les droits relatifs à un compte s'exercent depuis ce compte.
 
 **RG-RGPD-03** — Le sous-traitant d'hébergement doit être situé dans l'Union européenne.
 
@@ -1393,7 +1398,7 @@ aucun moment, y compris en lecture.
 | Intégration | Chaque endpoint `/v1/admin/*`, appelé par un `User` puis par un `Support` | Droits respectés — `RG-ADM-05` |
 | Intégration | Amorçage du compte administrateur | Idempotent, aucun doublon, mot de passe changé non réappliqué |
 | Concurrence | Attribution simultanée d'un article, marquage simultané d'un règlement | Une seule opération aboutit |
-| Bout en bout | Parcours « lien → prénom → présence → article → prix → règlement » | Exécuté à chaque livraison |
+| Bout en bout | Parcours « lien → authentification → adhésion automatique → présence → article → prix → règlement » | Exécuté à chaque livraison |
 | Manuel | Android, iOS, Safari iOS, Chrome Android | Grille de recette par version |
 
 **RG-TEST-01** — Aucune modification du domaine financier n'est livrée sans que le jeu
@@ -1411,7 +1416,7 @@ aléatoirement (dépenses, parts et suppressions tirées au hasard).
 | J1 | Squelette technique : dépôt, API, Flutter, PostgreSQL, migrations, CI | Application vide déployée sur les trois domaines |
 | J2 | **Comptes** : inscription, connexion, vérification d'adresse, réinitialisation, profil, photo, sessions, export, suppression | Un utilisateur gère intégralement son compte sans intervention |
 | J2b | **Administration** : amorçage du compte administrateur, back-office, journal d'audit, double authentification | Un administrateur gère les comptes sans jamais accéder au contenu d'un événement |
-| J3 | Événements et invitations | Création, lien, QR, code court, participation sans compte |
+| J3 | Événements et invitations | Création, lien, QR, code court, aperçu public et adhésion avec compte |
 | J4 | Présences | Statuts, horaires, synthèse |
 | J5 | Liste de courses et temps réel | Attribution concurrente sûre, propagation en moins d'une seconde |
 | J6 | Dépenses et règlements | Jeu de référence du §6.5 validé |
@@ -1476,8 +1481,11 @@ l'environnement de production.
 ### Socle événementiel (V1.0)
 
 13. Un organisateur crée un événement en moins de 60 secondes, sans documentation.
-14. Le lien d'invitation permet à une personne sans compte de participer en trois
-    interactions au maximum.
+14. Le lien d'invitation ouvre un aperçu public restreint ; après connexion ou création
+    de compte, il revient à l'invitation, rejoint automatiquement avec le nom de profil
+    et le statut `Unknown`, puis ouvre la soirée. Les App Links Android et Universal
+    Links iOS ouvrent directement ce lien ; SignalR assure le temps réel et FCM est
+    limité aux notifications.
 15. Dix membres déclarent leur présence ; les décomptes affichés sont exacts.
 16. Deux membres tentant simultanément de prendre le même article aboutissent à une
     seule attribution, avec message explicite pour le second.

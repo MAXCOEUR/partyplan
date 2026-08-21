@@ -25,9 +25,10 @@ changement d'architecture.
    avant chaque push.
 6. **Frontières de modules** — un module n'accède pas aux tables d'un autre module.
    Communication par interface publique uniquement.
-7. **Invité sans compte** — le parcours « lien → prénom → présence » doit rester
-   fonctionnel sans authentification. Ne pas introduire de dépendance à `user_id`
-   dans les listes de courses, dépenses ou tâches.
+7. **Compte obligatoire pour rejoindre** — l'aperçu d'invitation reste public et
+   restreint, mais toute nouvelle adhésion exige une session de compte valide. Le nom du
+   membre vient du profil et son statut initial est `Unknown`. `event_members.user_id`
+   reste nullable uniquement pour les lignes historiques et leurs références financières.
 8. **Montants** — `decimal` en C#, `numeric(10,2)` en base. Jamais de `double`.
 9. **Privé par défaut** — aucun événement indexable ni accessible publiquement.
 

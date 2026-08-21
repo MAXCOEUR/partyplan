@@ -6,8 +6,8 @@
 > n'existe pas dans le cahier des charges, c'est le cahier des charges qu'il faut
 > compléter d'abord.
 
-Mise à jour : 20/08/2026 — V0 et V0.5 livrées ; V1.0 en cours : événements, invitations,
-présences et socle hors ligne, API **et** écrans
+Mise à jour : 21/08/2026 — l'ADR 0006 rend le compte obligatoire pour toute nouvelle
+adhésion ; V1.0 reprend donc le parcours invitation avec comptes et liens profonds.
 
 ## Comment lire ce document
 
@@ -36,7 +36,7 @@ Toute tâche non cochée d'une version publiée devient une anomalie, pas un rep
 
 Décisions d'architecture prises : `ADR 0001` monorepo, `ADR 0002` monolithe modulaire,
 `ADR 0003` domaines et certificats, `ADR 0004` chaîne de livraison, `ADR 0005` identité
-et administration.
+et administration, `ADR 0006` compte obligatoire pour rejoindre.
 
 ---
 
@@ -148,7 +148,7 @@ Contrainte permanente : tout doit tourner en local avant d'être poussé — `§
 - [x] Projet `app/` : Android, iOS, Web
 - [x] Gestion d'état : Riverpod
 - [x] Routage `go_router`, avec route profonde `/join/:token` vérifiée en accès direct
-- [x] Stockage sécurisé du jeton de session, distinguant compte et invité sans compte
+- [x] Stockage sécurisé de la session de compte
 - [x] Client HTTP unique avec injection du jeton, en-tête d'idempotence et traduction des erreurs RFC 9457
 - [x] États génériques de chargement, d'erreur et de vide
 - [x] Manifeste PWA, `index.html` en `noindex`, service worker Flutter
@@ -215,7 +215,7 @@ Contrainte permanente : tout doit tourner en local avant d'être poussé — `§
 | Frontières de modules | 11 modules, aucune violation |
 | Migration appliquée sur PostgreSQL 16 | 27 tables, 4 contraintes de contrôle |
 | Journal d'audit | `UPDATE`, `DELETE` et `TRUNCATE` refusés, ligne intacte |
-| Cloisonnement | membre 200, non-membre 404, `PlatformAdmin` non membre 404, anonyme 401, invité limité à son événement |
+| Cloisonnement | membre 200, non-membre 404, `PlatformAdmin` non membre 404, anonyme 401 ; le comportement invité est historique et remplacé par l'ADR 0006 |
 | Garde de production | démarrage refusé sans secrets, en local comme en conteneur |
 | Images Docker | API 247 Mo, web 80 Mo, vitrine 48 Mo |
 | Application web servie | racine et route profonde à 200, en-têtes de sécurité présents |
@@ -384,10 +384,10 @@ Objectif : le parcours complet « créer une soirée → inviter → répondre �
 prix → remboursements » fonctionne en production.
 Sortie : les critères 13 à 26 du `§18` sont vérifiés.
 
-## Lot 1.1 — Rattachement des invités sans compte
+## Historique — Lot 1.1, rattachement des invités sans compte (remplacé par l'ADR 0006)
 
-- [x] `RG-AUTH-07` L'empreinte du jeton d'invité est conservée à l'adhésion : c'est elle, et jamais le prénom, qui portera le rattachement
-- [x] `EF-AUTH-11` Conversion d'une participation d'invité en compte permanent
+- [x] **Historique** — `RG-AUTH-07` L'empreinte du jeton d'invité était conservée à l'adhésion : c'est elle, et jamais le prénom, qui portait le rattachement
+- [x] **Historique** — `EF-AUTH-11` Conversion d'une participation d'invité en compte permanent
   - → endpoint authentifié `POST /v1/auth/guest-claim`, et non un champ ajouté à
     l'inscription : l'API compte quatre points d'ouverture de session — inscription,
     connexion, second facteur, connexion tierce — et un champ n'en couvrirait que deux,
@@ -423,7 +423,7 @@ Sortie : les critères 13 à 26 du `§18` sont vérifiés.
     cocher maintenant serait un faux
 - [ ] `RG-EVT-02` Brancher la vérification des règlements en attente — nécessite un contrat exposé par le module Settlements (lot 1.8) ; d'ici là la confirmation renforcée est la seule barrière
 - [x] Transfert de propriété à un autre membre — sans lui, `RG-ROLE-02` serait un cul-de-sac : l'organisateur resterait prisonnier de son propre événement
-  - → l'ancien propriétaire devient administrateur, non membre ordinaire ; la cible doit posséder un compte, un invité sans compte ne retrouverait pas l'événement depuis un autre appareil
+  - → l'ancien propriétaire devient administrateur, non membre ordinaire ; la cible est un compte membre, conformément à l'ADR 0006
 - [x] Écrans : accueil, création d'événement, tableau de bord, paramètres
   - → assistant de création en trois étapes, navigation libre, « Créer » actif dès
     l'étape 2 : nom et date suffisent à l'API, imposer l'étape 3 ferait de la
@@ -432,31 +432,21 @@ Sortie : les critères 13 à 26 du `§18` sont vérifiés.
   - → dans les paramètres, le transfert précède « quitter » : découvrir l'interdiction
     de `RG-ROLE-02` après avoir appuyé serait un cul-de-sac
 
-## Lot 1.3 — Invitations et accès sans compte
+## Lot 1.3 — Invitations avec compte et liens profonds
 
-- [x] `EF-INV-01` Lien d'invitation `/join/{token}`
-- [x] `RG-INV-01` Jeton de 192 bits, encodé en base64url pour survivre au partage, non déductible de l'identifiant
-- [x] `EF-INV-03` Code court `PLAN-XXXXXX`
-- [x] `RG-INV-02` Alphabet de 32 caractères sans `I`, `O`, `0` ni `1` ; six positions, soit un milliard de combinaisons contre un million à quatre
-- [x] `RG-INV-03` Limitation de la résolution de code court appliquée à l'endpoint
-- [x] `RG-INV-04` Aperçu restreint vérifié par test : ni membres, ni dépenses, ni jeton
-- [x] `EF-INV-04` Rejoindre avec un prénom seulement ; un jeton d'invité restreint à l'événement est remis
-- [x] `EF-INV-05` Régénérer le lien — le code court est renouvelé avec lui, sans quoi une porte resterait ouverte
-- [x] `EF-INV-06` Fermer les nouvelles arrivées ; l'aperçu reste lisible pour expliquer le refus
-- [x] Saisie du code tolérante : minuscules, espaces, tirets, absence de préfixe
-- [x] `EF-INV-02` QR code exportable en image
-  - → livré comme partage natif et non comme enregistrement en galerie : le besoin réel
-    est d'envoyer l'invitation dans une conversation, et l'enregistrement coûterait une
-    permission et une dépendance sur chaque plateforme
-- [x] `EF-INV-03` **Rejoindre** depuis un code court — trou trouvé en écrivant le client
-  - → le code permettait de voir l'aperçu mais pas d'entrer : l'aperçu ne contient aucun
-    jeton (`RG-INV-04`) et l'adhésion l'exigeait. Endpoint dédié plutôt que jeton révélé
-    par l'aperçu, qui ferait du code à six caractères un oracle à jetons
-- [x] `RG-INV-05` Parcours en deux écrans
-  - → la validation clavier du prénom passe directement au statut : ajouter un bouton
-    « suivant » ferait une quatrième interaction et ferait échouer `EF-INV-04`
-- [x] Écrans : aperçu d'invitation, saisie du prénom, choix du statut
-- [x] Recette : trois interactions maximum depuis un navigateur sans session
+- [ ] `EF-INV-01` Lien d'invitation `/join/{token}` et QR code avec la même URL canonique
+- [ ] `EF-INV-03` Code court `PLAN-XXXXXX`, avec aperçus publics restreints par jeton et code
+- [ ] `RG-INV-01` Jeton de 192 bits, encodé en base64url et non déductible de l'identifiant
+- [ ] `RG-INV-02` Alphabet de 32 caractères sans `I`, `O`, `0` ni `1` ; six positions
+- [ ] `RG-INV-03` Limitation de la résolution de code court
+- [ ] `RG-INV-04` Aperçu public : nom, dates, lieu, description et nombre de participants ; jamais membres, dépenses ou jeton long
+- [ ] `EF-INV-04` POST authentifiés par jeton ou code court, sans nom ni statut dans le corps ; le serveur utilise le profil et crée `Unknown`
+- [ ] `RG-INV-05` Adhésion idempotente : un rejeu du même compte ne crée pas de doublon ni ne modifie la présence
+- [ ] Conserver `/join/` ou `/rejoindre/` pendant connexion et inscription, en rejetant toute URL de retour externe
+- [ ] Écrans : aperçu, connexion/création avec retour, adhésion automatique et états fermeture, lien invalide et panne réseau
+- [ ] Supprimer la création de nouveaux jetons invités et `/v1/auth/guest-claim` ; conserver les lignes sans `user_id` uniquement comme historiques financières
+- [ ] Configurer Android App Links et iOS Universal Links pour ouvrir directement les invitations ; sans application, ouvrir le Web
+- [ ] Recette : POST anonyme à 401, nom du profil, statut `Unknown`, rejeu idempotent, routes profondes Web/Android/iOS
 
 ## Lot 1.4 — Présences
 
@@ -558,7 +548,7 @@ Sortie : les critères 13 à 26 du `§18` sont vérifiés.
 
 ## Lot 1.11 — Notifications
 
-- [ ] Configurer les notifications poussées (Firebase) pour Android et Web
+- [ ] Configurer les notifications poussées FCM pour Android et Web — exclusivement pour les notifications, jamais pour les liens, l'authentification, les données ou le temps réel
 - [ ] `EF-NOT-01` Réponses aux invitations, à l'organisateur
 - [ ] `EF-NOT-02` Modification de date ou de lieu
 - [ ] `EF-NOT-03` Rappel de non-réponse à J-3 et J-1
@@ -610,7 +600,7 @@ Sortie : les critères 13 à 26 du `§18` sont vérifiés.
 - [ ] `RG-RGPD-01` Anonymisation des contributions financières à la suppression
 - [ ] `EF-RGPD-03` Rectification des données d'identité
 - [ ] `EF-RGPD-04` Retrait du consentement par catégorie
-- [ ] `RG-RGPD-02` Droits exerçables par un invité sans compte
+- [ ] `RG-RGPD-02` Documenter le traitement des lignes historiques sans compte, conservées avec leurs références financières
 - [ ] Rédiger le registre des traitements — `§12.1`
 
 ## Lot 1.14 — Exploitation

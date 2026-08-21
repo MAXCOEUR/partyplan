@@ -1,7 +1,10 @@
 # Écrans événementiels et socle hors ligne — conception
 
-> Sous-projet **B1** du plan d'achèvement de la V1.0.
-> Date : 20/08/2026. Statut : validé, prêt pour le plan d'implémentation.
+> Document **historique** du sous-projet B1, daté du 20/08/2026.
+> Statut : remplacé le 21/08/2026 par
+> `2026-08-21-invitations-comptes-liens-profonds-design.md` et l'ADR 0006. Les mentions
+> ci-dessous du parcours invité sans compte décrivent uniquement l'ancien état ; elles ne
+> sont plus des exigences actives.
 
 ## 1. Objectif
 
