@@ -3,6 +3,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 import 'models/article_course.dart';
 import 'models/depense.dart';
+import 'models/message.dart';
 import 'models/reglement.dart';
 import 'models/evenement.dart';
 import 'models/invitation.dart';
@@ -13,6 +14,7 @@ import 'network/api_client.dart';
 import 'network/comptes_api.dart';
 import 'network/courses_api.dart';
 import 'network/depenses_api.dart';
+import 'network/discussion_api.dart';
 import 'network/reglements_api.dart';
 import 'network/evenements_api.dart';
 import 'offline/cache_lecture.dart';
@@ -360,6 +362,22 @@ final reglementsApiProvider = Provider<ReglementsApi>(
 /// application (RG-RMB-02).
 final reglementsProvider = FutureProvider.family<PageReglements, String>(
   (ref, evenementId) => ref.watch(reglementsApiProvider).lire(evenementId),
+);
+
+// -------------------------------------------------------------- discussion ----
+
+final discussionApiProvider = Provider<DiscussionApi>(
+  (ref) => DiscussionApi(ref.watch(apiClientProvider)),
+);
+
+/// Fil de discussion d'un événement.
+final filDiscussionProvider = FutureProvider.family<FilDiscussion, String>(
+  (ref, evenementId) => ref.watch(discussionApiProvider).lire(evenementId),
+);
+
+/// Messages épinglés et dossiers de rangement.
+final epinglesProvider = FutureProvider.family<PageEpingles, String>(
+  (ref, evenementId) => ref.watch(discussionApiProvider).lireEpingles(evenementId),
 );
 
 /// Aperçu d'une invitation, par jeton de lien ou par code court.

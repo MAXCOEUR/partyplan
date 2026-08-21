@@ -66,3 +66,8 @@ infra/data/
 
 # Chaînes traduites générées depuis lib/l10n/arb par `make l10n`
 app/lib/l10n/generated/
+
+# Client Dart engendré par « make openapi ». Les clients d'API sont écrits à la main :
+# le paquet généré n'est pas compilable en l'état et n'a aucun appelant. Seul
+# docs/api/openapi.json est versionné, comme trace de revue.
+app/packages/partyplan_api/
