@@ -127,18 +127,46 @@ class Message {
 
 /// Fil de discussion, du plus ancien au plus récent.
 class FilDiscussion {
-  const FilDiscussion({required this.messages});
+  const FilDiscussion({
+    required this.messages,
+    this.encorePlusHaut = false,
+    this.nonLus = 0,
+    this.premierNonLuId,
+  });
 
   factory FilDiscussion.depuisJson(Map<String, dynamic> json) => FilDiscussion(
     messages: [
       for (final m in json['items'] as List<dynamic>? ?? const [])
         Message.depuisJson(m as Map<String, dynamic>),
     ],
+    encorePlusHaut: json['hasMore'] as bool? ?? false,
+    nonLus: json['unreadCount'] as int? ?? 0,
+    premierNonLuId: json['firstUnreadId'] as String?,
   );
 
   final List<Message> messages;
 
+  /// Vrai s'il reste des messages plus anciens à demander en remontant.
+  final bool encorePlusHaut;
+
+  /// Nombre de messages non lus, y compris ceux qui ne sont pas dans cette page.
+  final int nonLus;
+
+  /// Premier message non lu. Peut se trouver au-dessus des messages chargés.
+  final String? premierNonLuId;
+
   bool get estVide => messages.isEmpty;
+
+  /// Le plus ancien message connu : le point de départ de la page suivante.
+  String? get plusAncienId => messages.isEmpty ? null : messages.first.id;
+
+  FilDiscussion avec({List<Message>? messages, bool? encorePlusHaut}) =>
+      FilDiscussion(
+        messages: messages ?? this.messages,
+        encorePlusHaut: encorePlusHaut ?? this.encorePlusHaut,
+        nonLus: nonLus,
+        premierNonLuId: premierNonLuId,
+      );
 }
 
 /// Dossier de rangement des messages épinglés. Toujours partagé.

@@ -145,8 +145,7 @@ class DetailDepense {
   ///
   /// L'écran le signale : deux personnes qui doivent des sommes différentes sur une
   /// même dépense se demanderaient sinon si le calcul est faux.
-  bool get partsInegales =>
-      parts.map((p) => p.part).toSet().length > 1;
+  bool get partsInegales => parts.map((p) => p.part).toSet().length > 1;
 }
 
 /// Liste des dépenses et ses totaux.

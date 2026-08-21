@@ -262,9 +262,7 @@ class _ChoixCategorie extends StatelessWidget {
             ChoiceChip(
               label: Text(categorie.libelle),
               selected: categorie == valeur,
-              onSelected: onChange == null
-                  ? null
-                  : (_) => onChange!(categorie),
+              onSelected: onChange == null ? null : (_) => onChange!(categorie),
             ),
         ],
       ),
@@ -287,9 +285,7 @@ Future<void> ouvrirFeuilleArticle(
   builder: (contexte) => Padding(
     // Laisse la place au clavier : sans cela, le bouton de validation reste caché
     // dessous et le formulaire paraît sans issue.
-    padding: EdgeInsets.only(
-      bottom: MediaQuery.viewInsetsOf(contexte).bottom,
-    ),
+    padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(contexte).bottom),
     child: ArticleFeuille(evenementId: evenementId, article: article),
   ),
 );

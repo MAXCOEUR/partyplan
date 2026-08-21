@@ -17,9 +17,7 @@ void main() {
         const MaterialApp(
           home: Scaffold(
             body: PpCard(
-              child: Column(
-                children: [Text('Bières'), Text('À prendre')],
-              ),
+              child: Column(children: [Text('Bières'), Text('À prendre')]),
             ),
           ),
         ),

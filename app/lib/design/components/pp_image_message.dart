@@ -72,7 +72,9 @@ class PpImageMessage extends StatelessWidget {
                 // Écarté de la sémantique : sans cela le lecteur d'écran annonce le
                 // libellé de la vignette suivi de « Image indisponible », les deux
                 // fondus en une seule phrase incompréhensible.
-                child: const ExcludeSemantics(child: Text('Image indisponible')),
+                child: const ExcludeSemantics(
+                  child: Text('Image indisponible'),
+                ),
               ),
             ),
           ),

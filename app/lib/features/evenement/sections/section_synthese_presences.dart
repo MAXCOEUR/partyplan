@@ -114,7 +114,11 @@ class _LigneParticipant extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: PpSpacing.xs),
       child: Row(
         children: [
-          PpAvatar(nom: membre.nomAffiche, urlPhoto: membre.avatarUrl, taille: 32),
+          PpAvatar(
+            nom: membre.nomAffiche,
+            urlPhoto: membre.avatarUrl,
+            taille: 32,
+          ),
           const SizedBox(width: PpSpacing.md),
           Expanded(
             child: Row(
@@ -133,7 +137,10 @@ class _LigneParticipant extends StatelessWidget {
                   Text(
                     '+${membre.accompagnants}',
                     style: theme.textTheme.labelSmall?.copyWith(
-                      color: PpColors.texteSur(PpColors.violet, theme.brightness),
+                      color: PpColors.texteSur(
+                        PpColors.violet,
+                        theme.brightness,
+                      ),
                       fontWeight: FontWeight.w600,
                     ),
                   ),

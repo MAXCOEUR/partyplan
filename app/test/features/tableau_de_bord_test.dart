@@ -26,7 +26,12 @@ void main() {
       await _monter(
         tester,
         membres: [
-          membre(id: 'm1', nom: 'Moi', statut: StatutPresence.present, cestMoi: true),
+          membre(
+            id: 'm1',
+            nom: 'Moi',
+            statut: StatutPresence.present,
+            cestMoi: true,
+          ),
           membre(id: 'm2', nom: 'Lucas', statut: StatutPresence.absent),
           membre(id: 'm3', nom: 'Léa', statut: StatutPresence.peutEtre),
           membre(id: 'm4', nom: 'Emma', statut: StatutPresence.inconnu),
@@ -47,7 +52,12 @@ void main() {
         tester,
         membres: [
           membre(id: 'm4', nom: 'Emma', statut: StatutPresence.inconnu),
-          membre(id: 'm1', nom: 'Moi', statut: StatutPresence.present, cestMoi: true),
+          membre(
+            id: 'm1',
+            nom: 'Moi',
+            statut: StatutPresence.present,
+            cestMoi: true,
+          ),
         ],
       );
 

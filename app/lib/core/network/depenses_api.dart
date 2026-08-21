@@ -16,7 +16,8 @@ class DepensesApi {
 
   Future<PageDepenses> lister(String evenementId) => _client.get(
     _base(evenementId),
-    analyser: (corps) => PageDepenses.depuisJson(corps! as Map<String, dynamic>),
+    analyser: (corps) =>
+        PageDepenses.depuisJson(corps! as Map<String, dynamic>),
   );
 
   Future<DetailDepense> detail(String evenementId, String depenseId) =>

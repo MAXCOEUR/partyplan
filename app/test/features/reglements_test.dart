@@ -96,11 +96,7 @@ void main() {
     testWidgets('dit d’abord ce que l’appelant doit', (tester) async {
       // EF-RMB-05 : sa propre dette passe avant les soldes des autres. C'est la seule
       // ligne sur laquelle la personne a quelque chose à faire.
-      await _monter(
-        tester,
-        monSolde: -18.30,
-        proposes: [_reglement()],
-      );
+      await _monter(tester, monSolde: -18.30, proposes: [_reglement()]);
 
       // L'étiquette est en capitales : c'est le texte réellement affiché.
       expect(find.textContaining('TU DOIS'), findsOneWidget);
@@ -111,7 +107,9 @@ void main() {
       await _monter(
         tester,
         monSolde: 42.50,
-        proposes: [_reglement(de: 'm2', deNom: 'Lucas', vers: 'm1', versNom: 'Moi')],
+        proposes: [
+          _reglement(de: 'm2', deNom: 'Lucas', vers: 'm1', versNom: 'Moi'),
+        ],
       );
 
       expect(find.textContaining('ON TE DOIT'), findsOneWidget);

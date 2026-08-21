@@ -72,7 +72,8 @@ Sondage _sondage({
   votants: votants,
   auteur: 'Lucas',
   creeLe: DateTime(2026, 8, 21, 20),
-  options: options ??
+  options:
+      options ??
       const [
         OptionSondage(id: 'o1', libelle: 'Pizza', voix: 0, laMienne: false),
         OptionSondage(id: 'o2', libelle: 'Sushi', voix: 0, laMienne: false),
@@ -156,7 +157,12 @@ void main() {
           votants: 1,
           options: const [
             OptionSondage(id: 'o1', libelle: 'Entrée', voix: 1, laMienne: true),
-            OptionSondage(id: 'o2', libelle: 'Dessert', voix: 0, laMienne: false),
+            OptionSondage(
+              id: 'o2',
+              libelle: 'Dessert',
+              voix: 0,
+              laMienne: false,
+            ),
           ],
         ),
       ]);
@@ -178,7 +184,12 @@ void main() {
           votants: 1,
           options: const [
             OptionSondage(id: 'o1', libelle: 'Entrée', voix: 1, laMienne: true),
-            OptionSondage(id: 'o2', libelle: 'Dessert', voix: 1, laMienne: true),
+            OptionSondage(
+              id: 'o2',
+              libelle: 'Dessert',
+              voix: 1,
+              laMienne: true,
+            ),
           ],
         ),
       ]);

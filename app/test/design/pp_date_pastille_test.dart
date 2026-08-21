@@ -42,9 +42,7 @@ void main() {
       // Laisser la pastille vide donnerait l'impression d'une donnée manquante plutôt
       // que d'une décision à prendre.
       await tester.pumpWidget(
-        const MaterialApp(
-          home: Scaffold(body: PpDatePastille(date: null)),
-        ),
+        const MaterialApp(home: Scaffold(body: PpDatePastille(date: null))),
       );
 
       expect(find.text('À définir'), findsOneWidget);

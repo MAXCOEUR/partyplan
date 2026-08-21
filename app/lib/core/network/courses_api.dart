@@ -117,10 +117,7 @@ class CoursesApi {
     double? prixPaye,
   }) => _client.post(
     '${_base(evenementId)}/$articleId/purchase',
-    corps: {
-      'purchasedQuantity': ?quantiteObtenue,
-      'actualPrice': ?prixPaye,
-    },
+    corps: {'purchasedQuantity': ?quantiteObtenue, 'actualPrice': ?prixPaye},
     cleIdempotence: nouvelleCleIdempotence(),
     analyser: (corps) =>
         ArticleCourse.depuisJson(corps! as Map<String, dynamic>),

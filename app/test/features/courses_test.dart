@@ -69,7 +69,9 @@ class _CoursesApiDouble implements CoursesApi {
     double? prixEstime,
     String? note,
   }) async {
-    appels.add('ajouter:$nom:${categorie.versApi}:$quantite:$unite:$prixEstime');
+    appels.add(
+      'ajouter:$nom:${categorie.versApi}:$quantite:$unite:$prixEstime',
+    );
     return _liste.articles.first;
   }
 
@@ -208,7 +210,9 @@ void main() {
       expect(find.textContaining('1 / 3'), findsOneWidget);
     });
 
-    testWidgets('groupe les articles par catégorie, en français', (tester) async {
+    testWidgets('groupe les articles par catégorie, en français', (
+      tester,
+    ) async {
       await _monter(
         tester,
         avancement: const AvancementCourses(total: 3, pris: 0, achetes: 0),

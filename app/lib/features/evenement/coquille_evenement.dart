@@ -133,7 +133,7 @@ class _CoquilleEvenementState extends ConsumerState<CoquilleEvenement> {
             TableauDeBordPage(evenementId: widget.eventId),
             CoursesPage(evenementId: widget.eventId),
             DepensesPage(evenementId: widget.eventId),
-          DiscussionPage(evenementId: widget.eventId),
+            DiscussionPage(evenementId: widget.eventId),
             _MenuPlus(evenementId: widget.eventId),
           ],
         ),

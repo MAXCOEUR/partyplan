@@ -16,8 +16,13 @@ class DiscussionApi {
 
   String _epingles(String evenementId) => '/events/$evenementId/pins';
 
-  Future<FilDiscussion> lire(String evenementId) => _client.get(
-    _fil(evenementId),
+  /// Une page du fil : les derniers messages, ou ceux qui précèdent [avant].
+  Future<FilDiscussion> lire(
+    String evenementId, {
+    String? avant,
+    int limite = 50,
+  }) => _client.get(
+    '${_fil(evenementId)}?limit=$limite${avant == null ? '' : '&before=$avant'}',
     // Jamais mis en cache : un fil de discussion servi depuis le disque après une
     // coupure afficherait une conversation vieille de plusieurs heures comme si elle
     // était à jour.
@@ -25,6 +30,14 @@ class DiscussionApi {
     analyser: (corps) =>
         FilDiscussion.depuisJson(corps! as Map<String, dynamic>),
   );
+
+  /// Avance le repère de lecture jusqu'à ce message.
+  Future<void> marquerLu(String evenementId, String messageId) =>
+      _client.post<void>(
+        '${_fil(evenementId)}/read',
+        corps: {'messageId': messageId},
+        analyser: (_) {},
+      );
 
   /// Envoie un message : texte, image, réponse, mentions.
   ///
@@ -109,16 +122,14 @@ class DiscussionApi {
 
   // ---------------------------------------------------------------- épingles ----
 
-  Future<PageEpingles> lireEpingles(
-    String evenementId, {
-    String? dossierId,
-  }) => _client.get(
-    _epingles(evenementId),
-    parametres: dossierId == null ? null : {'folderId': dossierId},
-    cacheable: false,
-    analyser: (corps) =>
-        PageEpingles.depuisJson(corps! as Map<String, dynamic>),
-  );
+  Future<PageEpingles> lireEpingles(String evenementId, {String? dossierId}) =>
+      _client.get(
+        _epingles(evenementId),
+        parametres: dossierId == null ? null : {'folderId': dossierId},
+        cacheable: false,
+        analyser: (corps) =>
+            PageEpingles.depuisJson(corps! as Map<String, dynamic>),
+      );
 
   /// Épingle un message. [dossierId] nul le laisse sans rangement.
   Future<Epingle> epingler(

@@ -27,8 +27,7 @@ void main() {
       // Le rail de 600 points est centré dans 1280 : son bord gauche tombe à 340, et
       // la marge intérieure place le contenu à 356. C'est sur ce bord — celui des
       // cartes — que le titre doit tomber, pas sur celui du rail nu.
-      final bordContenu =
-          (1280 - PpBreakpoints.railContenu) / 2 + PpSpacing.lg;
+      final bordContenu = (1280 - PpBreakpoints.railContenu) / 2 + PpSpacing.lg;
 
       expect(bordTitre, closeTo(bordContenu, 1));
     });

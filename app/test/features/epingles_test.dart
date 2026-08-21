@@ -18,6 +18,10 @@ class _DiscussionApiDouble implements DiscussionApi {
   final List<String> appels = [];
 
   @override
+  Future<void> marquerLu(String evenementId, String messageId) async =>
+      appels.add('marquerLu');
+
+  @override
   Future<PageEpingles> lireEpingles(
     String evenementId, {
     String? dossierId,
@@ -53,8 +57,11 @@ class _DiscussionApiDouble implements DiscussionApi {
   }
 
   @override
-  Future<FilDiscussion> lire(String evenementId) async =>
-      const FilDiscussion(messages: []);
+  Future<FilDiscussion> lire(
+    String evenementId, {
+    String? avant,
+    int limite = 50,
+  }) async => const FilDiscussion(messages: []);
 
   @override
   Future<Message> envoyer(

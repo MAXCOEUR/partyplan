@@ -129,10 +129,7 @@ void main() {
         const ArticleFeuille(evenementId: _evenement),
       );
 
-      await tester.enterText(
-        find.byKey(const Key('article-nom')),
-        'Chips',
-      );
+      await tester.enterText(find.byKey(const Key('article-nom')), 'Chips');
       await tester.tap(find.text('Nourriture'));
       await tester.pumpAndSettle();
       await tester.tap(find.text('Ajouter'));
@@ -159,32 +156,22 @@ void main() {
       expect(api.appels.single, contains('|Other|'));
     });
 
-    testWidgets('transmet quantité, unité, prix estimé et note', (tester) async {
+    testWidgets('transmet quantité, unité, prix estimé et note', (
+      tester,
+    ) async {
       final api = await _monter(
         tester,
         const ArticleFeuille(evenementId: _evenement),
       );
 
-      await tester.enterText(
-        find.byKey(const Key('article-nom')),
-        'Bières',
-      );
-      await tester.enterText(
-        find.byKey(const Key('article-quantite')),
-        '24',
-      );
+      await tester.enterText(find.byKey(const Key('article-nom')), 'Bières');
+      await tester.enterText(find.byKey(const Key('article-quantite')), '24');
       await tester.enterText(
         find.byKey(const Key('article-unite')),
         'bouteilles',
       );
-      await tester.enterText(
-        find.byKey(const Key('article-prix')),
-        '30,50',
-      );
-      await tester.enterText(
-        find.byKey(const Key('article-note')),
-        'blondes',
-      );
+      await tester.enterText(find.byKey(const Key('article-prix')), '30,50');
+      await tester.enterText(find.byKey(const Key('article-note')), 'blondes');
       await tester.tap(find.text('Ajouter'));
       await tester.pumpAndSettle();
 
@@ -216,14 +203,8 @@ void main() {
         const ArticleFeuille(evenementId: _evenement),
       );
 
-      await tester.enterText(
-        find.byKey(const Key('article-nom')),
-        'Bières',
-      );
-      await tester.enterText(
-        find.byKey(const Key('article-prix')),
-        '-3',
-      );
+      await tester.enterText(find.byKey(const Key('article-nom')), 'Bières');
+      await tester.enterText(find.byKey(const Key('article-prix')), '-3');
       await tester.tap(find.text('Ajouter'));
       await tester.pumpAndSettle();
 
@@ -255,10 +236,7 @@ void main() {
         AchatFeuille(evenementId: _evenement, article: _articleExemple),
       );
 
-      await tester.enterText(
-        find.byKey(const Key('achat-prix')),
-        '22,40',
-      );
+      await tester.enterText(find.byKey(const Key('achat-prix')), '22,40');
       await tester.pumpAndSettle();
 
       expect(find.textContaining('dépense'), findsOneWidget);
@@ -284,14 +262,8 @@ void main() {
         AchatFeuille(evenementId: _evenement, article: _articleExemple),
       );
 
-      await tester.enterText(
-        find.byKey(const Key('achat-quantite')),
-        '18',
-      );
-      await tester.enterText(
-        find.byKey(const Key('achat-prix')),
-        '22,40',
-      );
+      await tester.enterText(find.byKey(const Key('achat-quantite')), '18');
+      await tester.enterText(find.byKey(const Key('achat-prix')), '22,40');
       await tester.tap(find.text('C’est acheté'));
       await tester.pumpAndSettle();
 
@@ -304,10 +276,7 @@ void main() {
         AchatFeuille(evenementId: _evenement, article: _articleExemple),
       );
 
-      await tester.enterText(
-        find.byKey(const Key('achat-prix')),
-        '-5',
-      );
+      await tester.enterText(find.byKey(const Key('achat-prix')), '-5');
       await tester.tap(find.text('C’est acheté'));
       await tester.pumpAndSettle();
 

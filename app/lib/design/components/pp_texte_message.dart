@@ -75,7 +75,10 @@ class PpTexteMessage extends StatelessWidget {
         TextSpan(
           text: url,
           style: base.copyWith(
-            color: PpColors.texteSur(PpColors.violet, Theme.of(context).brightness),
+            color: PpColors.texteSur(
+              PpColors.violet,
+              Theme.of(context).brightness,
+            ),
             decoration: TextDecoration.underline,
             fontWeight: FontWeight.w500,
           ),
@@ -156,7 +159,8 @@ class PpTexteMessage extends StatelessWidget {
   static String _sansPonctuationFinale(String url) {
     var propre = url;
 
-    while (propre.isNotEmpty && _ponctuationFinale.contains(propre[propre.length - 1])) {
+    while (propre.isNotEmpty &&
+        _ponctuationFinale.contains(propre[propre.length - 1])) {
       propre = propre.substring(0, propre.length - 1);
     }
 

@@ -105,11 +105,7 @@ Future<_DepensesApiDouble> _monter(WidgetTester tester) async {
         (ref) async => [
           _membre(id: 'm1', nom: 'Moi', cestMoi: true),
           _membre(id: 'm2', nom: 'Lucas'),
-          _membre(
-            id: 'm3',
-            nom: 'Absente',
-            statut: StatutPresence.absent,
-          ),
+          _membre(id: 'm3', nom: 'Absente', statut: StatutPresence.absent),
         ],
       ),
     ],

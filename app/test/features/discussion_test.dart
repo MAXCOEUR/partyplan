@@ -8,6 +8,7 @@ import 'package:partyplan/core/providers.dart';
 import 'package:partyplan/features/discussion/discussion_page.dart';
 
 import '../aide/monter_ecran.dart';
+import '../doubles/fil_discussion_double.dart';
 
 const _evenement = 'ev-1';
 
@@ -19,7 +20,15 @@ class _DiscussionApiDouble implements DiscussionApi {
   final List<String> appels = [];
 
   @override
-  Future<FilDiscussion> lire(String evenementId) async {
+  Future<void> marquerLu(String evenementId, String messageId) async =>
+      appels.add('marquerLu');
+
+  @override
+  Future<FilDiscussion> lire(
+    String evenementId, {
+    String? avant,
+    int limite = 50,
+  }) async {
     appels.add('lire');
     return _fil;
   }
@@ -195,12 +204,22 @@ Future<_DiscussionApiDouble> _monter(
 
 void main() {
   group('Discussion', () {
-    testWidgets('affiche le fil, du plus ancien au plus récent', (tester) async {
+    testWidgets('affiche le fil, du plus ancien au plus récent', (
+      tester,
+    ) async {
       // Une conversation se lit dans l'ordre où elle s'est tenue : l'inverser
       // obligerait à remonter pour comprendre une réponse.
       await _monter(tester, [
-        _message(id: 'a', corps: 'premier', envoyeLe: DateTime(2026, 8, 21, 20)),
-        _message(id: 'b', corps: 'dernier', envoyeLe: DateTime(2026, 8, 21, 21)),
+        _message(
+          id: 'a',
+          corps: 'premier',
+          envoyeLe: DateTime(2026, 8, 21, 20),
+        ),
+        _message(
+          id: 'b',
+          corps: 'dernier',
+          envoyeLe: DateTime(2026, 8, 21, 21),
+        ),
       ]);
 
       final premier = tester.getTopLeft(find.text('premier')).dy;
@@ -370,7 +389,10 @@ void main() {
         ),
       ]);
 
-      expect(find.textContaining('On prend quoi comme musique ?'), findsOneWidget);
+      expect(
+        find.textContaining('On prend quoi comme musique ?'),
+        findsOneWidget,
+      );
     });
 
     testWidgets('un message modifié le dit', (tester) async {
@@ -382,9 +404,7 @@ void main() {
     testWidgets('un message supprimé garde sa place sans son contenu', (
       tester,
     ) async {
-      await _monter(tester, [
-        _message(id: 'a', corps: null, supprime: true),
-      ]);
+      await _monter(tester, [_message(id: 'a', corps: null, supprime: true)]);
 
       expect(find.textContaining('supprimé'), findsOneWidget);
     });
@@ -433,7 +453,10 @@ void main() {
     testWidgets('la liste se réduit à mesure qu’on tape', (tester) async {
       await _monter(tester, const []);
 
-      await tester.enterText(find.byKey(const Key('discussion-saisie')), '@Luc');
+      await tester.enterText(
+        find.byKey(const Key('discussion-saisie')),
+        '@Luc',
+      );
       await tester.pumpAndSettle();
 
       expect(find.byKey(const Key('mention-choix-m2')), findsOneWidget);
@@ -446,7 +469,10 @@ void main() {
       // « @luc » doit trouver Lucas : personne ne pense à la casse en tapant vite.
       await _monter(tester, const []);
 
-      await tester.enterText(find.byKey(const Key('discussion-saisie')), '@luc');
+      await tester.enterText(
+        find.byKey(const Key('discussion-saisie')),
+        '@luc',
+      );
       await tester.pumpAndSettle();
 
       expect(find.byKey(const Key('mention-choix-m2')), findsOneWidget);
@@ -474,7 +500,10 @@ void main() {
     testWidgets('la liste disparaît une fois le nom choisi', (tester) async {
       await _monter(tester, const []);
 
-      await tester.enterText(find.byKey(const Key('discussion-saisie')), '@Luc');
+      await tester.enterText(
+        find.byKey(const Key('discussion-saisie')),
+        '@Luc',
+      );
       await tester.pumpAndSettle();
       await tester.tap(find.byKey(const Key('mention-choix-m2')));
       await tester.pumpAndSettle();
@@ -482,7 +511,9 @@ void main() {
       expect(find.byKey(const Key('mention-choix-m2')), findsNothing);
     });
 
-    testWidgets('une adresse électronique n’ouvre pas la liste', (tester) async {
+    testWidgets('une adresse électronique n’ouvre pas la liste', (
+      tester,
+    ) async {
       // « ecris-moi@exemple.fr » contient un @ collé à du texte : ce n'est pas une
       // tentative de citer quelqu'un.
       await _monter(tester, const []);
@@ -537,9 +568,7 @@ void main() {
     ) async {
       final conteneur = ProviderContainer(
         overrides: [
-          filDiscussionProvider(
-            _evenement,
-          ).overrideWith((ref) => Future.error(Exception('réseau'))),
+          filDiscussionProvider(_evenement).overrideWith(FilEnPanne.new),
         ],
       );
       addTearDown(conteneur.dispose);

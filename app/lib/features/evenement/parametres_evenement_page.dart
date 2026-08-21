@@ -65,7 +65,9 @@ class _ParametresEvenementPageState
 
     return Scaffold(
       appBar: PpBarreApp(
-        bouton: PpRetour(versParent: PpRoutes.versEvenement(widget.evenementId)),
+        bouton: PpRetour(
+          versParent: PpRoutes.versEvenement(widget.evenementId),
+        ),
         titre: Text(l10n.paramTitre),
       ),
       body: PpRail(

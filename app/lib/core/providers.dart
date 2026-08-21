@@ -393,9 +393,108 @@ final discussionApiProvider = Provider<DiscussionApi>(
 );
 
 /// Fil de discussion d'un événement.
-final filDiscussionProvider = FutureProvider.family<FilDiscussion, String>(
-  (ref, evenementId) => ref.watch(discussionApiProvider).lire(evenementId),
-);
+/// Fil de discussion d'un événement, chargé par pages.
+///
+/// L'état accumule les pages au lieu de les remplacer : remonter le fil ne doit pas
+/// faire disparaître ce qu'on vient de lire en dessous.
+class FilDiscussionNotifier extends AsyncNotifier<FilDiscussion> {
+  FilDiscussionNotifier(this.evenementId);
+
+  final String evenementId;
+
+  /// Messages demandés par page. Deux écrans de conversation : assez pour qu'un fil
+  /// ordinaire ne pagine pas du tout.
+  static const parPage = 50;
+
+  bool _enCoursDeRemontee = false;
+
+  @override
+  Future<FilDiscussion> build() =>
+      ref.watch(discussionApiProvider).lire(evenementId, limite: parPage);
+
+  /// Ajoute la page précédente en tête du fil.
+  ///
+  /// Sans effet si le début du fil est atteint, ou si une remontée est déjà en cours :
+  /// le défilement déclenche plusieurs fois de suite, et deux requêtes concurrentes
+  /// rendraient la même page deux fois.
+  Future<void> chargerPlusAncien() async {
+    final actuel = state.value;
+
+    if (actuel == null || !actuel.encorePlusHaut || _enCoursDeRemontee) {
+      return;
+    }
+
+    _enCoursDeRemontee = true;
+
+    try {
+      final precedents = await ref
+          .read(discussionApiProvider)
+          .lire(evenementId, avant: actuel.plusAncienId, limite: parPage);
+
+      // Les identifiants déjà connus sont écartés : un message envoyé pendant la
+      // remontée peut se retrouver dans les deux pages, et une clé dupliquée fait
+      // lever la liste.
+      final connus = actuel.messages.map((m) => m.id).toSet();
+
+      state = AsyncData(
+        actuel.avec(
+          messages: [
+            ...precedents.messages.where((m) => !connus.contains(m.id)),
+            ...actuel.messages,
+          ],
+          encorePlusHaut: precedents.encorePlusHaut,
+        ),
+      );
+    } finally {
+      _enCoursDeRemontee = false;
+    }
+  }
+
+  /// Nombre maximal de pages chargées pour rejoindre le premier message non lu.
+  ///
+  /// « Tout jusqu'au premier non lu » n'est pas tenable : après trois semaines
+  /// d'absence, ce serait la conversation entière. Passé cette borne, le fil s'ouvre sur
+  /// les derniers messages, comme une messagerie qui renonce à rattraper un très vieux
+  /// retard.
+  static const _pagesDeRattrapage = 4;
+
+  /// Charge les pages nécessaires pour que le premier message non lu soit dans le fil.
+  ///
+  /// Sans cela, le repère de lecture désigne un message absent de l'écran : il n'y a
+  /// rien à montrer, et le fil s'ouvre en bas comme si tout était lu.
+  Future<void> rattraperLesNonLus() async {
+    for (var page = 1; page < _pagesDeRattrapage; page++) {
+      final actuel = state.value;
+
+      if (actuel == null ||
+          actuel.premierNonLuId == null ||
+          !actuel.encorePlusHaut ||
+          actuel.messages.any((m) => m.id == actuel.premierNonLuId)) {
+        return;
+      }
+
+      await chargerPlusAncien();
+    }
+  }
+
+  /// Avance le repère de lecture jusqu'au dernier message connu.
+  Future<void> marquerLu() async {
+    final actuel = state.value;
+
+    if (actuel == null || actuel.messages.isEmpty) {
+      return;
+    }
+
+    await ref
+        .read(discussionApiProvider)
+        .marquerLu(evenementId, actuel.messages.last.id);
+  }
+}
+
+final filDiscussionProvider =
+    AsyncNotifierProvider.family<FilDiscussionNotifier, FilDiscussion, String>(
+      FilDiscussionNotifier.new,
+    );
 
 /// Messages épinglés et dossiers de rangement.
 final epinglesProvider = FutureProvider.family<PageEpingles, String>(

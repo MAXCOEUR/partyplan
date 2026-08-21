@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -52,11 +54,112 @@ class _DiscussionPageState extends ConsumerState<DiscussionPage> {
   /// une montée vouée au refus.
   static const _tailleMaximale = 12 * 1024 * 1024;
 
+  /// Combien de temps la ligne « Nouveaux messages » reste affichée.
+  ///
+  /// Elle sert à se repérer en arrivant, pas à rester : passé le premier regard, c'est
+  /// une barre qui traverse la conversation sans plus rien dire.
+  static const _dureeDeLaLigne = Duration(seconds: 10);
+
+  /// Distance au haut du fil qui déclenche le chargement des messages plus anciens.
+  ///
+  /// Anticipée d'un écran : attendre le bord même laisserait voir un vide le temps de
+  /// la requête.
+  static const _margeDeRemontee = 600.0;
+
+  /// Message sur lequel la vue est ancrée : le premier non lu à l'arrivée.
+  ///
+  /// Une fois posé, il ne change plus tant qu'on est sur l'écran. La ligne de reprise
+  /// s'efface au bout de dix secondes, l'ancrage non : le déplacer ferait sauter la
+  /// conversation jusqu'en bas sous les yeux de qui est en train de lire.
+  String? _ancreAu;
+
+  /// Vrai tant que la ligne « Nouveaux messages » est affichée.
+  bool _ligneVisible = false;
+
+  /// Vrai une fois la lecture prise en compte, pour ne pas la resignaler à chaque
+  /// reconstruction de l'écran.
+  bool _lectureSignalee = false;
+
+  Timer? _effacementDeLaLigne;
+
+  @override
+  void initState() {
+    super.initState();
+    _defilement.addListener(_surDefilement);
+  }
+
   @override
   void dispose() {
+    _effacementDeLaLigne?.cancel();
+    _defilement
+      ..removeListener(_surDefilement)
+      ..dispose();
     _saisie.dispose();
-    _defilement.dispose();
     super.dispose();
+  }
+
+  /// Charge la page précédente quand on approche du haut du fil.
+  void _surDefilement() {
+    if (!_defilement.hasClients) {
+      return;
+    }
+
+    // Le centre du fil est la frontière de lecture : les messages plus anciens
+    // s'étendent au-dessus, en positions négatives.
+    final restant =
+        _defilement.position.pixels - _defilement.position.minScrollExtent;
+
+    if (restant < _margeDeRemontee) {
+      ref
+          .read(filDiscussionProvider(widget.evenementId).notifier)
+          .chargerPlusAncien();
+    }
+  }
+
+  /// Pose la ligne de reprise à l'arrivée, puis la retire et signale la lecture.
+  void _prendreEnCompteLaLecture(FilDiscussion fil) {
+    if (_lectureSignalee) {
+      return;
+    }
+
+    _lectureSignalee = true;
+
+    if (fil.nonLus == 0) {
+      return;
+    }
+
+    // Le premier non lu peut se trouver au-dessus de la page reçue : les pages
+    // intermédiaires sont demandées d'abord, sinon le repère désigne un message absent
+    // de l'écran et il n'y a rien à montrer.
+    unawaited(
+      ref
+          .read(filDiscussionProvider(widget.evenementId).notifier)
+          .rattraperLesNonLus(),
+    );
+
+    // La ligne est posée hors de la phase de construction : l'état se change après la
+    // frame, jamais pendant qu'elle se dessine.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _ancreAu = fil.premierNonLuId;
+        _ligneVisible = true;
+      });
+
+      _effacementDeLaLigne = Timer(_dureeDeLaLigne, () {
+        if (!mounted) {
+          return;
+        }
+
+        setState(() => _ligneVisible = false);
+        ref
+            .read(filDiscussionProvider(widget.evenementId).notifier)
+            .marquerLu();
+      });
+    });
   }
 
   Future<void> _envoyer() async {
@@ -207,22 +310,29 @@ class _DiscussionPageState extends ConsumerState<DiscussionPage> {
               onRetry: () =>
                   ref.invalidate(filDiscussionProvider(widget.evenementId)),
             ),
-            data: (donnees) => donnees.estVide
-                ? const PpEmptyState(
-                    titre: 'Rien de dit pour l’instant',
-                    explication:
-                        'Pose une question, partage un lien, ou envoie une photo. '
-                        'Ce qui compte se garde en l’épinglant.',
-                    icone: Icons.forum_rounded,
-                  )
-                : _Fil(
-                    evenementId: widget.evenementId,
-                    messages: donnees.messages,
-                    defilement: _defilement,
-                    surLien: _ouvrirLien,
-                    surReponse: (message) =>
-                        setState(() => _citation = message),
-                  ),
+            data: (donnees) {
+              _prendreEnCompteLaLecture(donnees);
+
+              return donnees.estVide
+                  ? const PpEmptyState(
+                      titre: 'Rien de dit pour l’instant',
+                      explication:
+                          'Pose une question, partage un lien, ou envoie une photo. '
+                          'Ce qui compte se garde en l’épinglant.',
+                      icone: Icons.forum_rounded,
+                    )
+                  : _Fil(
+                      evenementId: widget.evenementId,
+                      messages: donnees.messages,
+                      encorePlusHaut: donnees.encorePlusHaut,
+                      ancreAu: _ancreAu,
+                      ligneVisible: _ligneVisible,
+                      defilement: _defilement,
+                      surLien: _ouvrirLien,
+                      surReponse: (message) =>
+                          setState(() => _citation = message),
+                    );
+            },
           ),
         ),
         if (_citation != null)
@@ -244,10 +354,20 @@ class _DiscussionPageState extends ConsumerState<DiscussionPage> {
   }
 }
 
+/// Le fil, du plus ancien au plus récent, ancré en bas.
+///
+/// La liste est construite à l'envers plutôt que défilée après coup : une conversation
+/// s'ouvre sur son dernier message, et une liste ordinaire qu'on fait sauter en bas
+/// après le premier rendu se voit sauter. À l'envers, le bas est le point de départ
+/// naturel, et les messages plus anciens s'ajoutent au-dessus sans déplacer ce qu'on
+/// lit — c'est ce qui permet de remonter le fil sans perdre sa place.
 class _Fil extends StatelessWidget {
   const _Fil({
     required this.evenementId,
     required this.messages,
+    required this.encorePlusHaut,
+    required this.ancreAu,
+    required this.ligneVisible,
     required this.defilement,
     required this.surLien,
     required this.surReponse,
@@ -255,27 +375,137 @@ class _Fil extends StatelessWidget {
 
   final String evenementId;
   final List<Message> messages;
+
+  /// Vrai s'il reste du fil au-dessus : un indicateur le dit pendant le chargement.
+  final bool encorePlusHaut;
+
+  /// Message sur lequel la vue s'ouvre, et frontière entre lu et non lu.
+  final String? ancreAu;
+
+  /// Vrai tant que la ligne « Nouveaux messages » doit être montrée. L'ancrage lui
+  /// survit : la ligne disparaît sans que la conversation bouge.
+  final bool ligneVisible;
+
   final ScrollController defilement;
   final void Function(String) surLien;
   final void Function(Message) surReponse;
 
-  @override
-  Widget build(BuildContext context) => ListView.builder(
-    controller: defilement,
-    padding: const EdgeInsets.all(PpSpacing.lg),
-    itemCount: messages.length,
-    itemBuilder: (context, index) => _Bulle(
+  /// Ancre de la vue : le premier message non lu, ou le bas du fil.
+  static final _centre = GlobalKey();
+
+  Widget _bulle(int index) {
+    final message = messages[index];
+
+    return _Bulle(
       evenementId: evenementId,
-      message: messages[index],
+      message: message,
       // L'auteur n'est répété que lorsqu'il change : une suite de messages d'une même
       // personne n'a pas besoin de son nom à chaque ligne.
       montrerAuteur:
           index == 0 ||
-          messages[index - 1].auteurMembreId != messages[index].auteurMembreId,
+          messages[index - 1].auteurMembreId != message.auteurMembreId,
       surLien: surLien,
       surReponse: surReponse,
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // Rang du premier message non lu. Le fil s'ouvre juste là ; sans repère, il s'ouvre
+    // sur son dernier message.
+    final frontiere = ancreAu == null
+        ? messages.length
+        : messages.indexWhere((m) => m.id == ancreAu);
+
+    final coupe = frontiere < 0 ? messages.length : frontiere;
+    final lus = messages.take(coupe).toList();
+    final nouveaux = messages.skip(coupe).toList();
+
+    return CustomScrollView(
+      controller: defilement,
+      // Le centre est la frontière entre lu et non lu : ce qui précède s'étend vers le
+      // haut, ce qui suit vers le bas. C'est ce qui permet d'ouvrir la conversation sur
+      // le premier message non lu sans faire sauter la vue après le premier rendu.
+      center: _centre,
+      // Sans non-lu, le centre est vide et se colle au bas de la fenêtre : le fil
+      // s'ouvre alors sur son dernier message, comme n'importe quelle messagerie.
+      anchor: nouveaux.isEmpty ? 1.0 : 0.0,
+      slivers: [
+        // Avant le centre : les messages lus, du plus récent au plus ancien. La liste
+        // remonte, donc son ordre s'inverse.
+        SliverPadding(
+          padding: const EdgeInsets.symmetric(horizontal: PpSpacing.lg),
+          sliver: SliverList.builder(
+            itemCount: lus.length + (encorePlusHaut ? 1 : 0),
+            itemBuilder: (context, indexInverse) => indexInverse >= lus.length
+                ? const _AttenteEnHautDuFil()
+                : _bulle(coupe - 1 - indexInverse),
+          ),
+        ),
+        SliverPadding(
+          key: _centre,
+          padding: const EdgeInsets.symmetric(horizontal: PpSpacing.lg),
+          sliver: SliverList.builder(
+            itemCount: nouveaux.isEmpty ? 0 : nouveaux.length + 1,
+            itemBuilder: (context, index) => index == 0
+                // L'entête garde sa place quand la ligne s'efface : la retirer de la
+                // liste décalerait tout ce qui suit, et la vue sauterait.
+                ? (ligneVisible
+                      ? const _LigneDeReprise()
+                      : const SizedBox.shrink())
+                : _bulle(coupe + index - 1),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// Roue d'attente posée là où les messages plus anciens vont apparaître.
+class _AttenteEnHautDuFil extends StatelessWidget {
+  const _AttenteEnHautDuFil();
+
+  @override
+  Widget build(BuildContext context) => const Padding(
+    padding: EdgeInsets.symmetric(vertical: PpSpacing.lg),
+    child: Center(
+      child: SizedBox(
+        width: 20,
+        height: 20,
+        child: CircularProgressIndicator(strokeWidth: 2),
+      ),
     ),
   );
+}
+
+/// Séparateur posé au-dessus du premier message non lu.
+class _LigneDeReprise extends StatelessWidget {
+  const _LigneDeReprise();
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: PpSpacing.sm),
+      child: Row(
+        children: [
+          Expanded(child: Divider(color: PpColors.violet, thickness: 1)),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: PpSpacing.sm),
+            child: Text(
+              'Nouveaux messages',
+              style: theme.textTheme.labelSmall?.copyWith(
+                color: PpColors.violet,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+          Expanded(child: Divider(color: PpColors.violet, thickness: 1)),
+        ],
+      ),
+    );
+  }
 }
 
 class _Bulle extends ConsumerWidget {

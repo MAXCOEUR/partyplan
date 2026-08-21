@@ -56,7 +56,9 @@ class _StockageDiffere implements SessionStore {
 }
 
 void main() {
-  testWidgets('au démarrage, la liste n’est chargée qu’une fois', (tester) async {
+  testWidgets('au démarrage, la liste n’est chargée qu’une fois', (
+    tester,
+  ) async {
     await initializeDateFormatting('fr_FR');
 
     final api = _ApiEspion();

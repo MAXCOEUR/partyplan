@@ -240,5 +240,4 @@ class EvenementsApi {
           ((corps! as Map<String, dynamic>)['linked'] as num).toInt(),
     );
   }
-
 }

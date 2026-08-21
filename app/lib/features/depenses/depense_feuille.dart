@@ -239,16 +239,12 @@ class _DepenseFeuilleState extends ConsumerState<DepenseFeuille> {
               // À la saisie, l'appelant est présélectionné : c'est presque toujours lui
               // qui a payé, et le choisir à chaque fois serait un geste de trop.
               valeur: _payeur ?? _moi(participants)?.id,
-              onChange: _enCours
-                  ? null
-                  : (id) => setState(() => _payeur = id),
+              onChange: _enCours ? null : (id) => setState(() => _payeur = id),
             ),
             const SizedBox(height: PpSpacing.lg),
             _ChoixMode(
               valeur: _mode,
-              onChange: _enCours
-                  ? null
-                  : (mode) => _changerMode(mode, membres),
+              onChange: _enCours ? null : (mode) => _changerMode(mode, membres),
             ),
             if (_mode != ModeAssiette.tousLesPresents) ...[
               const SizedBox(height: PpSpacing.lg),
@@ -422,10 +418,7 @@ class _ChoixParticipants extends StatelessWidget {
                   icon: const Icon(Icons.remove_circle_outline),
                   tooltip: 'Une part de moins',
                 ),
-                Text(
-                  '${parts[membre.id]}',
-                  style: theme.textTheme.titleSmall,
-                ),
+                Text('${parts[membre.id]}', style: theme.textTheme.titleSmall),
                 IconButton(
                   key: Key('part-plus-${membre.id}'),
                   onPressed: () => onPoids(membre.id, 1),

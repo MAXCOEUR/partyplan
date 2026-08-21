@@ -10,8 +10,7 @@ Future<String?> _ouvrir(WidgetTester tester) async {
       home: Scaffold(
         body: Builder(
           builder: (context) => TextButton(
-            onPressed: () async =>
-                choisi = await ouvrirSelecteurEmoji(context),
+            onPressed: () async => choisi = await ouvrirSelecteurEmoji(context),
             child: const Text('Réagir'),
           ),
         ),
@@ -109,9 +108,7 @@ void main() {
 
     test('aucun emoji n’est proposé deux fois', () {
       // Un doublon entre familles ferait douter d'avoir déjà réagi.
-      final tous = [
-        for (final famille in famillesEmoji) ...famille.emojis,
-      ];
+      final tous = [for (final famille in famillesEmoji) ...famille.emojis];
 
       expect(tous.length, tous.toSet().length);
     });

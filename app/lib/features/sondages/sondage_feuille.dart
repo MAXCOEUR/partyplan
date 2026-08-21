@@ -65,12 +65,14 @@ class _SondageFeuilleState extends ConsumerState<SondageFeuille> {
     });
 
     try {
-      await ref.read(sondagesApiProvider).creer(
-        widget.evenementId,
-        question: _question.text.trim(),
-        options: options,
-        choixMultiple: _choixMultiple,
-      );
+      await ref
+          .read(sondagesApiProvider)
+          .creer(
+            widget.evenementId,
+            question: _question.text.trim(),
+            options: options,
+            choixMultiple: _choixMultiple,
+          );
 
       ref
         ..invalidate(sondagesProvider(widget.evenementId))

@@ -114,11 +114,7 @@ class _Totaux extends StatelessWidget {
               style: theme.textTheme.headlineSmall,
             ),
           ),
-          Container(
-            width: 1,
-            height: 44,
-            color: theme.colorScheme.outline,
-          ),
+          Container(width: 1, height: 44, color: theme.colorScheme.outline),
           Expanded(
             child: Padding(
               padding: const EdgeInsets.only(left: PpSpacing.lg),
@@ -262,11 +258,7 @@ class _MenuDepense extends ConsumerWidget {
   Future<void> _agir(BuildContext context, WidgetRef ref, String choix) async {
     switch (choix) {
       case 'modifier':
-        await ouvrirFeuilleDepense(
-          context,
-          evenementId,
-          depense: depense,
-        );
+        await ouvrirFeuilleDepense(context, evenementId, depense: depense);
 
       case 'supprimer':
         await _supprimer(context, ref);
@@ -308,9 +300,7 @@ class _MenuDepense extends ConsumerWidget {
     }
 
     try {
-      await ref
-          .read(depensesApiProvider)
-          .supprimer(evenementId, depense.id);
+      await ref.read(depensesApiProvider).supprimer(evenementId, depense.id);
     } on ApiException catch (erreur) {
       if (context.mounted) {
         ScaffoldMessenger.of(
@@ -320,7 +310,9 @@ class _MenuDepense extends ConsumerWidget {
     } on Exception {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Suppression impossible pour le moment.')),
+          const SnackBar(
+            content: Text('Suppression impossible pour le moment.'),
+          ),
         );
       }
     } finally {
@@ -342,7 +334,9 @@ class _Origine extends StatelessWidget {
     final couleur = issueDesCourses ? PpColors.rose : PpColors.violet;
 
     return Semantics(
-      label: issueDesCourses ? 'Issue de la liste de courses' : 'Saisie à la main',
+      label: issueDesCourses
+          ? 'Issue de la liste de courses'
+          : 'Saisie à la main',
       excludeSemantics: true,
       child: Container(
         width: 36,
@@ -362,7 +356,6 @@ class _Origine extends StatelessWidget {
     );
   }
 }
-
 
 /// Passage vers les remboursements.
 class _AccesReglements extends StatelessWidget {

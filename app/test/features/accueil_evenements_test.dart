@@ -74,7 +74,11 @@ void main() {
       // « C'est quand ? » est la première question devant une liste de soirées : la
       // date noyée dans une ligne de texte oblige à lire pour l'obtenir.
       await _monter(tester, [
-        itemListe(id: 'a', nom: 'Crémaillère', debut: DateTime(2026, 9, 12, 20)),
+        itemListe(
+          id: 'a',
+          nom: 'Crémaillère',
+          debut: DateTime(2026, 9, 12, 20),
+        ),
       ]);
 
       expect(find.byType(PpDatePastille), findsOneWidget);

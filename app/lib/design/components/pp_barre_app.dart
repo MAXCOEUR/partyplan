@@ -50,15 +50,14 @@ class PpBarreApp extends StatelessWidget implements PreferredSizeWidget {
               height: _hauteurBarre,
               child: PpRail(
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: PpSpacing.lg,
-                  ),
+                  padding: const EdgeInsets.symmetric(horizontal: PpSpacing.lg),
                   child: Row(
                     children: [
                       ?bouton,
                       Expanded(
                         child: DefaultTextStyle.merge(
-                          style: theme.appBarTheme.titleTextStyle ??
+                          style:
+                              theme.appBarTheme.titleTextStyle ??
                               theme.textTheme.titleLarge!,
                           overflow: TextOverflow.ellipsis,
                           child: titre,

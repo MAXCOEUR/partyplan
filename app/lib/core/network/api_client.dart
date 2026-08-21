@@ -63,6 +63,7 @@ class ApiClient {
 
   final Dio _dio;
   final SessionStore _sessionStore;
+
   /// Appelé au premier refus « change ton mot de passe » (RG-ADM-10). Le client ne
   /// connaît pas le routeur : il signale, le provider redirige.
   final void Function()? _auChangementImpose;

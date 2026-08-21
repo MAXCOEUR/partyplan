@@ -10,6 +10,7 @@ import 'package:partyplan/core/models/sondage.dart';
 import 'package:partyplan/core/providers.dart';
 
 import '../aide/fabriques.dart';
+import '../doubles/fil_discussion_double.dart';
 import '../doubles/session_store_double.dart';
 
 const _evenement = 'ev-1';
@@ -34,12 +35,12 @@ ProviderContainer _conteneur() {
       depensesProvider(_evenement).overrideWith(
         (ref) async => const PageDepenses(total: 0, maPart: 0, depenses: []),
       ),
-      filDiscussionProvider(_evenement).overrideWith(
-        (ref) async => const FilDiscussion(messages: []),
-      ),
-      sondagesProvider(_evenement).overrideWith(
-        (ref) async => const PageSondages(sondages: []),
-      ),
+      filDiscussionProvider(
+        _evenement,
+      ).overrideWith(() => FilFige(const FilDiscussion(messages: []))),
+      sondagesProvider(
+        _evenement,
+      ).overrideWith((ref) async => const PageSondages(sondages: [])),
       epinglesProvider(_evenement).overrideWith(
         (ref) async => const PageEpingles(dossiers: [], epingles: []),
       ),

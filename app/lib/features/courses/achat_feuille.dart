@@ -237,9 +237,7 @@ Future<void> ouvrirFeuilleAchat(
   isScrollControlled: true,
   useSafeArea: true,
   builder: (contexte) => Padding(
-    padding: EdgeInsets.only(
-      bottom: MediaQuery.viewInsetsOf(contexte).bottom,
-    ),
+    padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(contexte).bottom),
     child: AchatFeuille(evenementId: evenementId, article: article),
   ),
 );
