@@ -1,7 +1,9 @@
 namespace PartyPlan.Api.Setup;
 
+using System.Security.Claims;
 using System.Text;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
@@ -46,10 +48,29 @@ public static class AuthenticationSetup
                     ValidateLifetime = true,
                     ClockSkew = TimeSpan.FromSeconds(30),
                 };
+                options.Events = new JwtBearerEvents
+                {
+                    OnTokenValidated = context =>
+                    {
+                        if (!Guid.TryParse(
+                                context.Principal?.FindFirstValue(ClaimTypes.NameIdentifier),
+                                out _))
+                        {
+                            context.Fail("Le jeton ne désigne pas un compte utilisateur.");
+                        }
+
+                        return Task.CompletedTask;
+                    },
+                };
             });
 
         services.AddAuthorization(options =>
         {
+            options.DefaultPolicy = new AuthorizationPolicyBuilder()
+                .RequireAuthenticatedUser()
+                .RequireClaim(ClaimTypes.NameIdentifier)
+                .Build();
+
             // RG-ADM-04 : la double authentification est exigée pour tout rôle
             // plateforme. La revendication est portée par le jeton, la garde s'évalue
             // donc sans requête en base. Un compte promu conserve un ancien jeton

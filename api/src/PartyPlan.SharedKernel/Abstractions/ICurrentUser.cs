@@ -3,31 +3,12 @@ namespace PartyPlan.SharedKernel.Abstractions;
 using PartyPlan.SharedKernel.Enums;
 
 /// <summary>
-/// Appelant de la requête courante. Deux natures d'appelant coexistent :
-/// un compte utilisateur, et un invité sans compte dont la portée est limitée
-/// à un seul événement (EF-INV-04).
+/// Compte utilisateur de la requête courante.
 /// </summary>
 public interface ICurrentUser
 {
-    /// <summary>Identifiant du compte, absent pour un invité sans compte.</summary>
+    /// <summary>Identifiant du compte, absent lorsque l'appelant n'est pas authentifié.</summary>
     Guid? UserId { get; }
-
-    /// <summary>
-    /// Événement auquel un jeton d'invité est restreint. Toujours <c>null</c> pour
-    /// un compte : un compte accède à tous ses événements.
-    /// </summary>
-    Guid? GuestEventId { get; }
-
-    /// <summary>
-    /// Ligne de membre désignée par un jeton d'invité. Toujours <c>null</c> pour un
-    /// compte, qui est retrouvé par son identifiant d'utilisateur.
-    /// <para>
-    /// Indispensable : deux invités d'un même événement n'ont ni l'un ni l'autre
-    /// d'identifiant de compte. Les distinguer par « le premier membre sans compte »
-    /// ferait que chacun modifierait la présence de l'autre, et plus tard ses dépenses.
-    /// </para>
-    /// </summary>
-    Guid? GuestMemberId { get; }
 
     PlatformRole PlatformRole { get; }
 

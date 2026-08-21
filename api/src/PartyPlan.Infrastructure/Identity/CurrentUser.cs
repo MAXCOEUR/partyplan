@@ -11,13 +11,7 @@ public static class PartyPlanClaims
 {
     public const string PlatformRole = "pp:platform_role";
 
-    /// <summary>Événement auquel un jeton d'invité est restreint (EF-INV-04).</summary>
-    public const string GuestEventId = "pp:guest_event";
-
     public const string SessionId = "pp:session";
-
-    /// <summary>Ligne de membre désignée par un jeton d'invité.</summary>
-    public const string MemberId = "pp:member";
 
     /// <summary>Double authentification active (RG-ADM-04).</summary>
     public const string TotpEnabled = "pp:totp";
@@ -34,16 +28,6 @@ public sealed class CurrentUser(IHttpContextAccessor accessor) : ICurrentUser
     public Guid? UserId =>
         Guid.TryParse(Principal?.FindFirstValue(ClaimTypes.NameIdentifier), out var id) ? id : null;
 
-    public Guid? GuestEventId =>
-        Guid.TryParse(Principal?.FindFirstValue(PartyPlanClaims.GuestEventId), out var id) ? id : null;
-
-    public Guid? GuestMemberId =>
-        GuestEventId is null
-            ? null
-            : Guid.TryParse(Principal?.FindFirstValue(PartyPlanClaims.MemberId), out var id)
-                ? id
-                : null;
-
     public PlatformRole PlatformRole =>
         Enum.TryParse<PlatformRole>(Principal?.FindFirstValue(PartyPlanClaims.PlatformRole), out var role)
             ? role
@@ -52,5 +36,5 @@ public sealed class CurrentUser(IHttpContextAccessor accessor) : ICurrentUser
     public bool IsAuthenticated => Principal?.Identity?.IsAuthenticated == true;
 
     public override string ToString() =>
-        string.Create(CultureInfo.InvariantCulture, $"user={UserId}, role={PlatformRole}, guestEvent={GuestEventId}");
+        string.Create(CultureInfo.InvariantCulture, $"user={UserId}, role={PlatformRole}");
 }

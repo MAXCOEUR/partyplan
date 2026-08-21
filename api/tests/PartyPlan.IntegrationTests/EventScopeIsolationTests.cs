@@ -18,9 +18,11 @@ using Xunit;
 public sealed class EventScopeIsolationTests(PartyPlanApiFixture fixture) : IAsyncLifetime
 {
     private Guid _eventId;
+    private Guid _memberId;
     private Guid _memberUserId;
     private Guid _outsiderUserId;
     private Guid _adminUserId;
+    private string _inviteToken = string.Empty;
 
     public async Task InitializeAsync()
     {
@@ -28,6 +30,8 @@ public sealed class EventScopeIsolationTests(PartyPlanApiFixture fixture) : IAsy
         _outsiderUserId = Guid.CreateVersion7();
         _adminUserId = Guid.CreateVersion7();
         _eventId = Guid.CreateVersion7();
+        _memberId = Guid.CreateVersion7();
+        _inviteToken = Guid.NewGuid().ToString("N");
 
         await fixture.WithDatabaseAsync(async db =>
         {
@@ -41,14 +45,14 @@ public sealed class EventScopeIsolationTests(PartyPlanApiFixture fixture) : IAsy
                 Id = _eventId,
                 Name = "Anniversaire de test",
                 StartsAt = DateTimeOffset.UtcNow.AddDays(3),
-                InviteToken = Guid.NewGuid().ToString("N"),
+                InviteToken = _inviteToken,
                 ShortCode = "TST" + Random.Shared.Next(100, 999),
                 CreatedByUserId = _memberUserId,
             });
 
             db.EventMembers.Add(new EventMember
             {
-                Id = Guid.CreateVersion7(),
+                Id = _memberId,
                 EventId = _eventId,
                 UserId = _memberUserId,
                 DisplayName = "Membre",
@@ -107,13 +111,14 @@ public sealed class EventScopeIsolationTests(PartyPlanApiFixture fixture) : IAsy
     }
 
     [Fact]
-    public async Task Un_invite_sans_compte_voit_le_seul_evenement_de_son_jeton()
+    public async Task Un_ancien_jeton_invite_signe_est_refuse_sur_les_routes_protegees()
     {
-        using var autorise = Client(TestTokens.ForGuest(_eventId));
-        using var refuse = Client(TestTokens.ForGuest(Guid.CreateVersion7()));
+        using var client = Client(TestTokens.ForLegacyGuest(_eventId, _memberId));
+        using var rejoindre = new HttpRequestMessage(HttpMethod.Post, $"/v1/join/{_inviteToken}");
+        rejoindre.Headers.Add("Idempotency-Key", Guid.CreateVersion7().ToString());
 
-        (await autorise.GetAsync(EventUri())).StatusCode.ShouldBe(HttpStatusCode.OK);
-        (await refuse.GetAsync(EventUri())).StatusCode.ShouldBe(HttpStatusCode.NotFound);
+        (await client.GetAsync(EventUri())).StatusCode.ShouldBe(HttpStatusCode.Unauthorized);
+        (await client.SendAsync(rejoindre)).StatusCode.ShouldBe(HttpStatusCode.Unauthorized);
     }
 
     private Uri EventUri() => new($"/v1/events/{_eventId}", UriKind.Relative);

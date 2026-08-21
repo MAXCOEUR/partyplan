@@ -26,9 +26,10 @@ public interface IEventMembership
         CancellationToken cancellationToken);
 
     /// <summary>
-    /// Membre correspondant à l'appelant, compte ou invité sans compte. <c>null</c>
-    /// lorsque l'appelant n'est pas membre — auquel cas l'appelant répond 404, jamais
-    /// « accès refusé » (RG-SEC-02).
+    /// Membre correspondant au compte appelant. Les lignes historiques sans compte
+    /// restent listables mais ne peuvent pas représenter l'appelant. <c>null</c> lorsque
+    /// le compte n'est pas membre — auquel cas l'appelant répond 404, jamais « accès
+    /// refusé » (RG-SEC-02).
     /// </summary>
     Task<EventMemberRef?> FindCurrentAsync(Guid eventId, CancellationToken cancellationToken);
 }

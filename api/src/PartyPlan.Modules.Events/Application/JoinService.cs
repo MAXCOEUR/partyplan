@@ -188,8 +188,9 @@ public sealed class JoinService(
             .CountAsync(m => m.EventId == evenement.Id && m.RemovedAt == null, cancellationToken)
             .ConfigureAwait(false);
 
-        var dejaMembre = await MembreExistantAsync(evenement.Id, cancellationToken)
-            .ConfigureAwait(false) is not null;
+        var dejaMembre = currentUser.UserId is { } userId
+            && await MembreUtilisateurAsync(evenement.Id, userId, cancellationToken)
+                .ConfigureAwait(false) is not null;
 
         return new JoinPreview(
             evenement.Name,
@@ -214,31 +215,6 @@ public sealed class JoinService(
             .IgnoreQueryFilters()
             .Where(e => e.DeletedAt == null && e.ArchivedAt == null)
             .FirstOrDefaultAsync(critere, cancellationToken);
-
-    private async Task<EventMember?> MembreExistantAsync(Guid eventId, CancellationToken cancellationToken)
-    {
-        if (currentUser.UserId is { } utilisateur)
-        {
-            return await db.EventMembers
-                .IgnoreQueryFilters()
-                .FirstOrDefaultAsync(
-                    m => m.EventId == eventId && m.UserId == utilisateur && m.RemovedAt == null,
-                    cancellationToken)
-                .ConfigureAwait(false);
-        }
-
-        if (currentUser.GuestEventId == eventId)
-        {
-            return await db.EventMembers
-                .IgnoreQueryFilters()
-                .FirstOrDefaultAsync(
-                    m => m.EventId == eventId && m.UserId == null && m.RemovedAt == null,
-                    cancellationToken)
-                .ConfigureAwait(false);
-        }
-
-        return null;
-    }
 
     private Task<EventMember?> MembreUtilisateurAsync(
         Guid eventId,

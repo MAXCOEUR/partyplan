@@ -25,15 +25,9 @@ public sealed class EventsModule : IModule
         services.AddScoped<EventStatistics>();
         services.AddScoped<IEventStatistics>(sp => sp.GetRequiredService<EventStatistics>());
 
-        // Contrat public consommé par Users pour la conversion d'un invité en compte
-        // (EF-AUTH-11). Il reçoit le jeton brut : l'empreinte reste calculée ici.
         // Appartenance, consommée par Shopping, Expenses et Settlements : aucun de ces
         // modules n'accède à event_members.
         services.AddScoped<IEventMembership, EventMembership>();
-
-        services.AddScoped<GuestMembershipLinking>();
-        services.AddScoped<IGuestMembershipLinking>(
-            sp => sp.GetRequiredService<GuestMembershipLinking>());
     }
 
     public void MapEndpoints(IEndpointRouteBuilder routes) => EventsEndpoints.Map(routes);

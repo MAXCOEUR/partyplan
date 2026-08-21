@@ -14,20 +14,6 @@ public sealed record LoginRequest(
 
 public sealed record RefreshRequest([Required] string RefreshToken);
 
-/// <summary>
-/// Rattachement d'une participation d'invité au compte connecté (EF-AUTH-11).
-/// <para>
-/// Endpoint distinct plutôt que champ ajouté à l'inscription et à la connexion :
-/// l'API compte quatre points d'ouverture de session — inscription, connexion, second
-/// facteur, connexion tierce. Un champ n'en couvrirait que deux, et tout compte protégé
-/// par un second facteur perdrait silencieusement sa participation.
-/// </para>
-/// </summary>
-public sealed record ClaimGuestRequest([Required] string GuestToken);
-
-/// <summary>Nombre de participations rattachées. Zéro n'est pas une erreur.</summary>
-public sealed record ClaimGuestResponse(int Linked);
-
 public sealed record ForgotPasswordRequest(
     [Required][EmailAddress][MaxLength(320)] string Email);
 

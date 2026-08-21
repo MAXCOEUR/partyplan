@@ -454,16 +454,9 @@ public sealed class EventService(
 
     private async Task<EventMember?> MembreCourantAsync(Guid eventId, CancellationToken cancellationToken)
     {
-        var moi = currentUser.UserId;
-
-        if (moi is null)
+        if (currentUser.UserId is not { } moi)
         {
-            // Invité sans compte : identifié par son adhésion, non par un compte.
-            return await db.EventMembers
-                .FirstOrDefaultAsync(
-                    m => m.EventId == eventId && m.UserId == null && m.RemovedAt == null,
-                    cancellationToken)
-                .ConfigureAwait(false);
+            return null;
         }
 
         return await db.EventMembers

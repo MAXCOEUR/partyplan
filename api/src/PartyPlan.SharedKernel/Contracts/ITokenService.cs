@@ -35,12 +35,6 @@ public interface ITokenService
     Guid? ReadMfaChallenge(string token);
 
     /// <summary>
-    /// Jeton d'accès d'un invité sans compte, restreint à un seul événement
-    /// (EF-INV-04). Il ne porte aucun identifiant de compte.
-    /// </summary>
-    AccessToken CreateGuestToken(Guid eventId, Guid memberId);
-
-    /// <summary>
     /// Jeton de rafraîchissement : une valeur en clair remise au client, et son
     /// condensé, seul élément conservé en base.
     /// </summary>

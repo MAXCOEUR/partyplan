@@ -14,6 +14,10 @@ using PartyPlan.SharedKernel.Enums;
 /// </summary>
 internal static class TestTokens
 {
+    private const string LegacyGuestEventClaim = "pp:guest_event";
+
+    private const string LegacyMemberClaim = "pp:member";
+
     internal static string ForUser(Guid userId, PlatformRole role = PlatformRole.User)
     {
         var claims = new List<Claim>
@@ -26,12 +30,14 @@ internal static class TestTokens
         return Create(claims);
     }
 
-    internal static string ForGuest(Guid eventId)
+    /// <summary>Reproduit un ancien jeton signé afin de vérifier qu'il reste refusé.</summary>
+    internal static string ForLegacyGuest(Guid eventId, Guid memberId)
     {
         var claims = new List<Claim>
         {
-            new(JwtRegisteredClaimNames.Subject, $"guest:{eventId}"),
-            new(PartyPlanClaims.GuestEventId, eventId.ToString()),
+            new(JwtRegisteredClaimNames.Subject, $"guest:{memberId}"),
+            new(LegacyGuestEventClaim, eventId.ToString()),
+            new(LegacyMemberClaim, memberId.ToString()),
             new(PartyPlanClaims.PlatformRole, nameof(PlatformRole.User)),
         };
 

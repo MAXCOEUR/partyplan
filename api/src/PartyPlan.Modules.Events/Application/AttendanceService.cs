@@ -257,31 +257,16 @@ public sealed class AttendanceService(
         return Result.Success();
     }
 
-    /// <summary>
-    /// Membre correspondant à l'appelant.
-    /// <para>
-    /// Un invité sans compte est identifié par la ligne que porte son jeton, jamais par
-    /// « le premier membre sans compte » : deux invités d'un même événement n'ont ni
-    /// l'un ni l'autre d'identifiant de compte, et les confondre ferait que chacun
-    /// modifierait la présence de l'autre.
-    /// </para>
-    /// </summary>
+    /// <summary>Membre correspondant au compte appelant.</summary>
     private Task<EventMember?> MembreCourantAsync(Guid eventId, CancellationToken cancellationToken)
     {
-        if (currentUser.UserId is { } compte)
+        if (currentUser.UserId is not { } compte)
         {
-            return db.EventMembers.FirstOrDefaultAsync(
-                m => m.EventId == eventId && m.UserId == compte && m.RemovedAt == null,
-                cancellationToken);
+            return Task.FromResult<EventMember?>(null);
         }
 
-        if (currentUser.GuestMemberId is { } membreInvite)
-        {
-            return db.EventMembers.FirstOrDefaultAsync(
-                m => m.EventId == eventId && m.Id == membreInvite && m.RemovedAt == null,
-                cancellationToken);
-        }
-
-        return Task.FromResult<EventMember?>(null);
+        return db.EventMembers.FirstOrDefaultAsync(
+            m => m.EventId == eventId && m.UserId == compte && m.RemovedAt == null,
+            cancellationToken);
     }
 }

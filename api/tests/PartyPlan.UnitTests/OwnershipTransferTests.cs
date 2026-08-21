@@ -81,14 +81,14 @@ public sealed class OwnershipTransferTests
     }
 
     [Fact]
-    public void Un_transfert_vers_un_invite_sans_compte_est_refuse()
+    public void Un_transfert_vers_une_ligne_historique_sans_compte_est_refuse()
     {
         var resultat = EventMember.CanTransferOwnership(
             Membre(EventMemberRole.Owner),
             Membre(EventMemberRole.Member, avecCompte: false));
 
-        // Un invité sans compte ne retrouverait pas l'événement depuis un autre appareil,
-        // et personne ne pourrait plus l'administrer.
+        // Une ligne historique sans compte ne peut pas représenter un appelant : le
+        // transfert rendrait donc l'événement impossible à administrer.
         resultat.Error!.Code.ShouldBe("event.transfer_needs_account");
     }
 }

@@ -20,17 +20,9 @@ public sealed class EventScopePrimer(PartyPlanDbContext db, ICurrentUser current
             return;
         }
 
-        // Jeton d'invité : la portée est réduite au seul événement du jeton. Un invité
-        // n'a par construction accès à rien d'autre (EF-INV-04).
-        if (currentUser.GuestEventId is { } guestEventId)
-        {
-            scope.Prime([guestEventId]);
-            return;
-        }
-
         if (currentUser.UserId is not { } userId)
         {
-            // Appelant anonyme : aucun événement visible. Les endpoints publics
+            // Appelant sans compte : aucun événement visible. Les endpoints publics
             // d'invitation élargissent explicitement le périmètre le temps de leur
             // traitement (IEventScope.AllowTemporarily).
             scope.Prime([]);

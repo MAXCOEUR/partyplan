@@ -47,11 +47,7 @@ public sealed class TokenService(IOptions<TokenOptions> options, IClock clock) :
     /// <summary>Revendications propres au produit.</summary>
     public const string PlatformRoleClaim = "pp:platform_role";
 
-    public const string GuestEventClaim = "pp:guest_event";
-
     public const string SessionClaim = "pp:session";
-
-    public const string MemberClaim = "pp:member";
 
     /// <summary>Double authentification active. Exigée pour tout rôle plateforme (RG-ADM-04).</summary>
     public const string TotpClaim = "pp:totp";
@@ -152,17 +148,6 @@ public sealed class TokenService(IOptions<TokenOptions> options, IClock clock) :
             ? identifiant
             : null;
     }
-
-    public AccessToken CreateGuestToken(Guid eventId, Guid memberId) =>
-        Create(
-        [
-            // Aucun identifiant de compte : un invité n'en a pas, et lui en attribuer un
-            // ouvrirait son périmètre au-delà de l'événement rejoint.
-            new Claim(JwtRegisteredClaimNames.Sub, $"guest:{memberId}"),
-            new Claim(GuestEventClaim, eventId.ToString()),
-            new Claim(MemberClaim, memberId.ToString()),
-            new Claim(PlatformRoleClaim, nameof(PlatformRole.User)),
-        ]);
 
     public RefreshToken CreateRefreshToken()
     {

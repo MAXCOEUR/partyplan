@@ -66,7 +66,7 @@ public sealed class CorrectionDesPrixTests(PartyPlanApiFixture fixture)
         // Corriger la dépense d'autrui change ce qu'il a avancé, donc ce que chacun lui
         // doit. C'est le geste qui rend les comptes contestables.
         var (organisateur, evenement, _) = await EvenementAsync();
-        var invite = await InviteAsync(organisateur, evenement, "Lucas");
+        var invite = await MembreAsync(organisateur, evenement, "Lucas");
 
         var depense = await CreerDepense(organisateur, evenement, "Taxi", 24m);
 
@@ -82,7 +82,7 @@ public sealed class CorrectionDesPrixTests(PartyPlanApiFixture fixture)
     public async Task Un_membre_ne_supprime_pas_la_depense_d_un_autre()
     {
         var (organisateur, evenement, _) = await EvenementAsync();
-        var invite = await InviteAsync(organisateur, evenement, "Lucas");
+        var invite = await MembreAsync(organisateur, evenement, "Lucas");
 
         var depense = await CreerDepense(organisateur, evenement, "Taxi", 24m);
 
@@ -99,7 +99,7 @@ public sealed class CorrectionDesPrixTests(PartyPlanApiFixture fixture)
         // Il arbitre les comptes de la soirée : sans lui, une erreur de saisie d'un
         // invité parti depuis resterait inscrite pour toujours.
         var (organisateur, evenement, _) = await EvenementAsync();
-        var invite = await InviteAsync(organisateur, evenement, "Lucas");
+        var invite = await MembreAsync(organisateur, evenement, "Lucas");
 
         var depense = await CreerDepense(invite, evenement, "Glaçons", 8m);
 
@@ -153,7 +153,7 @@ public sealed class CorrectionDesPrixTests(PartyPlanApiFixture fixture)
         // Déclarer l'achat d'autrui créerait une dépense à son nom, donc une créance
         // qu'il n'a jamais avancée.
         var (organisateur, evenement, _) = await EvenementAsync();
-        var invite = await InviteAsync(organisateur, evenement, "Lucas");
+        var invite = await MembreAsync(organisateur, evenement, "Lucas");
 
         var article = await CreerArticle(organisateur, evenement, "Bières");
 
@@ -172,7 +172,7 @@ public sealed class CorrectionDesPrixTests(PartyPlanApiFixture fixture)
     public async Task L_organisateur_declare_l_achat_a_la_place_de_quiconque()
     {
         var (organisateur, evenement, _) = await EvenementAsync();
-        var invite = await InviteAsync(organisateur, evenement, "Lucas");
+        var invite = await MembreAsync(organisateur, evenement, "Lucas");
 
         var article = await CreerArticle(organisateur, evenement, "Bières");
 
@@ -303,11 +303,8 @@ public sealed class CorrectionDesPrixTests(PartyPlanApiFixture fixture)
         return (client, evenement, moi);
     }
 
-    /// <summary>
-    /// Invité sans compte, entré par le lien d'invitation. C'est le cas le plus
-    /// fréquent : la règle doit tenir pour lui comme pour un compte.
-    /// </summary>
-    private async Task<HttpClient> InviteAsync(
+    /// <summary>Second compte, entré par le lien d'invitation.</summary>
+    private async Task<HttpClient> MembreAsync(
         HttpClient organisateur,
         Guid evenement,
         string prenom)
@@ -317,21 +314,35 @@ public sealed class CorrectionDesPrixTests(PartyPlanApiFixture fixture)
 
         var jeton = invitation!.RootElement.GetProperty("token").GetString();
 
-        var client = fixture.CreateClient();
-        client.DefaultRequestHeaders.Add("Idempotency-Key", Guid.NewGuid().ToString());
+        using var anonyme = fixture.CreateClient();
+        var inscription = await anonyme.PostAsJsonAsync(
+            "/v1/auth/register",
+            new
+            {
+                email = $"prix-{Guid.NewGuid():N}@partyplan.test",
+                password = MotDePasse,
+                displayName = prenom,
+            });
 
-        var adhesion = await client.PostAsJsonAsync(
-            new Uri($"/v1/join/{jeton}", UriKind.Relative),
-            new { displayName = prenom, status = "Going" });
+        inscription.StatusCode.ShouldBe(HttpStatusCode.OK);
+
+        var client = fixture.CreateClient();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
+            "Bearer",
+            (await inscription.Content.ReadFromJsonAsync<JsonDocument>())!
+                .RootElement.GetProperty("accessToken").GetString());
+
+        var adhesion = await EvenementsTests.RejoindreBrutAsync(
+            client,
+            $"/v1/join/{jeton}",
+            Guid.CreateVersion7().ToString());
 
         adhesion.StatusCode.ShouldBe(HttpStatusCode.OK);
 
-        var corps = await adhesion.Content.ReadFromJsonAsync<JsonDocument>();
-        var jetonInvite = corps!.RootElement.GetProperty("guestToken").GetString();
-
-        client.DefaultRequestHeaders.Authorization =
-            new AuthenticationHeaderValue("Bearer", jetonInvite);
-        client.DefaultRequestHeaders.Remove("Idempotency-Key");
+        (await client.PatchAsJsonAsync(
+                $"/v1/events/{evenement}/members/me",
+                new { status = "Going" }))
+            .StatusCode.ShouldBe(HttpStatusCode.OK);
 
         return client;
     }
