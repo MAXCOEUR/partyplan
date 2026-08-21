@@ -26,25 +26,17 @@ public sealed record JoinPreview(
     bool JoinEnabled,
     bool AlreadyMember);
 
-/// <summary>Résultat d'une participation : la session d'invité, ou la confirmation d'adhésion.</summary>
-public sealed record JoinResult(
-    Guid EventId,
-    Guid MemberId,
-    string? GuestToken,
-    DateTimeOffset? GuestTokenExpiresAt);
+/// <summary>Confirmation d'une participation.</summary>
+public sealed record JoinResult(Guid EventId, Guid MemberId);
 
 /// <summary>
 /// Participation à un événement par lien ou par code court (EF-INV-04).
-/// <para>
-/// Chemin le plus critique du produit pour l'adoption : toute friction ajoutée ici se
-/// paie en taux de réponse (§1.4). Deux écrans au maximum, aucun compte exigé.
-/// </para>
 /// </summary>
 public sealed class JoinService(
     IEventsDbContext db,
     ICurrentUser currentUser,
     IEventScope scope,
-    ITokenService tokens,
+    IUserIdentityLookup users,
     IClock clock,
     IIdGenerator ids)
 {
@@ -56,9 +48,10 @@ public sealed class JoinService(
         "invitation.closed",
         "L'organisateur a fermé les arrivées pour cet événement.");
 
-    public static readonly DomainError NameRequired = DomainError.Validation(
-        "invitation.name_required",
-        "Indique ton prénom pour rejoindre.");
+    public static readonly DomainError AccountRequired = new(
+        "invitation.account_required",
+        "Connecte-toi pour rejoindre cet événement.",
+        ErrorKind.Unauthenticated);
 
     /// <summary>Aperçu par jeton de lien.</summary>
     public Task<Result<JoinPreview>> ApercuParJetonAsync(
@@ -82,17 +75,11 @@ public sealed class JoinService(
         return ApercuAsync(e => e.ShortCode == normalise, cancellationToken);
     }
 
-    /// <summary>
-    /// Rejoint un événement. Un compte connecté est rattaché ; sinon un membre sans
-    /// compte est créé, et un jeton d'invité restreint à cet événement est remis.
-    /// </summary>
+    /// <summary>Rejoint un événement avec le compte de l'appelant.</summary>
     public Task<Result<JoinResult>> RejoindreAsync(
         string token,
-        string displayName,
-        EventMemberStatus statut,
-        TimeOnly? arrivee,
         CancellationToken cancellationToken) =>
-        RejoindreAsync(e => e.InviteToken == token, displayName, statut, arrivee, cancellationToken);
+        RejoindreAsync(e => e.InviteToken == token, cancellationToken);
 
     /// <summary>
     /// Rejoint un événement à partir d'un code court (EF-INV-03).
@@ -105,9 +92,6 @@ public sealed class JoinService(
     /// </summary>
     public Task<Result<JoinResult>> RejoindreParCodeAsync(
         string? code,
-        string displayName,
-        EventMemberStatus statut,
-        TimeOnly? arrivee,
         CancellationToken cancellationToken)
     {
         if (!ShortCode.TryNormalize(code, out var normalise))
@@ -115,24 +99,22 @@ public sealed class JoinService(
             return Task.FromResult(Result<JoinResult>.Failure(InvitationNotFound));
         }
 
-        return RejoindreAsync(
-            e => e.ShortCode == normalise,
-            displayName,
-            statut,
-            arrivee,
-            cancellationToken);
+        return RejoindreAsync(e => e.ShortCode == normalise, cancellationToken);
     }
 
     private async Task<Result<JoinResult>> RejoindreAsync(
         System.Linq.Expressions.Expression<Func<Event, bool>> critere,
-        string displayName,
-        EventMemberStatus statut,
-        TimeOnly? arrivee,
         CancellationToken cancellationToken)
     {
-        if (string.IsNullOrWhiteSpace(displayName) || displayName.Trim().Length > 120)
+        if (currentUser.UserId is not { } userId)
         {
-            return NameRequired;
+            return AccountRequired;
+        }
+
+        var identity = await users.FindAsync(userId, cancellationToken).ConfigureAwait(false);
+        if (identity is null)
+        {
+            return AccountRequired;
         }
 
         var evenement = await TrouverAsync(critere, cancellationToken)
@@ -146,16 +128,11 @@ public sealed class JoinService(
         using var acces = scope.AllowTemporarily(evenement.Id);
 
         // Un membre déjà présent ne crée pas de doublon : le lien est souvent réouvert.
-        var existant = await MembreExistantAsync(evenement.Id, cancellationToken)
+        var existant = await MembreUtilisateurAsync(evenement.Id, userId, cancellationToken)
             .ConfigureAwait(false);
 
         if (existant is not null)
         {
-            existant.Status = statut;
-            existant.ArrivalTime = arrivee ?? existant.ArrivalTime;
-
-            await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
-
             return Resultat(evenement.Id, existant);
         }
 
@@ -168,26 +145,11 @@ public sealed class JoinService(
         {
             Id = ids.NewId(),
             EventId = evenement.Id,
-            UserId = currentUser.UserId,
-            DisplayName = displayName.Trim(),
-            Status = statut,
-            ArrivalTime = arrivee,
+            UserId = userId,
+            DisplayName = identity.DisplayName,
+            Status = EventMemberStatus.Unknown,
             JoinedAt = clock.UtcNow,
         };
-
-        string? jetonInvite = null;
-        DateTimeOffset? expiration = null;
-
-        if (currentUser.UserId is null)
-        {
-            // Le jeton d'invité est la seule preuve d'identité de cette personne. Son
-            // empreinte est conservée : c'est elle, et jamais le prénom, qui permettra le
-            // rattachement à un compte créé plus tard (RG-AUTH-07).
-            var acces_invite = tokens.CreateGuestToken(evenement.Id, membre.Id);
-            jetonInvite = acces_invite.Value;
-            expiration = acces_invite.ExpiresAt;
-            membre.GuestSessionHash = Empreinte(acces_invite.Value);
-        }
 
         db.EventMembers.Add(membre);
 
@@ -203,22 +165,11 @@ public sealed class JoinService(
 
         await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
-        return new JoinResult(evenement.Id, membre.Id, jetonInvite, expiration);
+        return new JoinResult(evenement.Id, membre.Id);
     }
 
     private static JoinResult Resultat(Guid eventId, EventMember membre) =>
-        new(eventId, membre.Id, null, null);
-
-    /// <summary>
-    /// Empreinte du jeton d'invité, déléguée à <see cref="GuestMembershipLinking"/>.
-    /// <para>
-    /// Un seul calcul dans le module : deux implémentations qui divergeraient d'un
-    /// octet feraient qu'aucune participation ne serait jamais rattachée à un compte,
-    /// sans la moindre erreur visible.
-    /// </para>
-    /// </summary>
-    private static string Empreinte(string valeur) =>
-        GuestMembershipLinking.Empreinte(valeur);
+        new(eventId, membre.Id);
 
     private async Task<Result<JoinPreview>> ApercuAsync(
         System.Linq.Expressions.Expression<Func<Event, bool>> critere,
@@ -288,4 +239,14 @@ public sealed class JoinService(
 
         return null;
     }
+
+    private Task<EventMember?> MembreUtilisateurAsync(
+        Guid eventId,
+        Guid userId,
+        CancellationToken cancellationToken) =>
+        db.EventMembers
+            .IgnoreQueryFilters()
+            .FirstOrDefaultAsync(
+                m => m.EventId == eventId && m.UserId == userId && m.RemovedAt == null,
+                cancellationToken);
 }

@@ -7,7 +7,6 @@ using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Configuration;
 using PartyPlan.Modules.Events.Application;
 using PartyPlan.SharedKernel.Contracts;
-using PartyPlan.SharedKernel.Enums;
 using PartyPlan.SharedKernel.Primitives;
 
 public sealed record CreateEventBody(
@@ -23,11 +22,6 @@ public sealed record UpdateEventBody(
     DateTimeOffset? StartsAt,
     DateTimeOffset? EndsAt,
     [MaxLength(300)] string? Address);
-
-public sealed record JoinBody(
-    [Required][MaxLength(120)] string DisplayName,
-    [Required] string Status,
-    TimeOnly? ArrivalTime);
 
 public sealed record AttendanceBody(
     [Required] string Status,
@@ -160,9 +154,7 @@ internal static class EventsEndpoints
 
     private static void MapJoin(IEndpointRouteBuilder routes)
     {
-        // Groupe public : par construction, l'appelant n'est pas encore membre. C'est le
-        // jeton ou le code qui autorise l'accès, et la vue renvoyée est restreinte à ce
-        // que RG-INV-04 permet.
+        // Les aperçus restent publics ; l'adhésion exige ensuite un compte authentifié.
         var groupe = routes.MapGroup("/join").WithTags("Invitations");
 
         groupe.MapGet("/{token}", async (
@@ -196,23 +188,16 @@ internal static class EventsEndpoints
         // transformerait un code de six caractères en oracle à jetons d'invitation.
         groupe.MapPost("/code/{shortCode}", async (
                 string shortCode,
-                JoinBody corps,
                 JoinService service,
                 CancellationToken cancellationToken) =>
-            {
-                if (!Enum.TryParse<EventMemberStatus>(corps.Status, out var statut))
-                {
-                    return Problem(AttendanceService.UnknownStatus);
-                }
-
-                return Respond(await service
-                    .RejoindreParCodeAsync(shortCode, corps.DisplayName, statut, corps.ArrivalTime, cancellationToken)
-                    .ConfigureAwait(false));
-            })
+            Respond(await service
+                .RejoindreParCodeAsync(shortCode, cancellationToken)
+                .ConfigureAwait(false)))
             .WithName("JoinByShortCode")
             .WithSummary("Rejoint depuis un code court. En-tête Idempotency-Key obligatoire.")
             .RequireRateLimiting(ShortCodePolicy)
             .RequireIdempotency()
+            .RequireAuthorization()
             .Produces<JoinResult>();
 
         // Écriture susceptible d'être mise en file par le client hors ligne
@@ -220,22 +205,15 @@ internal static class EventsEndpoints
         // second membre.
         groupe.MapPost("/{token}", async (
                 string token,
-                JoinBody corps,
                 JoinService service,
                 CancellationToken cancellationToken) =>
-            {
-                if (!Enum.TryParse<EventMemberStatus>(corps.Status, out var statut))
-                {
-                    return Problem(AttendanceService.UnknownStatus);
-                }
-
-                return Respond(await service
-                    .RejoindreAsync(token, corps.DisplayName, statut, corps.ArrivalTime, cancellationToken)
-                    .ConfigureAwait(false));
-            })
+            Respond(await service
+                .RejoindreAsync(token, cancellationToken)
+                .ConfigureAwait(false)))
             .WithName("JoinEvent")
-            .WithSummary("Rejoint l'événement. Aucun compte n'est exigé. En-tête Idempotency-Key obligatoire.")
+            .WithSummary("Rejoint l'événement avec le compte connecté. En-tête Idempotency-Key obligatoire.")
             .RequireIdempotency()
+            .RequireAuthorization()
             .Produces<JoinResult>();
     }
 
