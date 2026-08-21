@@ -678,15 +678,6 @@ public sealed class EvenementsTests(PartyPlanApiFixture fixture)
         return client.SendAsync(requete);
     }
 
-    // Les scénarios historiques hors de cette tâche compilent encore contre cette
-    // surcharge. Elle emprunte néanmoins le nouveau contrat sans corps métier.
-    internal static Task<HttpResponseMessage> RejoindreBrutAsync(
-        HttpClient client,
-        string jeton,
-        object _,
-        string? cle = null) =>
-        RejoindreBrutAsync(client, $"/v1/join/{jeton}", cle);
-
     /// <summary>Transfert de propriété, idempotent pour la même raison.</summary>
     internal static Task<HttpResponseMessage> TransfererBrutAsync(
         HttpClient client,

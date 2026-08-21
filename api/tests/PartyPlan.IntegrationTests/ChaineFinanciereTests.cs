@@ -389,11 +389,15 @@ public sealed class ChaineFinanciereTests(PartyPlanApiFixture fixture)
 
         var adhesion = await EvenementsTests.RejoindreBrutAsync(
             client,
-            invitation!.RootElement.GetProperty("token").GetString()!,
-            new { displayName = nom, status = "Going" },
+            $"/v1/join/{invitation!.RootElement.GetProperty("token").GetString()!}",
             Guid.CreateVersion7().ToString());
 
         adhesion.StatusCode.ShouldBe(HttpStatusCode.OK);
+
+        (await client.PatchAsJsonAsync(
+                $"/v1/events/{eventId}/members/me",
+                new { status = "Going" }))
+            .StatusCode.ShouldBe(HttpStatusCode.OK);
 
         return (
             client,
