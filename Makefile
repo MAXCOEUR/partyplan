@@ -16,6 +16,10 @@ API_URLS    := http://0.0.0.0:5080
 # accessible à l'adresse 10.0.2.2, câblée par Android.
 API_EMU     := http://10.0.2.2:5080
 
+# Port du serveur de développement Flutter Web. Fixe, et déclaré dans les origines
+# autorisées de appsettings.Development.json : les deux valeurs doivent rester égales.
+WEB_DEV_PORT := 5173
+
 .DEFAULT_GOAL := aide
 
 .PHONY: aide init up down restart logs ps api app web test test-api test-app \
@@ -75,7 +79,11 @@ api: ## Lance l'API en rechargement à chaud (base et courriel en conteneur)
 	  dotnet watch --project $(API_PROJ) run
 
 app: ## Lance l'application Flutter sur Chrome, en rechargement à chaud
-	cd app && flutter run -d chrome --dart-define=API_BASE_URL=http://localhost:5080
+	@# Le port doit être fixe : sans --web-port, Chrome est servi sur un port
+	@# tiré au hasard, jamais présent dans Cors:AllowedOrigins, et le navigateur
+	@# bloque alors chaque appel à l'API sans que rien ne l'explique côté serveur.
+	cd app && flutter run -d chrome --web-port=$(WEB_DEV_PORT) \
+	  --dart-define=API_BASE_URL=http://localhost:5080
 
 android: ## Lance l'application sur l'émulateur ou le téléphone Android connecté
 	cd app && flutter run --dart-define=API_BASE_URL=$(API_EMU)

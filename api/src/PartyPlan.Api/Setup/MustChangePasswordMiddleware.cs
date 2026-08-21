@@ -12,8 +12,8 @@ using PartyPlan.Infrastructure.Identity;
 /// changement reviendrait à ne pas avoir posé la contrainte.
 /// </para>
 /// <para>
-/// Trois chemins restent ouverts, sans quoi la contrainte serait un cul-de-sac : lire
-/// son profil, changer son mot de passe, se déconnecter.
+/// Quatre chemins restent ouverts, sans quoi la contrainte serait un cul-de-sac : lire
+/// son profil, changer son mot de passe, renouveler son jeton, se déconnecter.
 /// </para>
 /// </summary>
 public sealed class MustChangePasswordMiddleware(RequestDelegate next)
@@ -21,6 +21,13 @@ public sealed class MustChangePasswordMiddleware(RequestDelegate next)
     private static readonly string[] CheminsAutorises =
     [
         "/v1/auth/password/change",
+        // Le renouvellement du jeton doit rester ouvert : les revendications sont
+        // figées à l'émission, et le jeton en main porte encore l'obligation après le
+        // changement. Sans cette ouverture, le refus survivrait à la correction qu'il
+        // exige, pendant toute la durée de vie du jeton. Aucun contournement pour
+        // autant : le jeton renouvelé reprend l'état du compte en base, obligation
+        // comprise tant qu'elle subsiste.
+        "/v1/auth/refresh",
         "/v1/auth/logout",
         "/v1/me",
         "/health/live",

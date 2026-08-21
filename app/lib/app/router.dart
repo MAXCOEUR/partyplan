@@ -8,6 +8,7 @@ import '../features/admin/admin_audit_page.dart';
 import '../features/admin/admin_comptes_page.dart';
 import '../features/auth/connexion_page.dart';
 import '../features/auth/inscription_page.dart';
+import '../features/auth/mot_de_passe_a_changer_page.dart';
 import '../features/auth/mot_de_passe_oublie_page.dart';
 import '../features/auth/second_facteur_page.dart';
 import '../features/evenement/coquille_evenement.dart';
@@ -34,6 +35,10 @@ abstract final class PpRoutes {
   static const inscription = '/inscription';
   static const motDePasseOublie = '/mot-de-passe-oublie';
   static const secondFacteur = '/second-facteur';
+
+  /// Changement de mot de passe imposé avant toute autre action (RG-ADM-10). Exige une
+  /// session : elle n'a donc pas sa place dans [publiques].
+  static const motDePasseAChanger = '/mot-de-passe-a-changer';
 
   // Compte
   static const profilEdition = '/profil';
@@ -140,6 +145,19 @@ GoRouter creerRouteur(Ref ref) => GoRouter(
       return PpRoutes.accueil;
     }
 
+    // Tant que le mot de passe n'a pas changé, le serveur refuse toute autre requête
+    // en 403 (RG-ADM-10). Sans cette redirection, l'accueil s'affiche vide et rien
+    // n'indique quoi faire.
+    //
+    // L'information vient du refus lui-même, pas d'une lecture du profil : interroger
+    // le profil au démarrage ajouterait un appel réseau à chaque lancement, pour un
+    // cas qui ne concerne que le compte amorcé.
+    if (connecte
+        && chemin != PpRoutes.motDePasseAChanger
+        && ref.read(motDePasseAChangerProvider)) {
+      return PpRoutes.motDePasseAChanger;
+    }
+
     return null;
   },
   routes: [
@@ -154,6 +172,10 @@ GoRouter creerRouteur(Ref ref) => GoRouter(
     GoRoute(
       path: PpRoutes.inscription,
       builder: (context, state) => const InscriptionPage(),
+    ),
+    GoRoute(
+      path: PpRoutes.motDePasseAChanger,
+      builder: (context, state) => const MotDePasseAChangerPage(),
     ),
     GoRoute(
       path: PpRoutes.motDePasseOublie,
@@ -263,18 +285,22 @@ GoRouter creerRouteur(Ref ref) => GoRouter(
 /// Relaie les changements d'état de session au routeur.
 class _EcouteSession extends ChangeNotifier {
   _EcouteSession(Ref ref) {
-    _abonnement = ref.listen(
-      sessionProvider,
-      (_, _) => notifyListeners(),
-      fireImmediately: true,
-    );
+    _abonnements = [
+      ref.listen(sessionProvider, (_, _) => notifyListeners(), fireImmediately: true),
+      // Le refus « change ton mot de passe » arrive après la première lecture, donc
+      // après la redirection initiale. Sans cette écoute, l'écran affiché resterait
+      // celui de l'accueil, vide.
+      ref.listen(motDePasseAChangerProvider, (_, _) => notifyListeners()),
+    ];
   }
 
-  late final ProviderSubscription<Object?> _abonnement;
+  late final List<ProviderSubscription<Object?>> _abonnements;
 
   @override
   void dispose() {
-    _abonnement.close();
+    for (final abonnement in _abonnements) {
+      abonnement.close();
+    }
     super.dispose();
   }
 }

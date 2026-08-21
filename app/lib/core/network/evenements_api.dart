@@ -1,10 +1,9 @@
-import 'dart:math';
-
 import '../models/evenement.dart';
 import '../models/invitation.dart';
 import '../models/membre.dart';
 import '../storage/session_store.dart';
 import 'api_client.dart';
+import 'cle_idempotence.dart';
 
 /// Appels d'API du domaine événementiel.
 ///
@@ -156,7 +155,7 @@ class EvenementsApi {
     final reponse = await _client.post<Map<String, dynamic>>(
       chemin,
       corps: {'displayName': prenom, 'status': statut.versApi},
-      cleIdempotence: _cle(),
+      cleIdempotence: nouvelleCleIdempotence(),
       analyser: (corps) => corps! as Map<String, dynamic>,
     );
 
@@ -218,7 +217,7 @@ class EvenementsApi {
   Future<void> transfererPropriete(String evenementId, String membreId) =>
       _client.post<void>(
         '/events/$evenementId/members/$membreId/transfer-ownership',
-        cleIdempotence: _cle(),
+        cleIdempotence: nouvelleCleIdempotence(),
         differable: true,
         analyser: (_) {},
       );
@@ -242,14 +241,4 @@ class EvenementsApi {
     );
   }
 
-  /// 128 bits en hexadécimal. `Random.secure` : une clé d'idempotence devinable
-  /// permettrait à un tiers de faire rejouer la réponse d'autrui.
-  static String _cle() {
-    final alea = Random.secure();
-
-    return List.generate(
-      16,
-      (_) => alea.nextInt(256).toRadixString(16).padLeft(2, '0'),
-    ).join();
-  }
 }

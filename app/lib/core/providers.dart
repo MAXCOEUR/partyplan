@@ -38,11 +38,33 @@ final fileEcrituresProvider = Provider<FileEcritures>(
   (ref) => FileEcritures(ref.watch(magasinLocalProvider)),
 );
 
+/// Vrai lorsque le serveur a exigé un changement de mot de passe avant toute autre
+/// action (RG-ADM-10). Observé par le routeur, qui conduit alors vers l'écran dédié.
+///
+/// L'état vient du refus renvoyé par l'API, non d'une lecture du profil : interroger le
+/// profil au démarrage coûterait un appel réseau à chaque lancement, pour un cas qui ne
+/// concerne que le compte administrateur amorcé.
+class ChangementMotDePasseImpose extends Notifier<bool> {
+  @override
+  bool build() => false;
+
+  void exiger() => state = true;
+
+  void satisfait() => state = false;
+}
+
+final motDePasseAChangerProvider =
+    NotifierProvider<ChangementMotDePasseImpose, bool>(
+      ChangementMotDePasseImpose.new,
+    );
+
 final apiClientProvider = Provider<ApiClient>(
   (ref) => ApiClient(
     ref.watch(sessionStoreProvider),
     cache: ref.watch(cacheLectureProvider),
     file: ref.watch(fileEcrituresProvider),
+    auChangementImpose: () =>
+        ref.read(motDePasseAChangerProvider.notifier).exiger(),
   ),
 );
 
@@ -152,6 +174,9 @@ class SessionCourante extends AsyncNotifier<EtatSession> {
 
     ref.invalidate(profilProvider);
     ref.invalidate(mesEvenementsProvider);
+    // Sans cette remise à zéro, le compte suivant serait conduit vers un formulaire
+    // de changement de mot de passe qui ne le concerne pas.
+    ref.read(motDePasseAChangerProvider.notifier).satisfait();
     state = const AsyncData(EtatSession.anonyme);
   }
 

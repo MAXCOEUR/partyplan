@@ -30,6 +30,12 @@ class ApiException implements Exception {
 
   bool get estTropDeRequetes => statusCode == 429;
 
+  /// Le serveur exige un changement de mot de passe avant toute autre action
+  /// (RG-ADM-10). Il refuse alors chaque requête, sauf la lecture du profil, le
+  /// changement lui-même et la déconnexion.
+  bool get exigeChangementMotDePasse =>
+      statusCode == 403 && code == 'auth.must_change_password';
+
   factory ApiException.depuisProblemDetails(
     int statusCode,
     Map<String, dynamic> corps,

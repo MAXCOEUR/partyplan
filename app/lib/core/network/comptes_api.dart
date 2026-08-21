@@ -128,11 +128,19 @@ class ComptesApi {
   Future<void> changerMotDePasse({
     required String actuel,
     required String nouveau,
-  }) => _client.post<void>(
-    '/auth/password/change',
-    corps: {'currentPassword': actuel, 'newPassword': nouveau},
-    analyser: (_) {},
-  );
+  }) async {
+    await _client.post<void>(
+      '/auth/password/change',
+      corps: {'currentPassword': actuel, 'newPassword': nouveau},
+      analyser: (_) {},
+    );
+
+    // Les revendications d'un jeton sont figées à son émission : celui en main porte
+    // encore « doit changer son mot de passe » (RG-ADM-10), et le serveur refuserait
+    // toute requête en 403 pendant les quinze minutes de sa validité. Le renouveler
+    // ici évite que chaque appelant ait à y penser.
+    await _client.renouvelerJeton();
+  }
 
   Future<void> verifierAdresse(String code) => _client.post<void>(
     '/auth/email/verify',

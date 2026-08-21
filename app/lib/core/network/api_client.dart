@@ -26,7 +26,9 @@ class ApiClient {
     CacheLecture? cache,
     FileEcritures? file,
     EtatReseau? etat,
-  }) : _cache = cache,
+    void Function()? auChangementImpose,
+  }) : _auChangementImpose = auChangementImpose,
+       _cache = cache,
        _file = file,
        _etat = etat ?? EtatReseau(),
        _dio =
@@ -61,6 +63,10 @@ class ApiClient {
 
   final Dio _dio;
   final SessionStore _sessionStore;
+  /// Appelé au premier refus « change ton mot de passe » (RG-ADM-10). Le client ne
+  /// connaît pas le routeur : il signale, le provider redirige.
+  final void Function()? _auChangementImpose;
+
   final CacheLecture? _cache;
   final FileEcritures? _file;
   final EtatReseau _etat;
@@ -198,6 +204,25 @@ class ApiClient {
     );
   }
 
+  /// Suppression dont la réponse porte l'état résultant.
+  ///
+  /// Retirer l'attribution d'un article rend l'article à jour : le renvoyer évite un
+  /// aller-retour de rechargement, et l'écran affiche l'état réel plutôt qu'un état
+  /// deviné.
+  Future<T> deleteWithResult<T>(
+    String chemin, {
+    bool differable = false,
+    required T Function(Object? corps) analyser,
+  }) async {
+    final reponse = await _envoyer(
+      () => _dio.delete<Object?>(chemin),
+      differable: differable,
+      methode: 'DELETE',
+      chemin: chemin,
+    );
+    return analyser(reponse.data);
+  }
+
   /// Suppression avec corps. `DELETE /me` exige une confirmation (RG-USR-05).
   Future<void> deleteWithBody(String chemin, {Object? corps}) async {
     await _envoyer(
@@ -332,6 +357,12 @@ class ApiClient {
     return reponse;
   }
 
+  /// Renouvelle le jeton d'accès depuis le jeton de rafraîchissement.
+  ///
+  /// Public parce que le changement de mot de passe doit forcer ce renouvellement :
+  /// les revendications du jeton sont figées à son émission.
+  Future<bool> renouvelerJeton() => _rafraichir();
+
   Future<bool> _rafraichir() async {
     final jeton = await _sessionStore.lireJetonRafraichissement();
     if (jeton == null) {
@@ -368,8 +399,17 @@ class ApiClient {
 
     final corps = reponse.data;
 
-    throw corps is Map<String, dynamic>
+    final erreur = corps is Map<String, dynamic>
         ? ApiException.depuisProblemDetails(statut, corps)
         : ApiException(statusCode: statut, title: 'Une erreur est survenue.');
+
+    // Le refus est traité ici, au point de sortie unique : chaque écran devrait sinon
+    // reconnaître ce cas, et le premier à l'oublier laisserait un écran vide sans
+    // explication.
+    if (erreur.exigeChangementMotDePasse) {
+      _auChangementImpose?.call();
+    }
+
+    throw erreur;
   }
 }
