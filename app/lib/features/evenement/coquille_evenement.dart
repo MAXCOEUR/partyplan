@@ -87,6 +87,28 @@ class _CoquilleEvenementState extends ConsumerState<CoquilleEvenement> {
     return Scaffold(
       appBar: PpBarreApp(
         bouton: const BackButton(),
+        // Sondages et épingles prolongent la conversation : les chercher sous « Plus »
+        // oblige à quitter le fil pour y revenir. Ils n'apparaissent que sur cet
+        // onglet — ailleurs, ce serait deux icônes de plus dans une barre déjà
+        // chargée.
+        actions: _onglet == 3
+            ? [
+                IconButton(
+                  key: const Key('acces-sondages'),
+                  tooltip: 'Sondages',
+                  icon: const Icon(Icons.how_to_vote_outlined),
+                  onPressed: () =>
+                      context.push(PpRoutes.versSondages(widget.eventId)),
+                ),
+                IconButton(
+                  key: const Key('acces-epingles'),
+                  tooltip: 'Messages épinglés',
+                  icon: const Icon(Icons.push_pin_outlined),
+                  onPressed: () =>
+                      context.push(PpRoutes.versEpingles(widget.eventId)),
+                ),
+              ]
+            : const [],
         // Le nom de l'événement, pas celui de l'onglet : « Courses » ne dit pas de
         // quelle soirée il s'agit, et l'on peut être membre de trois événements.
         titre: Text(evenement?.nom ?? onglets[_onglet].libelle),

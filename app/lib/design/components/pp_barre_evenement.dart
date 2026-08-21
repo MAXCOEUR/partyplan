@@ -3,7 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/providers.dart';
 import '../tokens.dart';
+import '../../app/router.dart';
 import 'pp_barre_app.dart';
+import 'pp_retour.dart';
 
 /// Barre d'un écran rattaché à un événement.
 ///
@@ -33,7 +35,7 @@ class PpBarreEvenement extends ConsumerWidget implements PreferredSizeWidget {
     final evenement = ref.watch(evenementProvider(evenementId)).value;
 
     return PpBarreApp(
-      bouton: const BackButton(),
+      bouton: PpRetour(versParent: PpRoutes.versEvenement(evenementId)),
       titre: Text(evenement?.nom ?? section),
       basDeBarre: _Contexte(
         section: section,

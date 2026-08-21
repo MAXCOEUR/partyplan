@@ -110,7 +110,9 @@ class _DiscussionPageState extends ConsumerState<DiscussionPage> {
 
     final fichier = await FilePicker.pickFile(type: FileType.image);
 
-    if (fichier == null) {
+    // L'écran a pu être quitté pendant que le sélecteur était ouvert : reprendre ici
+    // sans vérifier ferait échouer la mise à jour d'état sur un widget démonté.
+    if (fichier == null || !mounted) {
       return;
     }
 
@@ -125,6 +127,10 @@ class _DiscussionPageState extends ConsumerState<DiscussionPage> {
     // faire refuser au bout.
     if (await fichier.length() > _tailleMaximale) {
       _signaler('L’image ne doit pas dépasser 12 Mo.');
+      return;
+    }
+
+    if (!mounted) {
       return;
     }
 
@@ -885,8 +891,13 @@ class _BarreSaisie extends StatelessWidget {
   ///
   /// Une feuille plutôt qu'une rangée d'icônes : la liste s'allongera — un lieu, un
   /// article de courses — et trois icônes muettes ne disent pas ce qu'elles font.
-  Future<void> _ouvrirAjouts(BuildContext context) async {
-    final choix = await showModalBottomSheet<String>(
+  ///
+  /// Chaque entrée agit dans la foulée de l'appui, sans attendre la fermeture de la
+  /// feuille : un navigateur n'ouvre un sélecteur de fichier que pendant le geste de
+  /// l'utilisateur, et attendre le résultat d'une feuille modale consomme ce geste —
+  /// le sélecteur ne s'ouvrait alors jamais sur le web.
+  void _ouvrirAjouts(BuildContext context) {
+    showModalBottomSheet<void>(
       context: context,
       useSafeArea: true,
       builder: (contexte) => SafeArea(
@@ -897,30 +908,24 @@ class _BarreSaisie extends StatelessWidget {
               leading: const Icon(Icons.image_outlined),
               title: const Text('Une image'),
               subtitle: const Text('Réduite avant l’envoi'),
-              onTap: () => Navigator.of(contexte).pop('image'),
+              onTap: () {
+                Navigator.of(contexte).pop();
+                onImage();
+              },
             ),
             ListTile(
               leading: const Icon(Icons.how_to_vote_outlined),
               title: const Text('Un sondage'),
               subtitle: const Text('Pour trancher une question'),
-              onTap: () => Navigator.of(contexte).pop('sondage'),
+              onTap: () {
+                Navigator.of(contexte).pop();
+                ouvrirFeuilleSondage(context, evenementId);
+              },
             ),
           ],
         ),
       ),
     );
-
-    if (!context.mounted) {
-      return;
-    }
-
-    switch (choix) {
-      case 'image':
-        onImage();
-
-      case 'sondage':
-        await ouvrirFeuilleSondage(context, evenementId);
-    }
   }
 
   @override

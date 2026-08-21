@@ -9,6 +9,7 @@ import '../../core/providers.dart';
 import '../../design/components/pp_avatar.dart';
 import '../../design/components/pp_barre_app.dart';
 import '../../design/components/pp_card.dart';
+import '../../design/components/pp_retour.dart';
 import '../../design/components/pp_rail.dart';
 import '../../design/components/pp_states.dart';
 import '../../design/tokens.dart';
@@ -30,7 +31,10 @@ class ProfilPage extends ConsumerWidget {
     return Scaffold(
       // La déconnexion n'est plus une icône de barre : elle est nommée en bas de
       // l'écran, avec la suppression du compte.
-      appBar: const PpBarreApp(bouton: BackButton(), titre: Text('Mon compte')),
+      appBar: const PpBarreApp(
+        bouton: PpRetour(versParent: PpRoutes.accueil),
+        titre: Text('Mon compte'),
+      ),
       body: profil.when(
         loading: () => const PpLoadingState(),
         error: (erreur, _) => PpErrorState(

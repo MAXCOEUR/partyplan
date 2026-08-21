@@ -8,6 +8,7 @@ import '../../core/models/evenement.dart';
 import '../../core/models/membre.dart';
 import '../../core/providers.dart';
 import '../../design/components/pp_barre_app.dart';
+import '../../design/components/pp_retour.dart';
 import '../../design/components/pp_card.dart';
 import '../../design/components/pp_choix_date_heure.dart';
 import '../../design/components/pp_form.dart';
@@ -64,7 +65,7 @@ class _ParametresEvenementPageState
 
     return Scaffold(
       appBar: PpBarreApp(
-        bouton: const BackButton(),
+        bouton: PpRetour(versParent: PpRoutes.versEvenement(widget.evenementId)),
         titre: Text(l10n.paramTitre),
       ),
       body: PpRail(

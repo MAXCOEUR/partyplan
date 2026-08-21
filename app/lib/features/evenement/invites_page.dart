@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/models/membre.dart';
+import '../../app/router.dart';
 import '../../core/providers.dart';
 import '../../design/components/pp_avatar.dart';
 import '../../design/components/pp_barre_app.dart';
+import '../../design/components/pp_retour.dart';
 import '../../design/components/pp_card.dart';
 import '../../design/components/pp_optimistic.dart';
 import '../../design/components/pp_rail.dart';
@@ -52,7 +54,7 @@ class InvitesPage extends ConsumerWidget {
 
     return Scaffold(
       appBar: PpBarreApp(
-        bouton: const BackButton(),
+        bouton: PpRetour(versParent: PpRoutes.versEvenement(evenementId)),
         titre: Text(l10n.invitesTitre),
       ),
       body: PpRail(child: corps),

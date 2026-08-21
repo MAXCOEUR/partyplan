@@ -80,6 +80,30 @@ void main() {
       expect(find.text('Crémaillère chez Léa'), findsWidgets);
     });
 
+    testWidgets('la discussion mène aux sondages et aux épingles', (
+      tester,
+    ) async {
+      // Les deux prolongent la conversation : les chercher sous « Plus » oblige à
+      // quitter le fil pour y revenir.
+      await _monter(tester, taille: const Size(400, 900));
+
+      await tester.tap(find.text('Discussion').first);
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('acces-sondages')), findsOneWidget);
+      expect(find.byKey(const Key('acces-epingles')), findsOneWidget);
+    });
+
+    testWidgets('les autres onglets n’affichent pas ces raccourcis', (
+      tester,
+    ) async {
+      // Ils n'ont de sens qu'au-dessus du fil : ailleurs, ce serait deux icônes de
+      // plus dans une barre déjà chargée.
+      await _monter(tester, taille: const Size(400, 900));
+
+      expect(find.byKey(const Key('acces-sondages')), findsNothing);
+    });
+
     testWidgets('sur téléphone, la navigation reste en bas', (tester) async {
       await _monter(tester, taille: const Size(400, 900));
 
