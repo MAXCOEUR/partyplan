@@ -239,12 +239,7 @@ const _detail = <String, dynamic>{
   'fromShoppingItem': false,
   'revisionCount': 1,
   'shares': [
-    {
-      'memberId': 'm1',
-      'displayName': 'Organisateur',
-      'share': 1,
-      'amount': 90,
-    },
+    {'memberId': 'm1', 'displayName': 'Organisateur', 'share': 1, 'amount': 90},
     {'memberId': 'm2', 'displayName': 'Lucas', 'share': 1, 'amount': 90},
   ],
 };

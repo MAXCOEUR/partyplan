@@ -8,6 +8,7 @@ import '../../core/dates.dart';
 import '../../core/models/evenement.dart';
 import '../../core/models/membre.dart';
 import '../../core/providers.dart';
+import '../../core/session/role_plateforme.dart';
 import '../../design/components/pp_bandeau_hors_ligne.dart';
 import '../../design/components/pp_barre_app.dart';
 import '../../design/components/pp_card.dart';
@@ -28,11 +29,25 @@ class AccueilPage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = PpL10n.of(context);
     final evenements = ref.watch(mesEvenementsProvider);
+    // Le rôle est lu dans le jeton déjà en mémoire, non demandé au serveur : charger
+    // le profil au démarrage ajouterait un appel réseau à chaque lancement de
+    // l'application pour décider de l'affichage d'une seule icône.
+    final personnelPlateforme = ref
+        .watch(rolePlateformeProvider)
+        .maybeWhen(data: estPersonnelPlateforme, orElse: () => false);
 
     return Scaffold(
       appBar: PpBarreApp(
         titre: const Text(PpMarque.nom),
         actions: [
+          // Gérer les comptes est le travail quotidien d'un administrateur : enterrée
+          // dans « Mon profil », l'entrée se cherche à chaque fois.
+          if (personnelPlateforme)
+            IconButton(
+              onPressed: () => context.push(PpRoutes.adminComptes),
+              icon: const Icon(Icons.admin_panel_settings_outlined),
+              tooltip: l10n.accueilAdministration,
+            ),
           IconButton(
             onPressed: () => context.push(PpRoutes.profil),
             icon: const Icon(Icons.person_outline_rounded),

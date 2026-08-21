@@ -18,11 +18,7 @@ class _Serveur extends Interceptor {
         : <String, Object?>{};
 
     handler.resolve(
-      Response<Object?>(
-        requestOptions: options,
-        statusCode: 200,
-        data: corps,
-      ),
+      Response<Object?>(requestOptions: options, statusCode: 200, data: corps),
     );
   }
 }

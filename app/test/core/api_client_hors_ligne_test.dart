@@ -31,10 +31,7 @@ class _Reseau extends Interceptor {
           requestOptions: options,
           statusCode: unique,
           data: unique == 200
-              ? {
-                  'accessToken': 'neuf',
-                  'refreshToken': 'neuf',
-                }
+              ? {'accessToken': 'neuf', 'refreshToken': 'neuf'}
               : reponse,
         ),
       );
@@ -157,33 +154,36 @@ void main() {
       ]);
     });
 
-    test('sans jeton de rafraîchissement, la lecture échoue franchement', () async {
-      final sansRafraichissement = ApiClient(
-        // Aucun jeton de rafraîchissement : la session est définitivement perdue.
-        SessionStoreDouble(jetonAcces: 'jeton'),
-        dio: Dio(
-          BaseOptions(
-            baseUrl: 'https://exemple.test/v1',
-            validateStatus: (_) => true,
+    test(
+      'sans jeton de rafraîchissement, la lecture échoue franchement',
+      () async {
+        final sansRafraichissement = ApiClient(
+          // Aucun jeton de rafraîchissement : la session est définitivement perdue.
+          SessionStoreDouble(jetonAcces: 'jeton'),
+          dio: Dio(
+            BaseOptions(
+              baseUrl: 'https://exemple.test/v1',
+              validateStatus: (_) => true,
+            ),
+          )..interceptors.add(reseau),
+          cache: CacheLecture(magasin),
+          file: FileEcritures(magasin),
+          etat: etat,
+        );
+
+        reseau
+          ..statut = 401
+          ..reponse = {'title': 'Unauthorized'};
+
+        await expectLater(
+          sansRafraichissement.get<List<dynamic>>(
+            '/events',
+            analyser: (c) => c! as List<dynamic>,
           ),
-        )..interceptors.add(reseau),
-        cache: CacheLecture(magasin),
-        file: FileEcritures(magasin),
-        etat: etat,
-      );
-
-      reseau
-        ..statut = 401
-        ..reponse = {'title': 'Unauthorized'};
-
-      await expectLater(
-        sansRafraichissement.get<List<dynamic>>(
-          '/events',
-          analyser: (c) => c! as List<dynamic>,
-        ),
-        throwsA(isA<ApiException>()),
-      );
-    });
+          throwsA(isA<ApiException>()),
+        );
+      },
+    );
   });
 
   group('Écriture hors ligne', () {

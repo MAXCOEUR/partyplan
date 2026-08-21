@@ -11,6 +11,7 @@ import 'models/invitation.dart';
 import 'models/membre.dart';
 import 'models/moyens_connexion.dart';
 import 'models/profil.dart';
+import 'session/role_plateforme.dart';
 import 'network/api_client.dart';
 import 'network/comptes_api.dart';
 import 'network/courses_api.dart';
@@ -67,6 +68,21 @@ final motDePasseAChangerProvider =
     NotifierProvider<ChangementMotDePasseImpose, bool>(
       ChangementMotDePasseImpose.new,
     );
+
+/// Rôle plateforme du compte connecté, lu dans le jeton d'accès.
+///
+/// Sert au seul affichage de l'entrée du back-office : les droits sont vérifiés par
+/// l'API, qui seule détient la clé de signature.
+final rolePlateformeProvider = FutureProvider<String>((ref) async {
+  // Dépend de l'état de session, et non du seul magasin : au lancement personne n'est
+  // connecté, et sans cette dépendance le rôle resterait celui d'avant la connexion —
+  // un administrateur ne verrait jamais son entrée du back-office.
+  ref.watch(sessionProvider);
+
+  final jeton = await ref.watch(sessionStoreProvider).lireJetonAcces();
+
+  return rolePlateformeDuJeton(jeton);
+});
 
 final apiClientProvider = Provider<ApiClient>(
   (ref) => ApiClient(
@@ -272,7 +288,9 @@ final evenementsApiProvider = Provider<EvenementsApi>(
 /// [profilProvider] : sans elle, la requête part pendant la frame qui précède la
 /// redirection, échoue en 401, et l'erreur reste affichée après la connexion — l'écran
 /// annonce « impossible de charger tes événements » alors que le serveur répond.
-final mesEvenementsProvider = FutureProvider<List<EvenementDeLaListe>>((ref) async {
+final mesEvenementsProvider = FutureProvider<List<EvenementDeLaListe>>((
+  ref,
+) async {
   // Toutes les dépendances sont lues **avant** la première attente. Un `ref.watch`
   // placé après un `await` se réabonne à chaque reconstruction : le provider se
   // réexécute en boucle, l'écran reste sur son indicateur de chargement et le serveur
@@ -346,10 +364,12 @@ final depensesProvider = FutureProvider.family<PageDepenses, String>(
 
 /// Détail d'une dépense : payeur, participants, part de chacun (EF-DEP-05).
 final detailDepenseProvider =
-    FutureProvider.family<DetailDepense, ({String evenementId, String depenseId})>(
-      (ref, cle) => ref
-          .watch(depensesApiProvider)
-          .detail(cle.evenementId, cle.depenseId),
+    FutureProvider.family<
+      DetailDepense,
+      ({String evenementId, String depenseId})
+    >(
+      (ref, cle) =>
+          ref.watch(depensesApiProvider).detail(cle.evenementId, cle.depenseId),
     );
 
 // --------------------------------------------------------------- règlements ----
@@ -379,7 +399,8 @@ final filDiscussionProvider = FutureProvider.family<FilDiscussion, String>(
 
 /// Messages épinglés et dossiers de rangement.
 final epinglesProvider = FutureProvider.family<PageEpingles, String>(
-  (ref, evenementId) => ref.watch(discussionApiProvider).lireEpingles(evenementId),
+  (ref, evenementId) =>
+      ref.watch(discussionApiProvider).lireEpingles(evenementId),
 );
 
 // ---------------------------------------------------------------- sondages ----

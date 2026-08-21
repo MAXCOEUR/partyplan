@@ -97,10 +97,20 @@ class _AdminComptesPageState extends ConsumerState<AdminComptesPage> {
       ),
       body: comptes.when(
         loading: () => const PpLoadingState(),
-        error: (_, _) => PpErrorState(
-          message: PpL10n.of(context).erreurReseau,
-          onRetry: () => ref.invalidate(comptesProvider),
-        ),
+        // Un refus d'autorisation n'est pas une panne : l'annoncer comme telle envoie
+        // vérifier un wifi qui marche, et le bouton « Réessayer » ne peut pas aboutir.
+        // Le seul refus possible ici est l'absence de double authentification
+        // (RG-ADM-04) : le jeton porte déjà le rôle, sans quoi l'entrée serait cachée.
+        error: (erreur, _) => erreur is ApiException && erreur.statusCode == 403
+            ? const PpErrorState(
+                message:
+                    'L’administration exige la double authentification.\n'
+                    'Active-la dans Sécurité, puis reconnecte-toi.',
+              )
+            : PpErrorState(
+                message: PpL10n.of(context).erreurReseau,
+                onRetry: () => ref.invalidate(comptesProvider),
+              ),
         data: (page) => page.elements.isEmpty
             ? const PpEmptyState(
                 titre: 'Aucun compte trouvé',

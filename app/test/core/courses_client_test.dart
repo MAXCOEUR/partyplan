@@ -40,7 +40,9 @@ void main() {
     serveur = _Serveur();
     final dio = Dio(BaseOptions(validateStatus: (_) => true))
       ..interceptors.add(serveur);
-    api = CoursesApi(ApiClient(SessionStoreDouble(jetonAcces: 'jeton'), dio: dio));
+    api = CoursesApi(
+      ApiClient(SessionStoreDouble(jetonAcces: 'jeton'), dio: dio),
+    );
   });
 
   group('Client d’API des courses', () {
@@ -99,7 +101,11 @@ void main() {
     test('omet les champs facultatifs laissés vides', () async {
       // Envoyer `null` sur un champ absent le distinguerait mal d'un effacement
       // volontaire côté serveur.
-      await api.ajouter(evenement, nom: 'Glace', categorie: CategorieCourse.nourriture);
+      await api.ajouter(
+        evenement,
+        nom: 'Glace',
+        categorie: CategorieCourse.nourriture,
+      );
 
       final corps = serveur.derniere.data! as Map<String, dynamic>;
       expect(corps.containsKey('quantity'), isFalse);
@@ -136,7 +142,10 @@ void main() {
       await api.attribuer(evenement, article);
 
       expect(serveur.derniere.method, 'POST');
-      expect(serveur.derniere.path, '/events/$evenement/shopping/$article/claim');
+      expect(
+        serveur.derniere.path,
+        '/events/$evenement/shopping/$article/claim',
+      );
     });
 
     test('retire son attribution et reçoit l’article à jour', () async {
@@ -145,7 +154,10 @@ void main() {
       final rendu = await api.liberer(evenement, article);
 
       expect(serveur.derniere.method, 'DELETE');
-      expect(serveur.derniere.path, '/events/$evenement/shopping/$article/claim');
+      expect(
+        serveur.derniere.path,
+        '/events/$evenement/shopping/$article/claim',
+      );
       expect(rendu.prisParMoi, isFalse);
     });
 
@@ -158,7 +170,10 @@ void main() {
       );
 
       expect(serveur.derniere.method, 'POST');
-      expect(serveur.derniere.path, '/events/$evenement/shopping/$article/purchase');
+      expect(
+        serveur.derniere.path,
+        '/events/$evenement/shopping/$article/purchase',
+      );
       expect(serveur.derniere.headers['Idempotency-Key'], isNotEmpty);
 
       final corps = serveur.derniere.data! as Map<String, dynamic>;
