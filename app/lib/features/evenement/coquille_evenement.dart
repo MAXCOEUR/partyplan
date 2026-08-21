@@ -13,6 +13,7 @@ import '../courses/article_feuille.dart';
 import '../courses/courses_page.dart';
 import '../depenses/depense_feuille.dart';
 import '../depenses/depenses_page.dart';
+import '../discussion/discussion_page.dart';
 import 'tableau_de_bord_page.dart';
 
 /// Coquille de navigation d'un événement.
@@ -22,8 +23,9 @@ import 'tableau_de_bord_page.dart';
 /// tient parce que c'est en ajoutant un onglet « juste pour cette fois » que la
 /// navigation se dégrade.
 ///
-/// Quatre aujourd'hui. Le planning a été retiré — la date d'un événement se règle dans
-/// ses paramètres — et la place attend la discussion.
+/// Cinq : accueil, courses, dépenses, discussion, et le reste sous « Plus ». La place
+/// libérée par le planning — retiré, la date d'un événement se règle dans ses
+/// paramètres — revient à la discussion.
 class CoquilleEvenement extends ConsumerStatefulWidget {
   const CoquilleEvenement({required this.eventId, super.key});
 
@@ -59,6 +61,11 @@ class _CoquilleEvenementState extends ConsumerState<CoquilleEvenement> {
         libelle: l10n.ongletDepenses,
         icone: Icons.euro_rounded,
         icoineActive: Icons.euro_rounded,
+      ),
+      (
+        libelle: l10n.ongletDiscussion,
+        icone: Icons.forum_outlined,
+        icoineActive: Icons.forum_rounded,
       ),
       (
         libelle: l10n.ongletPlus,
@@ -104,6 +111,7 @@ class _CoquilleEvenementState extends ConsumerState<CoquilleEvenement> {
             TableauDeBordPage(evenementId: widget.eventId),
             CoursesPage(evenementId: widget.eventId),
             DepensesPage(evenementId: widget.eventId),
+          DiscussionPage(evenementId: widget.eventId),
             _MenuPlus(evenementId: widget.eventId),
           ],
         ),
