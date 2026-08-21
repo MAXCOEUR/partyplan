@@ -34,7 +34,7 @@ class AccueilPage extends ConsumerWidget {
         titre: const Text(PpMarque.nom),
         actions: [
           IconButton(
-            onPressed: () => context.push(PpRoutes.profilEdition),
+            onPressed: () => context.push(PpRoutes.profil),
             icon: const Icon(Icons.person_outline_rounded),
             tooltip: l10n.accueilMonProfil,
           ),

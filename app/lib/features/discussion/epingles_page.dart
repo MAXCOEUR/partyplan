@@ -6,7 +6,7 @@ import '../../core/models/message.dart';
 import '../../core/network/api_exception.dart';
 import '../../core/providers.dart';
 import '../../design/components/pp_avatar.dart';
-import '../../design/components/pp_barre_app.dart';
+import '../../design/components/pp_barre_evenement.dart';
 import '../../design/components/pp_card.dart';
 import '../../design/components/pp_rail.dart';
 import '../../design/components/pp_states.dart';
@@ -40,9 +40,9 @@ class _EpinglesPageState extends ConsumerState<EpinglesPage> {
     final epingles = ref.watch(epinglesProvider(widget.evenementId));
 
     return Scaffold(
-      appBar: const PpBarreApp(
-        bouton: BackButton(),
-        titre: Text('Épinglé'),
+      appBar: PpBarreEvenement(
+        evenementId: widget.evenementId,
+        section: 'ÉPINGLÉ',
       ),
       body: PpRail(
         child: epingles.when(

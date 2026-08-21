@@ -496,10 +496,27 @@ void main() {
       expect(find.byKey(const Key('mention-choix-m2')), findsNothing);
     });
 
-    testWidgets('un bouton propose de joindre une image', (tester) async {
+    testWidgets('un bouton + ouvre ce qu’on peut ajouter', (tester) async {
+      // Créer un sondage n'était atteignable que par un menu de l'événement : à côté
+      // du champ de saisie, personne ne le trouvait.
       await _monter(tester, const []);
 
-      expect(find.byKey(const Key('discussion-image')), findsOneWidget);
+      await tester.tap(find.byKey(const Key('discussion-ajouter')));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Une image'), findsOneWidget);
+      expect(find.text('Un sondage'), findsOneWidget);
+    });
+
+    testWidgets('le + mène à la création d’un sondage', (tester) async {
+      await _monter(tester, const []);
+
+      await tester.tap(find.byKey(const Key('discussion-ajouter')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Un sondage'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Nouveau sondage'), findsOneWidget);
     });
 
     testWidgets('une image jointe s’affiche dans le fil', (tester) async {

@@ -4,7 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/models/sondage.dart';
 import '../../core/network/api_exception.dart';
 import '../../core/providers.dart';
-import '../../design/components/pp_barre_app.dart';
+import '../../design/components/pp_barre_evenement.dart';
 import '../../design/components/pp_card.dart';
 import '../../design/components/pp_rail.dart';
 import '../../design/components/pp_states.dart';
@@ -26,7 +26,10 @@ class SondagesPage extends ConsumerWidget {
     final sondages = ref.watch(sondagesProvider(evenementId));
 
     return Scaffold(
-      appBar: const PpBarreApp(bouton: BackButton(), titre: Text('Sondages')),
+      appBar: PpBarreEvenement(
+        evenementId: evenementId,
+        section: 'SONDAGES',
+      ),
       floatingActionButtonLocation: const PpFabDansLeRail(),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => ouvrirFeuilleSondage(context, evenementId),

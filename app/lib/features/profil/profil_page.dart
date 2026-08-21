@@ -7,10 +7,11 @@ import '../../app/router.dart';
 import '../../core/models/profil.dart';
 import '../../core/providers.dart';
 import '../../design/components/pp_avatar.dart';
+import '../../design/components/pp_barre_app.dart';
 import '../../design/components/pp_card.dart';
+import '../../design/components/pp_rail.dart';
 import '../../design/components/pp_states.dart';
 import '../../design/tokens.dart';
-import '../../l10n/marque.dart';
 import '../../l10n/generated/pp_localisations.dart';
 
 /// Écran de profil : ce que l'utilisateur voit de son propre compte.
@@ -27,107 +28,86 @@ class ProfilPage extends ConsumerWidget {
     final profil = ref.watch(profilProvider);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text(PpMarque.nom),
-        actions: [
-          IconButton(
-            tooltip: 'Se déconnecter',
-            icon: const Icon(Icons.logout_rounded),
-            onPressed: () async {
-              await ref.read(sessionProvider.notifier).deconnecter();
-              if (context.mounted) {
-                context.go(PpRoutes.connexion);
-              }
-            },
-          ),
-          const SizedBox(width: PpSpacing.sm),
-        ],
-      ),
+      // La déconnexion n'est plus une icône de barre : elle est nommée en bas de
+      // l'écran, avec la suppression du compte.
+      appBar: const PpBarreApp(bouton: BackButton(), titre: Text('Mon compte')),
       body: profil.when(
         loading: () => const PpLoadingState(),
         error: (erreur, _) => PpErrorState(
           message: PpL10n.of(context).erreurReseau,
           onRetry: () => ref.invalidate(profilProvider),
         ),
-        data: (donnees) => RefreshIndicator(
-          onRefresh: () async => ref.invalidate(profilProvider),
-          child: ListView(
-            padding: const EdgeInsets.all(PpSpacing.lg),
-            children: [
-              _EnTeteProfil(profil: donnees),
-              const SizedBox(height: PpSpacing.lg),
-              if (!donnees.emailVerifie) ...[
-                const _RappelVerification(),
+        data: (donnees) => PpRail(
+          child: RefreshIndicator(
+            onRefresh: () async => ref.invalidate(profilProvider),
+            child: ListView(
+              padding: const EdgeInsets.all(PpSpacing.lg),
+              children: [
+                _EnTeteProfil(profil: donnees),
                 const SizedBox(height: PpSpacing.lg),
-              ],
-              _Section(
-                titre: 'Mon compte',
-                entrees: [
-                  _Entree(
-                    icone: Icons.person_outline_rounded,
-                    libelle: 'Modifier mon profil',
-                    detail: donnees.nomAffiche,
-                    onTap: () => context.push(PpRoutes.profilEdition),
-                  ),
-                  _Entree(
-                    icone: Icons.shield_outlined,
-                    libelle: 'Sécurité et sessions',
-                    detail: donnees.aUnMotDePasse
-                        ? 'Mot de passe défini'
-                        : 'Aucun mot de passe défini',
-                    onTap: () => context.push(PpRoutes.securite),
-                  ),
-                  _Entree(
-                    icone: Icons.privacy_tip_outlined,
-                    libelle: 'Mes données et confidentialité',
-                    detail: 'Export, suppression du compte',
-                    onTap: () => context.push(PpRoutes.confidentialite),
-                  ),
+                if (!donnees.emailVerifie) ...[
+                  const _RappelVerification(),
+                  const SizedBox(height: PpSpacing.lg),
                 ],
-              ),
-              if (donnees.estPersonnelPlateforme) ...[
-                const SizedBox(height: PpSpacing.lg),
                 _Section(
-                  titre: 'Administration',
+                  titre: 'Mon compte',
                   entrees: [
                     _Entree(
-                      icone: Icons.groups_outlined,
-                      libelle: 'Gestion des comptes',
-                      detail: donnees.estAdministrateur
-                          ? 'Tous les droits'
-                          : 'Consultation et dépannage',
-                      onTap: () => context.push(PpRoutes.adminComptes),
+                      icone: Icons.person_outline_rounded,
+                      libelle: 'Modifier mon profil',
+                      detail: donnees.nomAffiche,
+                      onTap: () => context.push(PpRoutes.profilEdition),
                     ),
                     _Entree(
-                      icone: Icons.history_rounded,
-                      libelle: 'Journal d’audit',
-                      detail: 'Trace de toutes les actions',
-                      onTap: () => context.push(PpRoutes.adminAudit),
+                      icone: Icons.shield_outlined,
+                      libelle: 'Sécurité et sessions',
+                      detail: donnees.aUnMotDePasse
+                          ? 'Mot de passe défini'
+                          : 'Aucun mot de passe défini',
+                      onTap: () => context.push(PpRoutes.securite),
+                    ),
+                    _Entree(
+                      icone: Icons.privacy_tip_outlined,
+                      libelle: 'Mes données et confidentialité',
+                      detail: 'Export, suppression du compte',
+                      onTap: () => context.push(PpRoutes.confidentialite),
                     ),
                   ],
                 ),
-              ],
-              const SizedBox(height: PpSpacing.lg),
-              _Section(
-                titre: 'Mes événements',
-                entrees: const [
-                  _Entree(
-                    icone: Icons.celebration_outlined,
-                    libelle: 'Créer un événement',
-                    detail: 'Disponible en V1.0',
-                    onTap: null,
+                if (donnees.estPersonnelPlateforme) ...[
+                  const SizedBox(height: PpSpacing.lg),
+                  _Section(
+                    titre: 'Administration',
+                    entrees: [
+                      _Entree(
+                        icone: Icons.groups_outlined,
+                        libelle: 'Gestion des comptes',
+                        detail: donnees.estAdministrateur
+                            ? 'Tous les droits'
+                            : 'Consultation et dépannage',
+                        onTap: () => context.push(PpRoutes.adminComptes),
+                      ),
+                      _Entree(
+                        icone: Icons.history_rounded,
+                        libelle: 'Journal d’audit',
+                        detail: 'Trace de toutes les actions',
+                        onTap: () => context.push(PpRoutes.adminAudit),
+                      ),
+                    ],
                   ),
                 ],
-              ),
-              const SizedBox(height: PpSpacing.xl),
-              Center(
-                child: Text(
-                  'Compte créé le ${_dateFr.format(donnees.creeLe.toLocal())}',
-                  style: Theme.of(context).textTheme.bodySmall,
+                const SizedBox(height: PpSpacing.lg),
+                _FinDeSession(profil: donnees),
+                const SizedBox(height: PpSpacing.xl),
+                Center(
+                  child: Text(
+                    'Compte créé le ${_dateFr.format(donnees.creeLe.toLocal())}',
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
                 ),
-              ),
-              const SizedBox(height: PpSpacing.xl),
-            ],
+                const SizedBox(height: PpSpacing.xl),
+              ],
+            ),
           ),
         ),
       ),
@@ -368,5 +348,116 @@ class _Entree extends StatelessWidget {
       subtitle: Text(detail, style: theme.textTheme.bodySmall),
       trailing: actif ? const Icon(Icons.chevron_right_rounded) : null,
     );
+  }
+}
+
+/// Quitter la session, ou le produit.
+///
+/// Deux gestes nommés, en bas de l'écran : une icône dans la barre ne se trouve pas, et
+/// fermer son compte n'a pas à se chercher dans « Mes données et confidentialité ».
+class _FinDeSession extends ConsumerWidget {
+  const _FinDeSession({required this.profil});
+
+  final Profil profil;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        PpCard(
+          onTap: () => _deconnecter(context, ref),
+          child: Row(
+            children: [
+              const Icon(Icons.logout_rounded, color: PpColors.violet),
+              const SizedBox(width: PpSpacing.md),
+              Expanded(
+                child: Text(
+                  'Se déconnecter',
+                  style: theme.textTheme.titleSmall,
+                ),
+              ),
+              const Icon(Icons.chevron_right_rounded),
+            ],
+          ),
+        ),
+        const SizedBox(height: PpSpacing.sm),
+        // Un administrateur de plateforme ne peut pas se supprimer tant qu'il n'a pas
+        // transféré son rôle : le serveur le refuse (RG-ADM-05), et proposer le geste
+        // pour le voir échouer vaudrait moins que l'expliquer.
+        if (profil.estAdministrateur)
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: PpSpacing.lg),
+            child: Text(
+              'Ton compte est administrateur de la plateforme : transfère ce rôle '
+              'avant de pouvoir le supprimer.',
+              style: theme.textTheme.bodySmall,
+            ),
+          )
+        else
+          PpCard(
+            onTap: () => context.push(PpRoutes.confidentialite),
+            child: Row(
+              children: [
+                const Icon(Icons.delete_outline_rounded, color: PpColors.rouge),
+                const SizedBox(width: PpSpacing.md),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Supprimer mon compte',
+                        style: theme.textTheme.titleSmall?.copyWith(
+                          color: PpColors.rougeTexte,
+                        ),
+                      ),
+                      Text(
+                        'Définitif. Tes données sont exportables avant.',
+                        style: theme.textTheme.bodySmall,
+                      ),
+                    ],
+                  ),
+                ),
+                const Icon(Icons.chevron_right_rounded),
+              ],
+            ),
+          ),
+      ],
+    );
+  }
+
+  Future<void> _deconnecter(BuildContext context, WidgetRef ref) async {
+    final confirme = await showDialog<bool>(
+      context: context,
+      builder: (contexte) => AlertDialog(
+        title: const Text('Se déconnecter ?'),
+        content: const Text(
+          'Les événements rejoints sans compte sur cet appareil resteront '
+          'accessibles par leur lien.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(contexte).pop(false),
+            child: const Text('Rester connecté'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(contexte).pop(true),
+            child: const Text('Se déconnecter'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirme != true) {
+      return;
+    }
+
+    await ref.read(sessionProvider.notifier).deconnecter();
+
+    if (context.mounted) {
+      context.go(PpRoutes.connexion);
+    }
   }
 }

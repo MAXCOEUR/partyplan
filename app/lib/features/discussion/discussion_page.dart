@@ -14,6 +14,7 @@ import '../../design/components/pp_selecteur_emoji.dart';
 import '../../design/components/pp_states.dart';
 import '../../design/components/pp_texte_message.dart';
 import '../../design/tokens.dart';
+import '../sondages/sondage_feuille.dart';
 import '../sondages/sondages_page.dart';
 import 'epingler_feuille.dart';
 
@@ -222,6 +223,7 @@ class _DiscussionPageState extends ConsumerState<DiscussionPage> {
           controleur: _saisie,
           enCours: _envoiEnCours,
           imageEnCours: _imageEnCours,
+          evenementId: widget.evenementId,
           membres: ref.watch(membresProvider(widget.evenementId)).value ?? [],
           onEnvoyer: _envoyer,
           onImage: _joindreUneImage,
@@ -672,11 +674,13 @@ class _Saisie extends StatefulWidget {
     required this.controleur,
     required this.enCours,
     required this.imageEnCours,
+    required this.evenementId,
     required this.membres,
     required this.onEnvoyer,
     required this.onImage,
   });
 
+  final String evenementId;
   final TextEditingController controleur;
   final bool enCours;
   final bool imageEnCours;
@@ -803,6 +807,7 @@ class _SaisieState extends State<_Saisie> {
           controleur: widget.controleur,
           enCours: widget.enCours,
           imageEnCours: widget.imageEnCours,
+          evenementId: widget.evenementId,
           onEnvoyer: widget.onEnvoyer,
           onImage: widget.onImage,
           theme: theme,
@@ -862,6 +867,7 @@ class _BarreSaisie extends StatelessWidget {
     required this.controleur,
     required this.enCours,
     required this.imageEnCours,
+    required this.evenementId,
     required this.onEnvoyer,
     required this.onImage,
     required this.theme,
@@ -870,9 +876,52 @@ class _BarreSaisie extends StatelessWidget {
   final TextEditingController controleur;
   final bool enCours;
   final bool imageEnCours;
+  final String evenementId;
   final VoidCallback onEnvoyer;
   final VoidCallback onImage;
   final ThemeData theme;
+
+  /// Présente ce qu'on peut ajouter à la conversation.
+  ///
+  /// Une feuille plutôt qu'une rangée d'icônes : la liste s'allongera — un lieu, un
+  /// article de courses — et trois icônes muettes ne disent pas ce qu'elles font.
+  Future<void> _ouvrirAjouts(BuildContext context) async {
+    final choix = await showModalBottomSheet<String>(
+      context: context,
+      useSafeArea: true,
+      builder: (contexte) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.image_outlined),
+              title: const Text('Une image'),
+              subtitle: const Text('Réduite avant l’envoi'),
+              onTap: () => Navigator.of(contexte).pop('image'),
+            ),
+            ListTile(
+              leading: const Icon(Icons.how_to_vote_outlined),
+              title: const Text('Un sondage'),
+              subtitle: const Text('Pour trancher une question'),
+              onTap: () => Navigator.of(contexte).pop('sondage'),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    if (!context.mounted) {
+      return;
+    }
+
+    switch (choix) {
+      case 'image':
+        onImage();
+
+      case 'sondage':
+        await ouvrirFeuilleSondage(context, evenementId);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -886,16 +935,16 @@ class _BarreSaisie extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
           IconButton(
-            key: const Key('discussion-image'),
-            onPressed: imageEnCours ? null : onImage,
+            key: const Key('discussion-ajouter'),
+            onPressed: imageEnCours ? null : () => _ouvrirAjouts(context),
             icon: imageEnCours
                 ? const SizedBox(
                     width: 20,
                     height: 20,
                     child: CircularProgressIndicator(strokeWidth: 2),
                   )
-                : const Icon(Icons.image_outlined),
-            tooltip: 'Joindre une image',
+                : const Icon(Icons.add_circle_outline_rounded),
+            tooltip: 'Ajouter',
           ),
           Expanded(
             child: TextField(

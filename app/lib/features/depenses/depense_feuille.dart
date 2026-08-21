@@ -40,7 +40,8 @@ class _DepenseFeuilleState extends ConsumerState<DepenseFeuille> {
 
   ModeAssiette _mode = ModeAssiette.tousLesPresents;
 
-  /// Payeur choisi. Nul désigne l'appelant, ce qui est le cas courant.
+  /// Payeur choisi. Nul tant que la liste des membres n'est pas chargée : c'est alors
+  /// l'appelant qui est présélectionné, le cas courant.
   String? _payeur;
 
   /// Poids par membre, en mode sélection ou parts inégales. Absent du dictionnaire
@@ -99,6 +100,10 @@ class _DepenseFeuilleState extends ConsumerState<DepenseFeuille> {
     });
   }
 
+  /// Ligne de membre de l'appelant, parmi ceux proposés.
+  static Membre? _moi(List<Membre> membres) =>
+      membres.where((m) => m.cestMoi).firstOrNull;
+
   Future<void> _enregistrer() async {
     if (!_formulaire.currentState!.validate()) {
       return;
@@ -123,6 +128,11 @@ class _DepenseFeuilleState extends ConsumerState<DepenseFeuille> {
       _erreur = null;
     });
 
+    // Le payeur est transmis explicitement, même quand c'est l'appelant : laisser le
+    // serveur le déduire d'un champ absent rendrait la requête ambiguë à la relecture.
+    final membres = ref.read(membresProvider(widget.evenementId)).value ?? [];
+    final payeur = _payeur ?? _moi(_participants(membres))?.id;
+
     final parts = _mode == ModeAssiette.tousLesPresents
         ? null
         : [
@@ -140,7 +150,7 @@ class _DepenseFeuilleState extends ConsumerState<DepenseFeuille> {
           libelle: _libelle.text.trim(),
           montant: montant,
           mode: _mode,
-          payeurMembreId: _payeur,
+          payeurMembreId: payeur,
           parts: parts,
         );
       } else {
@@ -150,7 +160,7 @@ class _DepenseFeuilleState extends ConsumerState<DepenseFeuille> {
           libelle: _libelle.text.trim(),
           montant: montant,
           mode: _mode,
-          payeurMembreId: _payeur,
+          payeurMembreId: payeur,
           parts: parts,
         );
       }
@@ -226,7 +236,9 @@ class _DepenseFeuilleState extends ConsumerState<DepenseFeuille> {
             const SizedBox(height: PpSpacing.lg),
             _ChoixPayeur(
               membres: participants,
-              valeur: _payeur,
+              // À la saisie, l'appelant est présélectionné : c'est presque toujours lui
+              // qui a payé, et le choisir à chaque fois serait un geste de trop.
+              valeur: _payeur ?? _moi(participants)?.id,
               onChange: _enCours
                   ? null
                   : (id) => setState(() => _payeur = id),
@@ -283,7 +295,12 @@ class _DepenseFeuilleState extends ConsumerState<DepenseFeuille> {
   }
 }
 
-/// Qui a payé. Par défaut l'appelant, sans avoir à le dire.
+/// Qui a payé. Par défaut l'appelant.
+///
+/// Chaque personne y figure sous son identifiant de membre, y compris l'appelant.
+/// « Moi » était auparavant porté par la valeur nulle : corriger sa propre dépense
+/// plaçait alors dans le sélecteur un identifiant qui ne correspondait à aucune entrée,
+/// et Flutter refusait de construire la liste.
 class _ChoixPayeur extends StatelessWidget {
   const _ChoixPayeur({
     required this.membres,
@@ -292,12 +309,19 @@ class _ChoixPayeur extends StatelessWidget {
   });
 
   final List<Membre> membres;
+
+  /// Identifiant du payeur choisi. Nul tant que rien n'est chargé.
   final String? valeur;
+
   final void Function(String?)? onChange;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+
+    // Une valeur absente de la liste ferait échouer la construction : mieux vaut
+    // n'en présélectionner aucune que planter.
+    final connue = membres.any((m) => m.id == valeur);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -306,14 +330,13 @@ class _ChoixPayeur extends StatelessWidget {
         const SizedBox(height: PpSpacing.xs),
         DropdownButtonFormField<String?>(
           key: const Key('depense-payeur'),
-          initialValue: valeur,
+          initialValue: connue ? valeur : null,
           onChanged: onChange,
           items: [
-            const DropdownMenuItem(value: null, child: Text('Moi')),
-            for (final membre in membres.where((m) => !m.cestMoi))
+            for (final membre in membres)
               DropdownMenuItem(
                 value: membre.id,
-                child: Text(membre.nomAffiche),
+                child: Text(membre.cestMoi ? 'Moi' : membre.nomAffiche),
               ),
           ],
         ),

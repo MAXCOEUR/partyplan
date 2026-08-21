@@ -20,6 +20,7 @@ import '../features/evenement/parametres_evenement_page.dart';
 import '../features/profil/confidentialite_page.dart';
 import '../features/profil/connexions_page.dart';
 import '../features/profil/profil_edition_page.dart';
+import '../features/profil/profil_page.dart';
 import '../features/profil/second_facteur_reglage_page.dart';
 import '../features/profil/securite_page.dart';
 import '../features/reglements/reglements_page.dart';
@@ -44,7 +45,12 @@ abstract final class PpRoutes {
   static const motDePasseAChanger = '/mot-de-passe-a-changer';
 
   // Compte
-  static const profilEdition = '/profil';
+  ///
+  /// `/profil` présente la vue d'ensemble du compte ; la modification est un écran à
+  /// part. Faire pointer `/profil` directement sur le formulaire rendait la
+  /// déconnexion et la suppression du compte inatteignables.
+  static const profil = '/profil';
+  static const profilEdition = '/profil/modifier';
   static const securite = '/securite';
   static const confidentialite = '/mes-donnees';
   static const secondFacteurReglage = '/securite/double-authentification';
@@ -192,6 +198,10 @@ GoRouter creerRouteur(Ref ref) => GoRouter(
     GoRoute(
       path: PpRoutes.motDePasseOublie,
       builder: (context, state) => const MotDePasseOubliePage(),
+    ),
+    GoRoute(
+      path: PpRoutes.profil,
+      builder: (context, state) => const ProfilPage(),
     ),
     GoRoute(
       path: PpRoutes.profilEdition,

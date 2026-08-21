@@ -5,7 +5,7 @@ import '../../core/models/reglement.dart';
 import '../../core/network/api_exception.dart';
 import '../../core/providers.dart';
 import '../../design/components/pp_avatar.dart';
-import '../../design/components/pp_barre_app.dart';
+import '../../design/components/pp_barre_evenement.dart';
 import '../../design/components/pp_card.dart';
 import '../../design/components/pp_money.dart';
 import '../../design/components/pp_rail.dart';
@@ -372,9 +372,9 @@ class ReglementsEcran extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-    appBar: const PpBarreApp(
-      bouton: BackButton(),
-      titre: Text('Qui rend quoi'),
+    appBar: PpBarreEvenement(
+      evenementId: evenementId,
+      section: 'QUI REND QUOI',
     ),
     body: PpRail(child: ReglementsPage(evenementId: evenementId)),
   );

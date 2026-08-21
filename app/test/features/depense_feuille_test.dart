@@ -45,7 +45,9 @@ class _DepensesApiDouble implements DepensesApi {
     DateTime? date,
     List<PartDemandee>? parts,
   }) async {
-    appels.add('modifier|$depenseId|$libelle|$montant|${mode.versApi}');
+    appels.add(
+      'modifier|$depenseId|$libelle|$montant|${mode.versApi}|$payeurMembreId',
+    );
     return _detailExemple;
   }
 
@@ -169,9 +171,11 @@ void main() {
       await tester.tap(find.text('Ajouter la dépense'));
       await tester.pumpAndSettle();
 
+      // L'appelant est transmis explicitement : laisser le serveur le déduire d'un
+      // champ absent rendrait la requête ambiguë à la relecture.
       expect(
         api.appels.single,
-        'creer|Location de la salle|180.0|AllPresent|null|',
+        'creer|Location de la salle|180.0|AllPresent|m1|',
       );
     });
 
@@ -235,6 +239,101 @@ void main() {
 
       expect(api.appels.single, contains('Custom'));
       expect(api.appels.single, contains('m1=2'));
+    });
+
+    testWidgets('corriger sa propre dépense n’écrase pas le sélecteur', (
+      tester,
+    ) async {
+      // Le payeur était placé dans le sélecteur par son identifiant, mais « Moi » y
+      // figurait sous la valeur nulle : corriger sa propre dépense ne trouvait aucune
+      // entrée correspondante et l'écran plantait sur une assertion de Flutter.
+      final api = _DepensesApiDouble();
+
+      final conteneur = ProviderContainer(
+        overrides: [
+          depensesApiProvider.overrideWithValue(api),
+          membresProvider(_evenement).overrideWith(
+            (ref) async => [
+              _membre(id: 'm1', nom: 'Moi', cestMoi: true),
+              _membre(id: 'm2', nom: 'Lucas'),
+            ],
+          ),
+        ],
+      );
+      addTearDown(conteneur.dispose);
+
+      await monterEcran(
+        tester,
+        Scaffold(
+          body: DepenseFeuille(
+            evenementId: _evenement,
+            depense: Depense(
+              id: 'd1',
+              libelle: 'Taxi du retour',
+              montant: 40,
+              // Payée par l'appelant : c'est le cas qui plantait.
+              payeurMembreId: 'm1',
+              payeurNom: 'Moi',
+              date: DateTime(2026, 8, 21),
+              nombreParticipants: 2,
+              issueDesCourses: false,
+            ),
+          ),
+        ),
+        conteneur: conteneur,
+      );
+
+      expect(tester.takeException(), isNull);
+      expect(find.text('Taxi du retour'), findsOneWidget);
+      expect(find.text('40,00'), findsOneWidget);
+    });
+
+    testWidgets('corriger la dépense d’un autre conserve son payeur', (
+      tester,
+    ) async {
+      final api = _DepensesApiDouble();
+
+      final conteneur = ProviderContainer(
+        overrides: [
+          depensesApiProvider.overrideWithValue(api),
+          membresProvider(_evenement).overrideWith(
+            (ref) async => [
+              _membre(id: 'm1', nom: 'Moi', cestMoi: true),
+              _membre(id: 'm2', nom: 'Lucas'),
+            ],
+          ),
+        ],
+      );
+      addTearDown(conteneur.dispose);
+
+      await monterEcran(
+        tester,
+        Scaffold(
+          body: DepenseFeuille(
+            evenementId: _evenement,
+            depense: Depense(
+              id: 'd1',
+              libelle: 'Glaçons',
+              montant: 8,
+              payeurMembreId: 'm2',
+              payeurNom: 'Lucas',
+              date: DateTime(2026, 8, 21),
+              nombreParticipants: 2,
+              issueDesCourses: false,
+            ),
+          ),
+        ),
+        conteneur: conteneur,
+      );
+
+      expect(tester.takeException(), isNull);
+
+      await tester.tap(find.text('Enregistrer'));
+      await tester.pumpAndSettle();
+
+      // Le payeur d'origine est conservé : corriger un montant ne doit pas transférer
+      // la créance à celui qui corrige.
+      expect(api.appels.single, endsWith('|m2'));
     });
 
     testWidgets('les absents ne sont pas proposés par défaut', (tester) async {
