@@ -442,11 +442,16 @@ Sortie : les critères 13 à 26 du `§18` sont vérifiés.
 - [ ] `RG-INV-04` Aperçu public : nom, dates, lieu, description et nombre de participants ; jamais membres, dépenses ou jeton long
 - [ ] `EF-INV-04` POST authentifiés par jeton ou code court, sans nom ni statut dans le corps ; le serveur utilise le profil et crée `Unknown`
 - [ ] `RG-INV-05` Adhésion idempotente : un rejeu du même compte ne crée pas de doublon ni ne modifie la présence
-- [ ] Conserver `/join/` ou `/rejoindre/` pendant connexion et inscription, en rejetant toute URL de retour externe
+- [ ] Conserver `retour` pendant connexion et inscription avec une allowlist stricte :
+  uniquement `/join/{token}` ou `/rejoindre/{code}` après décodage ; rejeter vers `/`
+  toute URL absolue, schéma, autorité ou préfixe `//`, fragment, paramètres, segment
+  supplémentaire ou autre route
 - [ ] Écrans : aperçu, connexion/création avec retour, adhésion automatique et états fermeture, lien invalide et panne réseau
 - [ ] Supprimer la création de nouveaux jetons invités et `/v1/auth/guest-claim` ; conserver les lignes sans `user_id` uniquement comme historiques financières
 - [ ] Configurer Android App Links et iOS Universal Links pour ouvrir directement les invitations ; sans application, ouvrir le Web
-- [ ] Recette : POST anonyme à 401, nom du profil, statut `Unknown`, rejeu idempotent, routes profondes Web/Android/iOS
+- [ ] Recette : POST anonyme à 401, nom du profil, statut `Unknown`, rejeu idempotent,
+  routes profondes Web/Android/iOS, et `retour` valide conservé / retour externe,
+  `//host`, fragment, paramètres ou autre route remplacé par `/`
 
 ## Lot 1.4 — Présences
 

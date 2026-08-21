@@ -470,10 +470,20 @@ dépenses, ni la discussion.
 ne reçoivent ni prénom ni statut. Le lien d'invitation est conservé pendant
 l'authentification, puis le compte rejoint automatiquement avec le statut `Unknown`.
 
+**RG-INV-06** — Après décodage, le paramètre `retour` n'accepte que l'un des deux
+formats exacts `/join/{token}` ou `/rejoindre/{code}`. Toute autre valeur — URL absolue,
+schéma, autorité ou préfixe `//`, fragment, paramètres, segment supplémentaire ou route
+hors invitation — est remplacée par `/`. Cette liste positive interdit toute redirection
+ouverte après connexion ou inscription.
+
 *Critères d'acceptation EF-INV-04* : depuis un navigateur sans session, l'aperçu affiche
 « Se connecter » et « Créer un compte ». Après authentification, l'application revient
 à l'invitation, rejoint une seule fois avec le nom du profil et ouvre le tableau de bord ;
 aucun formulaire de prénom ou de statut ne précède l'entrée dans la soirée.
+
+*Recette du retour* : `/join/{token}` et `/rejoindre/{code}` sont conservés après
+authentification. `https://host/...`, `//host/...`, `/admin`, un fragment, des paramètres
+ou tout autre chemin sont remplacés par `/`.
 
 ### 5.4 Présences
 
