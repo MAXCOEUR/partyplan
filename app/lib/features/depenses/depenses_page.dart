@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
+import '../../app/router.dart';
 import '../../core/models/depense.dart';
 import '../../core/providers.dart';
 import '../../design/components/pp_card.dart';
@@ -69,6 +71,10 @@ class _Liste extends ConsumerWidget {
         ),
         children: [
           _Totaux(total: page.total, maPart: page.maPart),
+          const SizedBox(height: PpSpacing.sm),
+          // « Combien ça coûte » et « qui rend quoi » sont deux questions qui se
+          // suivent : enterrer la seconde sous un menu obligerait à la chercher.
+          _AccesReglements(evenementId: evenementId),
           const SizedBox(height: PpSpacing.lg),
           for (final depense in depenses) ...[
             _CarteDepense(depense: depense),
@@ -244,4 +250,34 @@ class _Origine extends StatelessWidget {
       ),
     );
   }
+}
+
+
+/// Passage vers les remboursements.
+class _AccesReglements extends StatelessWidget {
+  const _AccesReglements({required this.evenementId});
+
+  final String evenementId;
+
+  @override
+  Widget build(BuildContext context) => PpCard(
+    onTap: () => context.push(PpRoutes.versReglements(evenementId)),
+    padding: const EdgeInsets.symmetric(
+      horizontal: PpSpacing.lg,
+      vertical: PpSpacing.md,
+    ),
+    child: Row(
+      children: [
+        const Icon(Icons.handshake_rounded, color: PpColors.violet),
+        const SizedBox(width: PpSpacing.md),
+        Expanded(
+          child: Text(
+            'Qui rend quoi',
+            style: Theme.of(context).textTheme.titleSmall,
+          ),
+        ),
+        const Icon(Icons.chevron_right_rounded),
+      ],
+    ),
+  );
 }

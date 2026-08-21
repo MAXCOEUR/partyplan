@@ -271,6 +271,11 @@ class _MenuPlus extends StatelessWidget {
           onTap: () => context.push(PpRoutes.versInvites(evenementId)),
         ),
         ListTile(
+          leading: const Icon(Icons.handshake_rounded),
+          title: const Text('Qui rend quoi'),
+          onTap: () => context.push(PpRoutes.versReglements(evenementId)),
+        ),
+        ListTile(
           leading: const Icon(Icons.ios_share_rounded),
           title: Text(l10n.menuPlusInviter),
           onTap: () => context.push(PpRoutes.versInvitation(evenementId)),

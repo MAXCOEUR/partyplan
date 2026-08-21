@@ -123,6 +123,19 @@ void main() {
       expect(find.textContaining('location'), findsOneWidget);
     });
 
+    testWidgets('mène aux remboursements depuis les totaux', (tester) async {
+      // « Combien ça coûte » et « qui rend quoi à qui » sont deux questions qui se
+      // suivent. Enterrer la seconde sous un menu obligerait à la chercher.
+      await _monter(
+        tester,
+        total: 208.4,
+        maPart: 52.1,
+        depenses: [_depense(id: 'a')],
+      );
+
+      expect(find.text('Qui rend quoi'), findsOneWidget);
+    });
+
     testWidgets('offre une reprise après une erreur de chargement', (
       tester,
     ) async {

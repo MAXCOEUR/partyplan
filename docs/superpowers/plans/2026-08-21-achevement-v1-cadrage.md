@@ -59,6 +59,48 @@ Le plan détaillé d'un sous-projet est écrit **juste avant son exécution**, p
 d'avance : le sous-projet précédent apprend des choses sur les contrats réels, et un
 plan écrit trop tôt décrit un code qui n'existera pas ainsi.
 
+## Décisions produit arrêtées le 21/08/2026
+
+Prises avec le propriétaire du produit, en réponse à des questions qui changeaient le
+schéma de base. Reportées ici parce qu'un choix de ce genre, laissé dans une
+conversation, se reperd et se redécide autrement six semaines plus tard.
+
+### Discussion
+
+- **Un seul fil par événement.** Pas de salons multiples : une soirée à six personnes
+  se retrouverait avec des salons vides, et ce qui compte se perdrait dans celui que
+  personne ne lit.
+- **Les « salons » sont les dossiers d'épingles.** On épingle un message et on le range
+  dans un dossier — Musique, Adresses, Photos — que l'on consulte ensuite.
+- **Les dossiers d'épingles sont partagés, sans exception.** Aucune épingle privée : une
+  seule notion, donc aucune question à se poser au moment d'épingler. C'est ce qui rend
+  l'épingle utile — retrouver le code du portail que quelqu'un d'autre a donné.
+- **Les sondages naissent dans le fil et se retrouvent dans un écran à eux.** Ils sont
+  portés par un message — c'est là qu'on les crée et qu'on y répond au fil de la
+  conversation — mais un sondage remonté par cinquante messages devient introuvable :
+  un écran dédié les liste tous, ouverts d'abord.
+- Attendus dans la discussion : réactions, réponse à un message, mention d'une
+  personne, envoi d'images compressées avant l'envoi.
+- **Les notifications sont préparées mais pas envoyées.** Les mentions et les messages
+  produisent ce qu'il faut pour notifier plus tard ; aucun envoi n'est branché.
+
+### Choix de la date
+
+Le « planning » attendu n'est pas un déroulé horaire de la soirée, c'est le **choix
+collectif de la date** :
+
+- un événement peut naître **sans date** ;
+- n'importe quel membre **propose** une ou plusieurs dates ;
+- chacun **vote oui ou non** sur chaque date proposée ;
+- **l'organisateur arrête** la date retenue, qui devient la date de l'événement.
+
+Le déroulé horaire — les étapes de la soirée du lot 1.9 — reste hors périmètre jusqu'à
+nouvel ordre : ce n'est pas ce qui manque aujourd'hui.
+
+### Ordre d'exécution retenu
+
+Règlements, puis choix de la date, puis discussion. Le site vitrine ferme la marche.
+
 ## Contraintes qui s'appliquent à tous les sous-projets
 
 Reprises du cahier des charges et de `CLAUDE.md`, valeurs exactes.

@@ -21,6 +21,7 @@ import '../features/profil/connexions_page.dart';
 import '../features/profil/profil_edition_page.dart';
 import '../features/profil/second_facteur_reglage_page.dart';
 import '../features/profil/securite_page.dart';
+import '../features/reglements/reglements_page.dart';
 import '../features/rejoindre/adhesion_page.dart';
 import '../features/rejoindre/apercu_invitation_page.dart';
 import '../features/rejoindre/rejoindre_page.dart';
@@ -70,6 +71,7 @@ abstract final class PpRoutes {
   static const evenementInvites = '/events/:eventId/invites';
   static const evenementInvitation = '/events/:eventId/inviter';
   static const evenementParametres = '/events/:eventId/parametres';
+  static const evenementReglements = '/events/:eventId/reglements';
 
   static String versEvenement(String eventId) => '/events/$eventId';
 
@@ -85,6 +87,8 @@ abstract final class PpRoutes {
   static String versInvitation(String eventId) => '/events/$eventId/inviter';
 
   static String versParametres(String eventId) => '/events/$eventId/parametres';
+
+  static String versReglements(String eventId) => '/events/$eventId/reglements';
 
   static String versRejoindre(String token) => '/join/$token';
 
@@ -259,6 +263,12 @@ GoRouter creerRouteur(Ref ref) => GoRouter(
       path: PpRoutes.evenementInvitation,
       builder: (context, state) =>
           InvitationPage(evenementId: state.pathParameters['eventId']!),
+    ),
+    GoRoute(
+      path: PpRoutes.evenementReglements,
+      builder: (context, state) => ReglementsEcran(
+        evenementId: state.pathParameters['eventId']!,
+      ),
     ),
     GoRoute(
       path: PpRoutes.evenementParametres,
