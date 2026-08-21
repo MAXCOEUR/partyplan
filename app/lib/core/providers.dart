@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
+import 'models/article_course.dart';
 import 'models/evenement.dart';
 import 'models/invitation.dart';
 import 'models/membre.dart';
@@ -8,6 +9,7 @@ import 'models/moyens_connexion.dart';
 import 'models/profil.dart';
 import 'network/api_client.dart';
 import 'network/comptes_api.dart';
+import 'network/courses_api.dart';
 import 'network/evenements_api.dart';
 import 'offline/cache_lecture.dart';
 import 'offline/etat_reseau.dart';
@@ -311,6 +313,17 @@ final monMembreProvider = FutureProvider.family<Membre?, String>((
 
   return null;
 });
+
+// ------------------------------------------------------------------- courses ----
+
+final coursesApiProvider = Provider<CoursesApi>(
+  (ref) => CoursesApi(ref.watch(apiClientProvider)),
+);
+
+/// Liste de courses d'un événement, avec son avancement (EF-CRS-09).
+final listeCoursesProvider = FutureProvider.family<ListeCourses, String>(
+  (ref, evenementId) => ref.watch(coursesApiProvider).lister(evenementId),
+);
 
 /// Aperçu d'une invitation, par jeton de lien ou par code court.
 ///

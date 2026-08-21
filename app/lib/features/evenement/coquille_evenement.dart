@@ -5,6 +5,8 @@ import '../../app/router.dart';
 import '../../design/components/pp_states.dart';
 import '../../design/tokens.dart';
 import '../../l10n/generated/pp_localisations.dart';
+import '../courses/article_feuille.dart';
+import '../courses/courses_page.dart';
 import 'tableau_de_bord_page.dart';
 
 /// Coquille de navigation d'un événement.
@@ -74,12 +76,8 @@ class _CoquilleEvenementState extends State<CoquilleEvenement> {
         index: _onglet,
         children: [
           TableauDeBordPage(evenementId: widget.eventId),
-          // Courses et Dépenses arrivent au sous-projet B2, Planning au B4.
-          PpEmptyState(
-            titre: onglets[1].libelle,
-            explication: PpL10n.of(context).ongletBientot,
-            icone: onglets[1].icoineActive,
-          ),
+          CoursesPage(evenementId: widget.eventId),
+          // Dépenses et Planning arrivent aux sous-projets suivants.
           PpEmptyState(
             titre: onglets[2].libelle,
             explication: PpL10n.of(context).ongletBientot,
@@ -93,6 +91,13 @@ class _CoquilleEvenementState extends State<CoquilleEvenement> {
           _MenuPlus(evenementId: widget.eventId),
         ],
       ),
+      floatingActionButton: _onglet == 1
+          ? FloatingActionButton.extended(
+              onPressed: () => ouvrirFeuilleArticle(context, widget.eventId),
+              icon: const Icon(Icons.add_rounded),
+              label: const Text('Ajouter'),
+            )
+          : null,
       bottomNavigationBar: NavigationBar(
         selectedIndex: _onglet,
         onDestinationSelected: (index) => setState(() => _onglet = index),
