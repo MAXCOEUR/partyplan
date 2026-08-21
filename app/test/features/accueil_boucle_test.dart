@@ -37,16 +37,10 @@ class _StockageDiffere implements SessionStore {
   Future<String?> lireJetonRafraichissement() async => 'rafraichissement';
 
   @override
-  Future<String?> lireJetonInvite() async => null;
-
-  @override
   Future<void> enregistrerSession({
     required String jetonAcces,
     required String jetonRafraichissement,
   }) async {}
-
-  @override
-  Future<void> enregistrerJetonInvite(String jeton) async {}
 
   @override
   Future<void> effacerSession() async {}

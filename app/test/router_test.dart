@@ -6,6 +6,7 @@ import 'package:partyplan/core/providers.dart';
 import 'package:partyplan/core/storage/session_store.dart';
 import 'package:partyplan/features/auth/connexion_page.dart';
 import 'package:partyplan/core/models/invitation.dart';
+import 'package:partyplan/core/network/evenements_api.dart';
 import 'package:partyplan/features/rejoindre/apercu_invitation_page.dart';
 
 import 'doubles/session_store_double.dart';
@@ -73,6 +74,7 @@ void main() {
     testWidgets(
       'un compte déjà connecté retrouve son invitation depuis connexion',
       (tester) async {
+        final api = _ApiAdhesion();
         final conteneur = ProviderContainer(
           overrides: [
             sessionStoreProvider.overrideWithValue(
@@ -82,6 +84,7 @@ void main() {
               ),
             ),
             mesEvenementsProvider.overrideWith((ref) async => []),
+            evenementsApiProvider.overrideWithValue(api),
             apercuInvitationProvider.overrideWith(
               (ref, cle) async => ApercuInvitation(
                 nom: 'Crémaillère',
@@ -108,10 +111,27 @@ void main() {
         );
         await tester.pumpAndSettle();
 
-        expect(find.byType(ApercuInvitationPage), findsOneWidget);
+        expect(api.jetons, ['JETON']);
+        expect(
+          routeur.routerDelegate.currentConfiguration.uri.path,
+          '/events/e1',
+        );
       },
     );
   });
+}
+
+class _ApiAdhesion implements EvenementsApi {
+  final List<String> jetons = [];
+
+  @override
+  Future<String> rejoindreParJeton({required String jeton}) async {
+    jetons.add(jeton);
+    return 'e1';
+  }
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => throw UnimplementedError();
 }
 
 /// Date fixe : un test ne doit pas dépendre de l'heure à laquelle il tourne.
@@ -156,16 +176,10 @@ class _StockageVide implements SessionStore {
   Future<String?> lireJetonRafraichissement() async => null;
 
   @override
-  Future<String?> lireJetonInvite() async => null;
-
-  @override
   Future<void> enregistrerSession({
     required String jetonAcces,
     required String jetonRafraichissement,
   }) async {}
-
-  @override
-  Future<void> enregistrerJetonInvite(String jeton) async {}
 
   @override
   Future<void> effacerSession() async {}

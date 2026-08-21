@@ -1,7 +1,6 @@
 import '../models/evenement.dart';
 import '../models/invitation.dart';
 import '../models/membre.dart';
-import '../storage/session_store.dart';
 import 'api_client.dart';
 import 'cle_idempotence.dart';
 
@@ -15,10 +14,9 @@ import 'cle_idempotence.dart';
 /// délibérément non idempotent, et un rejeu invaliderait le lien que l'utilisateur
 /// vient de partager (EF-INV-05).
 class EvenementsApi {
-  const EvenementsApi(this._client, this._sessions);
+  const EvenementsApi(this._client);
 
   final ApiClient _client;
-  final SessionStore _sessions;
 
   // ------------------------------------------------------------ événements ----
 
@@ -129,41 +127,21 @@ class EvenementsApi {
         ApercuInvitation.depuisJson(corps! as Map<String, dynamic>),
   );
 
-  /// Rejoint par le lien d'invitation (EF-INV-04).
-  ///
-  /// Le jeton d'invité remis est conservé : c'est lui, et jamais le prénom, qui
-  /// permettra le rattachement à un compte créé plus tard (RG-AUTH-07). Le perdre,
-  /// c'est perdre les dépenses saisies.
-  Future<String> rejoindreParJeton({
-    required String jeton,
-    required String prenom,
-    required StatutPresence statut,
-  }) => _rejoindre('/join/$jeton', prenom, statut);
+  /// Rejoint par le lien d'invitation avec le compte courant (EF-INV-04).
+  Future<String> rejoindreParJeton({required String jeton}) =>
+      _rejoindre('/join/$jeton');
 
   /// Rejoint par le code court (EF-INV-03).
-  Future<String> rejoindreParCode({
-    required String code,
-    required String prenom,
-    required StatutPresence statut,
-  }) => _rejoindre('/join/code/${normaliserCode(code)}', prenom, statut);
+  Future<String> rejoindreParCode({required String code}) =>
+      _rejoindre('/join/code/${normaliserCode(code)}');
 
-  Future<String> _rejoindre(
-    String chemin,
-    String prenom,
-    StatutPresence statut,
-  ) async {
+  Future<String> _rejoindre(String chemin) async {
     final reponse = await _client.post<Map<String, dynamic>>(
       chemin,
-      corps: {'displayName': prenom, 'status': statut.versApi},
+      corps: null,
       cleIdempotence: nouvelleCleIdempotence(),
       analyser: (corps) => corps! as Map<String, dynamic>,
     );
-
-    final jetonInvite = reponse['guestToken'] as String?;
-
-    if (jetonInvite != null) {
-      await _sessions.enregistrerJetonInvite(jetonInvite);
-    }
 
     return reponse['eventId'] as String;
   }
@@ -221,23 +199,4 @@ class EvenementsApi {
         differable: true,
         analyser: (_) {},
       );
-
-  /// Rattache au compte les participations rejointes sans compte (EF-AUTH-11).
-  ///
-  /// Appelée après toute ouverture de session, si un jeton d'invité subsiste sur
-  /// l'appareil. Zéro rattachement n'est pas une erreur.
-  Future<int> reclamerParticipations() async {
-    final jeton = await _sessions.lireJetonInvite();
-
-    if (jeton == null) {
-      return 0;
-    }
-
-    return _client.post<int>(
-      '/auth/guest-claim',
-      corps: {'guestToken': jeton},
-      analyser: (corps) =>
-          ((corps! as Map<String, dynamic>)['linked'] as num).toInt(),
-    );
-  }
 }

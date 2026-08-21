@@ -1,8 +1,30 @@
+import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:partyplan/core/models/evenement.dart';
 import 'package:partyplan/core/models/invitation.dart';
 import 'package:partyplan/core/models/membre.dart';
+import 'package:partyplan/core/network/api_client.dart';
 import 'package:partyplan/core/network/evenements_api.dart';
+
+import '../doubles/session_store_double.dart';
+
+class _ServeurInvitation extends Interceptor {
+  final List<RequestOptions> requetes = [];
+
+  RequestOptions get derniere => requetes.last;
+
+  @override
+  void onRequest(RequestOptions options, RequestInterceptorHandler handler) {
+    requetes.add(options);
+    handler.resolve(
+      Response<Object?>(
+        requestOptions: options,
+        statusCode: 200,
+        data: {'eventId': 'e1', 'memberId': 'm1'},
+      ),
+    );
+  }
+}
 
 void main() {
   group('EvenementDeLaListe', () {
@@ -174,6 +196,49 @@ void main() {
       ]) {
         expect(EvenementsApi.normaliserCode(saisie), 'K7M2X9', reason: saisie);
       }
+    });
+  });
+
+  group('Adhésion avec un compte', () {
+    late _ServeurInvitation serveur;
+    late EvenementsApi api;
+
+    setUp(() {
+      serveur = _ServeurInvitation();
+      final dio = Dio(BaseOptions(validateStatus: (_) => true));
+      api = EvenementsApi(
+        ApiClient(SessionStoreDouble(jetonAcces: 'jeton-compte'), dio: dio),
+      );
+      // Le serveur vient après l'intercepteur d'authentification du client afin
+      // d'observer la requête telle qu'elle partirait réellement sur le réseau.
+      dio.interceptors.add(serveur);
+    });
+
+    test(
+      'rejoint par jeton sans corps et retourne seulement l’événement',
+      () async {
+        final eventId = await api.rejoindreParJeton(jeton: 'JETON');
+
+        expect(eventId, 'e1');
+        expect(serveur.derniere.method, 'POST');
+        expect(serveur.derniere.path, '/join/JETON');
+        expect(serveur.derniere.data, isNull);
+        expect(serveur.derniere.headers['Idempotency-Key'], isNotEmpty);
+        expect(
+          serveur.derniere.headers['Authorization'],
+          'Bearer jeton-compte',
+        );
+      },
+    );
+
+    test('rejoint par code court normalisé avec le même contrat', () async {
+      final eventId = await api.rejoindreParCode(code: ' plan-k7m 2x9 ');
+
+      expect(eventId, 'e1');
+      expect(serveur.derniere.method, 'POST');
+      expect(serveur.derniere.path, '/join/code/K7M2X9');
+      expect(serveur.derniere.data, isNull);
+      expect(serveur.derniere.headers['Idempotency-Key'], isNotEmpty);
     });
   });
 }

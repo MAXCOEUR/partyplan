@@ -27,7 +27,6 @@ import '../features/profil/second_facteur_reglage_page.dart';
 import '../features/profil/securite_page.dart';
 import '../features/reglements/reglements_page.dart';
 import '../features/sondages/sondages_page.dart';
-import '../features/rejoindre/adhesion_page.dart';
 import '../features/rejoindre/apercu_invitation_page.dart';
 import '../features/rejoindre/rejoindre_page.dart';
 import '../l10n/generated/pp_localisations.dart';
@@ -72,11 +71,9 @@ abstract final class PpRoutes {
   /// l'ordre, et `/events/:eventId` capterait sinon « nouveau » comme identifiant.
   static const creationEvenement = '/events/nouveau';
 
-  /// Aperçu et adhésion par code court. Distincts de `/join/:token` : le code ne
-  /// donne pas accès au jeton, qui reste secret (RG-INV-04).
+  /// Aperçu par code court. Distinct de `/join/:token` : le code ne donne pas accès au
+  /// jeton, qui reste secret (RG-INV-04).
   static const apercuParCode = '/rejoindre/:code';
-  static const adhesionParCode = '/rejoindre/:code/participer';
-  static const adhesionParJeton = '/join/:token/participer';
 
   static const evenement = '/events/:eventId';
   static const evenementInvites = '/events/:eventId/invites';
@@ -90,11 +87,6 @@ abstract final class PpRoutes {
   static String versEvenement(String eventId) => '/events/$eventId';
 
   static String versApercuParCode(String code) => '/rejoindre/$code';
-
-  static String versAdhesion(String jeton) => '/join/$jeton/participer';
-
-  static String versAdhesionParCode(String code) =>
-      '/rejoindre/$code/participer';
 
   static String versInvites(String eventId) => '/events/$eventId/invites';
 
@@ -154,8 +146,6 @@ GoRouter creerRouteur(Ref ref) => GoRouter(
     }
 
     final connecte = session.requireValue == EtatSession.connecte;
-    final invite = session.requireValue == EtatSession.invite;
-
     // Le lien d'invitation et la saisie de code restent accessibles en toutes
     // circonstances : c'est le point d'entrée de tout invité (EF-INV-04), et exiger
     // une session ici ruinerait l'adoption.
@@ -167,7 +157,7 @@ GoRouter creerRouteur(Ref ref) => GoRouter(
       return null;
     }
 
-    if (!connecte && !invite && !PpRoutes.publiques.contains(chemin)) {
+    if (!connecte && !PpRoutes.publiques.contains(chemin)) {
       return PpRoutes.connexion;
     }
 
@@ -263,11 +253,6 @@ GoRouter creerRouteur(Ref ref) => GoRouter(
           ApercuInvitationPage(jeton: state.pathParameters['token']),
     ),
     GoRoute(
-      path: PpRoutes.adhesionParJeton,
-      builder: (context, state) =>
-          AdhesionPage(jeton: state.pathParameters['token']),
-    ),
-    GoRoute(
       path: PpRoutes.rejoindreParCode,
       builder: (context, state) => const RejoindrePage(),
     ),
@@ -275,11 +260,6 @@ GoRouter creerRouteur(Ref ref) => GoRouter(
       path: PpRoutes.apercuParCode,
       builder: (context, state) =>
           ApercuInvitationPage(code: state.pathParameters['code']),
-    ),
-    GoRoute(
-      path: PpRoutes.adhesionParCode,
-      builder: (context, state) =>
-          AdhesionPage(code: state.pathParameters['code']),
     ),
     // Avant `/events/:eventId` : sinon « nouveau » serait pris pour un identifiant.
     GoRoute(

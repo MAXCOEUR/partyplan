@@ -7,7 +7,6 @@ import '../../design/components/pp_states.dart';
 import '../../design/tokens.dart';
 import '../../l10n/generated/pp_localisations.dart';
 import 'sections/section_compte_a_rebours.dart';
-import 'sections/section_creer_un_compte.dart';
 import 'sections/section_identite.dart';
 import 'sections/section_ma_presence.dart';
 import 'sections/section_partage.dart';
@@ -66,7 +65,6 @@ class TableauDeBordPage extends ConsumerWidget {
             SectionSynthesePresences(evenementId: evenementId, resume: resume),
             SectionPartage(evenementId: evenementId),
             SectionSansReponse(evenementId: evenementId),
-            const SectionCreerUnCompte(),
             // --- Emplacements réservés ---------------------------------------
             // B2 : SectionArticlesNonAttribues, SectionCeQueJeDois
             // B4 : SectionProchaineEtape

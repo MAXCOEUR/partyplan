@@ -27,6 +27,10 @@ void main() {
       );
       addTearDown(conteneur.dispose);
 
+      // La session est déterminée avant ses consommateurs, comme au démarrage réel.
+      // L'ancien second accès au stockage invité masquait cette synchronisation dans
+      // le test en laissant au provider de rôle le temps de terminer le premier.
+      expect(await conteneur.read(sessionProvider.future), EtatSession.anonyme);
       expect(await conteneur.read(rolePlateformeProvider.future), 'User');
 
       magasin.jetonAcces = _jetonAvecRole('PlatformAdmin');

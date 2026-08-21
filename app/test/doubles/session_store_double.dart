@@ -6,24 +6,16 @@ import 'package:partyplan/core/storage/session_store.dart';
 /// substitut, chaque test échouerait sur un canal de plateforme absent, pour une raison
 /// étrangère à ce qu'il vérifie.
 class SessionStoreDouble implements SessionStore {
-  SessionStoreDouble({
-    this.jetonAcces,
-    this.jetonRafraichissement,
-    this.jetonInvite,
-  });
+  SessionStoreDouble({this.jetonAcces, this.jetonRafraichissement});
 
   String? jetonAcces;
   String? jetonRafraichissement;
-  String? jetonInvite;
 
   @override
   Future<String?> lireJetonAcces() async => jetonAcces;
 
   @override
   Future<String?> lireJetonRafraichissement() async => jetonRafraichissement;
-
-  @override
-  Future<String?> lireJetonInvite() async => jetonInvite;
 
   @override
   Future<void> enregistrerSession({
@@ -35,10 +27,6 @@ class SessionStoreDouble implements SessionStore {
   }
 
   @override
-  Future<void> enregistrerJetonInvite(String jeton) async =>
-      jetonInvite = jeton;
-
-  @override
   Future<void> effacerSession() async {
     jetonAcces = null;
     jetonRafraichissement = null;
@@ -47,6 +35,5 @@ class SessionStoreDouble implements SessionStore {
   @override
   Future<void> toutEffacer() async {
     await effacerSession();
-    jetonInvite = null;
   }
 }

@@ -47,9 +47,7 @@ class ApiClient {
     _dio.interceptors.add(
       InterceptorsWrapper(
         onRequest: (options, handler) async {
-          final jeton =
-              await _sessionStore.lireJetonAcces() ??
-              await _sessionStore.lireJetonInvite();
+          final jeton = await _sessionStore.lireJetonAcces();
 
           if (jeton != null) {
             options.headers['Authorization'] = 'Bearer $jeton';
@@ -77,7 +75,7 @@ class ApiClient {
   /// Lecture.
   ///
   /// [cacheable] à faux pour ce qui ne doit pas rester sur l'appareil — la résolution
-  /// d'un code court remet un jeton d'invitation, qui n'a rien à faire dans un cache.
+  /// d'un code court expose un événement privé, qui n'a rien à faire dans un cache.
   Future<T> get<T>(
     String chemin, {
     Map<String, dynamic>? parametres,

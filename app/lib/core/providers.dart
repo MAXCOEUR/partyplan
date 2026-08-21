@@ -112,12 +112,8 @@ final comptesApiProvider = Provider<ComptesApi>(
       ComptesApi(ref.watch(apiClientProvider), ref.watch(sessionStoreProvider)),
 );
 
-/// État d'authentification.
-///
-/// Trois cas distincts, et non un simple booléen : un invité sans compte est
-/// authentifié pour un seul événement (EF-INV-04), ce qui n'ouvre ni profil ni
-/// back-office.
-enum EtatSession { inconnu, anonyme, invite, connecte }
+/// État d'authentification du compte.
+enum EtatSession { inconnu, anonyme, connecte }
 
 /// Session courante.
 ///
@@ -130,9 +126,6 @@ class SessionCourante extends AsyncNotifier<EtatSession> {
 
     if (await store.lireJetonAcces() != null) {
       return EtatSession.connecte;
-    }
-    if (await store.lireJetonInvite() != null) {
-      return EtatSession.invite;
     }
     return EtatSession.anonyme;
   }
@@ -210,42 +203,6 @@ class SessionCourante extends AsyncNotifier<EtatSession> {
     ref.read(motDePasseAChangerProvider.notifier).satisfait();
     state = const AsyncData(EtatSession.anonyme);
   }
-
-  /// Bascule la session en mode invité après une adhésion sans compte.
-  ///
-  /// Sans cet appel, l'état resterait « anonyme » et le routeur renverrait aussitôt la
-  /// personne vers l'écran de connexion — après lui avoir promis qu'aucun compte
-  /// n'était nécessaire.
-  Future<void> reprendreCommeInvite() async {
-    // La liste des événements observe cet état : elle se recharge sans qu'on l'invalide,
-    // et l'invalider d'ici formerait un cycle.
-    state = const AsyncData(EtatSession.invite);
-  }
-
-  /// Rattache au compte les participations rejointes sans compte (EF-AUTH-11).
-  ///
-  /// Appelée après toute ouverture de session. Un échec n'est pas propagé : perdre le
-  /// rattachement est fâcheux, mais bloquer une connexion réussie pour cette raison le
-  /// serait davantage.
-  Future<void> reclamerParticipations() async {
-    try {
-      final rattachees = await ref
-          .read(evenementsApiProvider)
-          .reclamerParticipations();
-
-      // La liste n'est pas invalidée d'ici : elle observe l'état de session, et un
-      // notifieur qui invalide ce qui dépend de lui forme un cycle que Riverpod refuse.
-      // C'est à l'écran qui déclenche le rattachement de la rafraîchir.
-      //
-      // Personne n'appelle encore cette méthode : EF-AUTH-11 n'est pas branché.
-      if (rattachees > 0) {
-        return;
-      }
-    } on Exception {
-      // Silencieux à dessein : le jeton d'invité reste sur l'appareil et la prochaine
-      // ouverture de session retentera.
-    }
-  }
 }
 
 final sessionProvider = AsyncNotifierProvider<SessionCourante, EtatSession>(
@@ -287,10 +244,7 @@ final sessionsProvider = FutureProvider<List<SessionActive>>(
 // ---------------------------------------------------------------- événements ----
 
 final evenementsApiProvider = Provider<EvenementsApi>(
-  (ref) => EvenementsApi(
-    ref.watch(apiClientProvider),
-    ref.watch(sessionStoreProvider),
-  ),
+  (ref) => EvenementsApi(ref.watch(apiClientProvider)),
 );
 
 /// Événements de la personne connectée, à venir puis passés (EF-EVT-05).
@@ -311,7 +265,7 @@ final mesEvenementsProvider = FutureProvider<List<EvenementDeLaListe>>((
 
   final etat = await session;
 
-  // Un invité sans compte n'a pas de liste : son jeton ne vaut que pour un événement.
+  // Un anonyme n'a aucune liste privée à charger.
   if (etat != EtatSession.connecte) {
     return const [];
   }

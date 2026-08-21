@@ -166,18 +166,14 @@
   "invitationFermee": "Les nouvelles arrivées sont fermées.",
   "invitationErreur": "Impossible de charger l’invitation.",
 
-  "apercuParticiper": "Participer",
   "apercuParticipants": "{nombre, plural, =1{1 participant} other{{nombre} participants}}",
   "@apercuParticipants": { "placeholders": { "nombre": { "type": "int" } } },
   "apercuFermee": "L’organisateur a fermé les nouvelles arrivées.",
-  "apercuDejaMembre": "Tu participes déjà à cet événement.",
-  "apercuVoirEvenement": "Voir l’événement",
   "apercuIntrouvable": "Cette invitation n’existe pas ou n’est plus valable.",
-  "adhesionPrenomQuestion": "Comment tu t’appelles ?",
-  "adhesionPrenomChamp": "Ton prénom",
-  "adhesionPrenomRequis": "Indique ton prénom.",
-  "adhesionStatutQuestion": "Tu viens ?",
-  "adhesionSansCompte": "Pas besoin de créer un compte.",
+  "apercuCompteRequis": "Connecte-toi pour rejoindre cet événement.",
+  "apercuSeConnecter": "Se connecter",
+  "apercuCreerCompte": "Créer un compte",
+  "adhesionEnCours": "Accès à l’événement en cours…",
   "adhesionEchec": "Impossible de rejoindre cet événement.",
 
   "codeCourtTitre": "Rejoindre avec un code",
@@ -186,10 +182,6 @@
   "codeCourtContinuer": "Continuer",
   "codeCourtRequis": "Saisis le code de l’événement.",
   "codeCourtIntrouvable": "Aucun événement ne correspond à ce code.",
-
-  "conversionTitre": "Garde tes événements",
-  "conversionExplication": "Sans compte, tu perds l’accès à cet événement si tu changes de téléphone ou vides ton navigateur.",
-  "conversionCreerUnCompte": "Créer un compte",
 
   "menuPlusInvites": "Invités",
   "menuPlusInviter": "Inviter",
