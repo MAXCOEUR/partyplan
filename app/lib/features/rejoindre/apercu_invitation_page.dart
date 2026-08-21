@@ -13,6 +13,8 @@ import '../../design/tokens.dart';
 import '../../l10n/generated/pp_localisations.dart';
 import '../../l10n/marque.dart';
 
+typedef _IdentiteInvitation = ({String? jeton, String? code});
+
 /// Aperçu restreint d'une invitation, accessible sans session (RG-INV-04).
 ///
 /// N'affiche que ce que porte [ApercuInvitation] : nom, date, lieu, nombre de
@@ -35,6 +37,27 @@ class _ApercuInvitationPageState extends ConsumerState<ApercuInvitationPage> {
   bool _adhesionLancee = false;
   bool _adhesionEnCours = false;
   String? _erreurAdhesion;
+  int _generationAdhesion = 0;
+
+  _IdentiteInvitation get _identiteInvitation =>
+      (jeton: widget.jeton, code: widget.code);
+
+  @override
+  void didUpdateWidget(covariant ApercuInvitationPage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+
+    final ancienneIdentite = (jeton: oldWidget.jeton, code: oldWidget.code);
+    if (ancienneIdentite == _identiteInvitation) {
+      return;
+    }
+
+    // GoRouter peut conserver ce State quand seul le paramètre de route change.
+    // Toute tâche ou réponse de l'invitation précédente devient alors obsolète.
+    _generationAdhesion++;
+    _adhesionLancee = false;
+    _adhesionEnCours = false;
+    _erreurAdhesion = null;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -79,9 +102,11 @@ class _ApercuInvitationPageState extends ConsumerState<ApercuInvitationPage> {
     // La garde est levée avant de programmer la tâche : plusieurs reconstructions
     // dans la même frame ne peuvent donc pas empiler plusieurs POST.
     _adhesionLancee = true;
+    final identite = _identiteInvitation;
+    final generation = _generationAdhesion;
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) {
-        _rejoindre();
+      if (mounted && _estTentativeCourante(identite, generation)) {
+        _rejoindre(identite, generation);
       }
     });
   }
@@ -177,8 +202,8 @@ class _ApercuInvitationPageState extends ConsumerState<ApercuInvitationPage> {
     );
   }
 
-  Future<void> _rejoindre() async {
-    if (_adhesionEnCours) {
+  Future<void> _rejoindre(_IdentiteInvitation identite, int generation) async {
+    if (!_estTentativeCourante(identite, generation) || _adhesionEnCours) {
       return;
     }
 
@@ -189,15 +214,15 @@ class _ApercuInvitationPageState extends ConsumerState<ApercuInvitationPage> {
 
     try {
       final api = ref.read(evenementsApiProvider);
-      final evenementId = widget.jeton != null
-          ? await api.rejoindreParJeton(jeton: widget.jeton!)
-          : await api.rejoindreParCode(code: widget.code!);
+      final evenementId = identite.jeton != null
+          ? await api.rejoindreParJeton(jeton: identite.jeton!)
+          : await api.rejoindreParCode(code: identite.code!);
 
-      if (mounted) {
+      if (mounted && _estTentativeCourante(identite, generation)) {
         context.go(PpRoutes.versEvenement(evenementId));
       }
     } on Exception {
-      if (mounted) {
+      if (mounted && _estTentativeCourante(identite, generation)) {
         setState(() {
           _adhesionEnCours = false;
           _erreurAdhesion = PpL10n.of(context).adhesionEchec;
@@ -205,6 +230,9 @@ class _ApercuInvitationPageState extends ConsumerState<ApercuInvitationPage> {
       }
     }
   }
+
+  bool _estTentativeCourante(_IdentiteInvitation identite, int generation) =>
+      generation == _generationAdhesion && identite == _identiteInvitation;
 
   void _reessayer() {
     if (_adhesionEnCours) {
