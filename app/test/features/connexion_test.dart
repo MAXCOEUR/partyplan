@@ -1,11 +1,16 @@
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:partyplan/app/app.dart';
 import 'package:partyplan/app/router.dart';
+import 'package:partyplan/core/models/invitation.dart';
+import 'package:partyplan/core/network/api_client.dart';
 import 'package:partyplan/core/providers.dart';
+import 'package:partyplan/features/accueil/accueil_page.dart';
 import 'package:partyplan/features/auth/connexion_page.dart';
 import 'package:partyplan/features/auth/inscription_page.dart';
+import 'package:partyplan/features/rejoindre/apercu_invitation_page.dart';
 
 import '../doubles/session_store_double.dart';
 
@@ -61,6 +66,57 @@ void main() {
       expect(find.byType(InscriptionPage), findsOneWidget);
     });
 
+    testWidgets('conserve le retour d’invitation vers l’inscription', (
+      tester,
+    ) async {
+      await _monter(tester, route: '/connexion?retour=%2Fjoin%2FJETON');
+
+      await _appuyer(tester, find.text('Créer un compte'));
+
+      final page = tester.widget<InscriptionPage>(find.byType(InscriptionPage));
+      expect(page.retour, '/join/JETON');
+    });
+
+    testWidgets('revient à l’aperçu après une connexion réussie', (
+      tester,
+    ) async {
+      await _monter(tester, route: '/connexion?retour=%2Fjoin%2FJETON');
+
+      await tester.enterText(
+        find.byType(TextFormField).first,
+        'max@partyplan.local',
+      );
+      await tester.enterText(
+        find.byType(TextFormField).last,
+        'Trombone-Nuage-42x',
+      );
+      await _appuyer(tester, find.text('Se connecter'));
+
+      expect(find.byType(ApercuInvitationPage), findsOneWidget);
+    });
+
+    testWidgets('ignore un retour externe après une connexion réussie', (
+      tester,
+    ) async {
+      await _monter(
+        tester,
+        route: '/connexion?retour=https%3A%2F%2Fevil.test%2Fjoin%2FJETON',
+      );
+
+      await tester.enterText(
+        find.byType(TextFormField).first,
+        'max@partyplan.local',
+      );
+      await tester.enterText(
+        find.byType(TextFormField).last,
+        'Trombone-Nuage-42x',
+      );
+      await _appuyer(tester, find.text('Se connecter'));
+
+      expect(find.byType(ApercuInvitationPage), findsNothing);
+      expect(find.byType(AccueilPage), findsOneWidget);
+    });
+
     testWidgets('ne déborde pas sur un écran étroit', (tester) async {
       // 320 points de large : le plus petit écran encore en service. Un débordement ici
       // masquerait le lien d'inscription, c'est-à-dire le parcours d'acquisition.
@@ -99,6 +155,28 @@ void main() {
 
       expect(find.textContaining('caractère(s)'), findsOneWidget);
     });
+
+    testWidgets('revient à l’aperçu après une inscription réussie', (
+      tester,
+    ) async {
+      await _monter(
+        tester,
+        route: '/inscription?retour=%2Frejoindre%2FPLAN-K7M2X9',
+      );
+
+      await tester.enterText(find.byType(TextFormField).at(0), 'Maxence');
+      await tester.enterText(
+        find.byType(TextFormField).at(1),
+        'max@partyplan.local',
+      );
+      await tester.enterText(
+        find.byType(TextFormField).at(2),
+        'Trombone-Nuage-42x',
+      );
+      await _appuyer(tester, find.text('Créer mon compte'));
+
+      expect(find.byType(ApercuInvitationPage), findsOneWidget);
+    });
   });
 }
 
@@ -117,8 +195,15 @@ Future<void> _monter(
   WidgetTester tester, {
   String route = PpRoutes.connexion,
 }) async {
+  final stockage = SessionStoreDouble();
+  final dio = Dio(BaseOptions(validateStatus: (_) => true))
+    ..interceptors.add(_ServeurAuth());
   final conteneur = ProviderContainer(
-    overrides: [sessionStoreProvider.overrideWithValue(SessionStoreDouble())],
+    overrides: [
+      sessionStoreProvider.overrideWithValue(stockage),
+      apiClientProvider.overrideWithValue(ApiClient(stockage, dio: dio)),
+      apercuInvitationProvider.overrideWith((ref, cle) async => _apercu),
+    ],
   );
   addTearDown(conteneur.dispose);
 
@@ -133,7 +218,49 @@ Future<void> _monter(
   );
   await tester.pumpAndSettle();
 
-  if (route == PpRoutes.connexion) {
+  if (route.startsWith(PpRoutes.connexion)) {
     expect(find.byType(ConnexionPage), findsOneWidget);
+  }
+}
+
+final _apercu = ApercuInvitation(
+  nom: 'Crémaillère',
+  debut: DateTime.utc(2026, 9, 12, 20),
+  fin: null,
+  adresse: null,
+  description: null,
+  nombreParticipants: 3,
+  adhesionsOuvertes: true,
+  dejaMembre: false,
+);
+
+/// Simule uniquement les réponses HTTP d'authentification : le routeur et la session
+/// de l'application restent les vrais objets du parcours.
+class _ServeurAuth extends Interceptor {
+  @override
+  void onRequest(RequestOptions options, RequestInterceptorHandler handler) {
+    final estAuth =
+        options.path == '/auth/login' || options.path == '/auth/register';
+    if (!estAuth) {
+      handler.reject(
+        DioException(
+          requestOptions: options,
+          type: DioExceptionType.connectionError,
+        ),
+      );
+      return;
+    }
+
+    handler.resolve(
+      Response<Object?>(
+        requestOptions: options,
+        statusCode: 200,
+        data: {
+          'accessToken': 'jeton-test',
+          'refreshToken': 'rafraichissement-test',
+          'requiresSecondFactor': false,
+        },
+      ),
+    );
   }
 }

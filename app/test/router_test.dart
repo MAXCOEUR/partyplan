@@ -8,6 +8,8 @@ import 'package:partyplan/features/auth/connexion_page.dart';
 import 'package:partyplan/core/models/invitation.dart';
 import 'package:partyplan/features/rejoindre/apercu_invitation_page.dart';
 
+import 'doubles/session_store_double.dart';
+
 void main() {
   group('Routage', () {
     test('la route d’invitation se construit depuis un jeton', () {
@@ -67,6 +69,48 @@ void main() {
       // erreur réseau.
       expect(find.byType(ConnexionPage), findsOneWidget);
     });
+
+    testWidgets(
+      'un compte déjà connecté retrouve son invitation depuis connexion',
+      (tester) async {
+        final conteneur = ProviderContainer(
+          overrides: [
+            sessionStoreProvider.overrideWithValue(
+              SessionStoreDouble(
+                jetonAcces: 'jeton-test',
+                jetonRafraichissement: 'rafraichissement-test',
+              ),
+            ),
+            mesEvenementsProvider.overrideWith((ref) async => []),
+            apercuInvitationProvider.overrideWith(
+              (ref, cle) async => ApercuInvitation(
+                nom: 'Crémaillère',
+                debut: _debutFictif,
+                fin: null,
+                adresse: null,
+                description: null,
+                nombreParticipants: 3,
+                adhesionsOuvertes: true,
+                dejaMembre: false,
+              ),
+            ),
+          ],
+        );
+        addTearDown(conteneur.dispose);
+        final routeur = conteneur.read(routeurProvider);
+        routeur.go('/connexion?retour=%2Fjoin%2FJETON');
+
+        await tester.pumpWidget(
+          UncontrolledProviderScope(
+            container: conteneur,
+            child: const PartyPlanApp(),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.byType(ApercuInvitationPage), findsOneWidget);
+      },
+    );
   });
 }
 

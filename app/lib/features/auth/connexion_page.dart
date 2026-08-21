@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../app/router.dart';
+import '../../app/retour_auth.dart';
 import '../../core/network/api_exception.dart';
 import '../../core/providers.dart';
 import '../../design/components/pp_form.dart';
@@ -12,7 +13,9 @@ import '../../l10n/validateurs.dart';
 
 /// Écran de connexion (EF-AUTH-02).
 class ConnexionPage extends ConsumerStatefulWidget {
-  const ConnexionPage({super.key});
+  const ConnexionPage({this.retour, super.key});
+
+  final String? retour;
 
   @override
   ConsumerState<ConnexionPage> createState() => _ConnexionPageState();
@@ -48,7 +51,7 @@ class _ConnexionPageState extends ConsumerState<ConnexionPage> {
           .connecter(email: _adresse.text.trim(), motDePasse: _motDePasse.text);
 
       if (mounted) {
-        context.go(PpRoutes.accueil);
+        context.go(RetourAuth.destination(widget.retour));
       }
     } on ApiException catch (erreur) {
       // Le message vient du serveur : il est déjà rédigé pour l'utilisateur, et ne
@@ -138,7 +141,11 @@ class _ConnexionPageState extends ConsumerState<ConnexionPage> {
                         TextButton(
                           onPressed: _enCours
                               ? null
-                              : () => context.push(PpRoutes.inscription),
+                              : () => context.push(
+                                  RetourAuth.versInscription(
+                                    RetourAuth.destination(widget.retour),
+                                  ),
+                                ),
                           child: const Text('Créer un compte'),
                         ),
                       ],

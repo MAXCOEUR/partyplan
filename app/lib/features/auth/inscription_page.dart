@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../app/router.dart';
+import '../../app/retour_auth.dart';
 import '../../core/network/api_exception.dart';
 import '../../core/providers.dart';
 import '../../design/components/pp_form.dart';
@@ -12,7 +12,9 @@ import '../../l10n/validateurs.dart';
 
 /// Écran d'inscription (EF-AUTH-01).
 class InscriptionPage extends ConsumerStatefulWidget {
-  const InscriptionPage({super.key});
+  const InscriptionPage({this.retour, super.key});
+
+  final String? retour;
 
   @override
   ConsumerState<InscriptionPage> createState() => _InscriptionPageState();
@@ -54,7 +56,7 @@ class _InscriptionPageState extends ConsumerState<InscriptionPage> {
           );
 
       if (mounted) {
-        context.go(PpRoutes.accueil);
+        context.go(RetourAuth.destination(widget.retour));
       }
     } on ApiException catch (erreur) {
       setState(() => _erreur = erreur.title);

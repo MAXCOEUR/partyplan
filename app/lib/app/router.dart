@@ -31,6 +31,7 @@ import '../features/rejoindre/adhesion_page.dart';
 import '../features/rejoindre/apercu_invitation_page.dart';
 import '../features/rejoindre/rejoindre_page.dart';
 import '../l10n/generated/pp_localisations.dart';
+import 'retour_auth.dart';
 
 /// Routes de l'application.
 abstract final class PpRoutes {
@@ -170,6 +171,11 @@ GoRouter creerRouteur(Ref ref) => GoRouter(
       return PpRoutes.connexion;
     }
 
+    if (connecte &&
+        (chemin == PpRoutes.connexion || chemin == PpRoutes.inscription)) {
+      return RetourAuth.destination(state.uri.queryParameters['retour']);
+    }
+
     if (connecte && PpRoutes.publiques.contains(chemin)) {
       return PpRoutes.accueil;
     }
@@ -196,11 +202,13 @@ GoRouter creerRouteur(Ref ref) => GoRouter(
     ),
     GoRoute(
       path: PpRoutes.connexion,
-      builder: (context, state) => const ConnexionPage(),
+      builder: (context, state) =>
+          ConnexionPage(retour: state.uri.queryParameters['retour']),
     ),
     GoRoute(
       path: PpRoutes.inscription,
-      builder: (context, state) => const InscriptionPage(),
+      builder: (context, state) =>
+          InscriptionPage(retour: state.uri.queryParameters['retour']),
     ),
     GoRoute(
       path: PpRoutes.motDePasseAChanger,
