@@ -198,8 +198,13 @@ class SessionCourante extends AsyncNotifier<EtatSession> {
     // déconnexion démentirait la promesse d'événement privé sur un appareil partagé.
     await ref.read(cacheLectureProvider).purger();
 
-    ref.invalidate(profilProvider);
-    ref.invalidate(mesEvenementsProvider);
+    // Ni le profil ni la liste des événements ne sont invalidés d'ici : tous deux
+    // observent cet état de session, et un notifieur qui invalide ce qui dépend de lui
+    // forme un cycle. Riverpod lève alors, la méthode s'arrête avant la ligne suivante,
+    // et l'application se croit encore connectée alors que le serveur a révoqué la
+    // session — il fallait recharger la page à la main pour pouvoir se reconnecter.
+    // Changer l'état suffit : ils se rechargent d'eux-mêmes.
+
     // Sans cette remise à zéro, le compte suivant serait conduit vers un formulaire
     // de changement de mot de passe qui ne le concerne pas.
     ref.read(motDePasseAChangerProvider.notifier).satisfait();
@@ -212,8 +217,9 @@ class SessionCourante extends AsyncNotifier<EtatSession> {
   /// personne vers l'écran de connexion — après lui avoir promis qu'aucun compte
   /// n'était nécessaire.
   Future<void> reprendreCommeInvite() async {
+    // La liste des événements observe cet état : elle se recharge sans qu'on l'invalide,
+    // et l'invalider d'ici formerait un cycle.
     state = const AsyncData(EtatSession.invite);
-    ref.invalidate(mesEvenementsProvider);
   }
 
   /// Rattache au compte les participations rejointes sans compte (EF-AUTH-11).
@@ -227,8 +233,13 @@ class SessionCourante extends AsyncNotifier<EtatSession> {
           .read(evenementsApiProvider)
           .reclamerParticipations();
 
+      // La liste n'est pas invalidée d'ici : elle observe l'état de session, et un
+      // notifieur qui invalide ce qui dépend de lui forme un cycle que Riverpod refuse.
+      // C'est à l'écran qui déclenche le rattachement de la rafraîchir.
+      //
+      // Personne n'appelle encore cette méthode : EF-AUTH-11 n'est pas branché.
       if (rattachees > 0) {
-        ref.invalidate(mesEvenementsProvider);
+        return;
       }
     } on Exception {
       // Silencieux à dessein : le jeton d'invité reste sur l'appareil et la prochaine
