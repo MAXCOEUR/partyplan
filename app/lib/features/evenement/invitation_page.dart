@@ -7,7 +7,9 @@ import 'package:share_plus/share_plus.dart';
 import '../../core/models/evenement.dart';
 import '../../core/models/invitation.dart';
 import '../../core/providers.dart';
+import '../../design/components/pp_barre_app.dart';
 import '../../design/components/pp_card.dart';
+import '../../design/components/pp_rail.dart';
 import '../../design/components/pp_states.dart';
 import '../../design/tokens.dart';
 import '../../l10n/generated/pp_localisations.dart';
@@ -25,17 +27,22 @@ class InvitationPage extends ConsumerWidget {
     final evenement = ref.watch(evenementProvider(evenementId)).value;
 
     return Scaffold(
-      appBar: AppBar(title: Text(l10n.invitationTitre)),
-      body: invitation.when(
-        loading: () => const PpLoadingState(),
-        error: (_, _) => PpErrorState(
-          message: l10n.invitationErreur,
-          onRetry: () => ref.invalidate(invitationProvider(evenementId)),
-        ),
-        data: (donnees) => _Contenu(
-          evenementId: evenementId,
-          invitation: donnees,
-          evenement: evenement,
+      appBar: PpBarreApp(
+        bouton: const BackButton(),
+        titre: Text(l10n.invitationTitre),
+      ),
+      body: PpRail(
+        child: invitation.when(
+          loading: () => const PpLoadingState(),
+          error: (_, _) => PpErrorState(
+            message: l10n.invitationErreur,
+            onRetry: () => ref.invalidate(invitationProvider(evenementId)),
+          ),
+          data: (donnees) => _Contenu(
+            evenementId: evenementId,
+            invitation: donnees,
+            evenement: evenement,
+          ),
         ),
       ),
     );

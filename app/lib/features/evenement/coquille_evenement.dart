@@ -75,8 +75,7 @@ class _CoquilleEvenementState extends ConsumerState<CoquilleEvenement> {
 
     // Au-delà de ce seuil, une barre de navigation basse étalée sur toute la largeur
     // sépare le geste du regard : la place est alors sur le côté.
-    final large =
-        MediaQuery.sizeOf(context).width >= PpBreakpoints.large;
+    final large = MediaQuery.sizeOf(context).width >= PpBreakpoints.large;
 
     return Scaffold(
       appBar: PpBarreApp(
@@ -100,11 +99,11 @@ class _CoquilleEvenementState extends ConsumerState<CoquilleEvenement> {
         selection: _onglet,
         onSelection: (index) => setState(() => _onglet = index),
         child: IndexedStack(
-        index: _onglet,
-        children: [
-          TableauDeBordPage(evenementId: widget.eventId),
-          CoursesPage(evenementId: widget.eventId),
-          DepensesPage(evenementId: widget.eventId),
+          index: _onglet,
+          children: [
+            TableauDeBordPage(evenementId: widget.eventId),
+            CoursesPage(evenementId: widget.eventId),
+            DepensesPage(evenementId: widget.eventId),
             _MenuPlus(evenementId: widget.eventId),
           ],
         ),
@@ -149,7 +148,8 @@ class _CoquilleEvenementState extends ConsumerState<CoquilleEvenement> {
 /// Le titre porte le nom de l'événement, cette ligne dit où l'on est et combien de
 /// monde est attendu. Deux informations que l'on cherche sans arrêt en préparant une
 /// soirée, et qui n'ont pas à coûter une navigation.
-class _SousTitreEvenement extends StatelessWidget implements PreferredSizeWidget {
+class _SousTitreEvenement extends StatelessWidget
+    implements PreferredSizeWidget {
   const _SousTitreEvenement({
     required this.onglet,
     required this.membres,

@@ -7,9 +7,11 @@ import '../../app/router.dart';
 import '../../core/models/evenement.dart';
 import '../../core/models/membre.dart';
 import '../../core/providers.dart';
+import '../../design/components/pp_barre_app.dart';
 import '../../design/components/pp_card.dart';
 import '../../design/components/pp_choix_date_heure.dart';
 import '../../design/components/pp_form.dart';
+import '../../design/components/pp_rail.dart';
 import '../../design/components/pp_states.dart';
 import '../../design/tokens.dart';
 import '../../l10n/generated/pp_localisations.dart';
@@ -61,45 +63,51 @@ class _ParametresEvenementPageState
     final moi = ref.watch(monMembreProvider(widget.evenementId)).value;
 
     return Scaffold(
-      appBar: AppBar(title: Text(l10n.paramTitre)),
-      body: evenement.when(
-        loading: () => const PpLoadingState(),
-        error: (_, _) => PpErrorState(
-          message: l10n.tdbErreur,
-          onRetry: () => ref.invalidate(evenementProvider(widget.evenementId)),
+      appBar: PpBarreApp(
+        bouton: const BackButton(),
+        titre: Text(l10n.paramTitre),
+      ),
+      body: PpRail(
+        child: evenement.when(
+          loading: () => const PpLoadingState(),
+          error: (_, _) => PpErrorState(
+            message: l10n.tdbErreur,
+            onRetry: () =>
+                ref.invalidate(evenementProvider(widget.evenementId)),
+          ),
+          data: (resume) {
+            if (!_initialise) {
+              _nom.text = resume.nom;
+              _lieu.text = resume.adresse ?? '';
+              _description.text = resume.description ?? '';
+              _debut = resume.debut;
+              _fin = resume.fin;
+              _initialise = true;
+            }
+
+            final role = moi?.role ?? RoleMembre.membre;
+
+            return ListView(
+              padding: const EdgeInsets.all(PpSpacing.lg),
+              children: [
+                if (role.peutGerer) ...[
+                  _modification(l10n),
+                  const SizedBox(height: PpSpacing.xl),
+                ],
+                // Le transfert vient AVANT « quitter » : voir la note de classe.
+                if (role == RoleMembre.proprietaire) ...[
+                  _transfert(l10n),
+                  const SizedBox(height: PpSpacing.md),
+                ],
+                _quitter(l10n, role),
+                if (role.peutSupprimer) ...[
+                  const SizedBox(height: PpSpacing.md),
+                  _supprimer(l10n, resume),
+                ],
+              ],
+            );
+          },
         ),
-        data: (resume) {
-          if (!_initialise) {
-            _nom.text = resume.nom;
-            _lieu.text = resume.adresse ?? '';
-            _description.text = resume.description ?? '';
-            _debut = resume.debut;
-            _fin = resume.fin;
-            _initialise = true;
-          }
-
-          final role = moi?.role ?? RoleMembre.membre;
-
-          return ListView(
-            padding: const EdgeInsets.all(PpSpacing.lg),
-            children: [
-              if (role.peutGerer) ...[
-                _modification(l10n),
-                const SizedBox(height: PpSpacing.xl),
-              ],
-              // Le transfert vient AVANT « quitter » : voir la note de classe.
-              if (role == RoleMembre.proprietaire) ...[
-                _transfert(l10n),
-                const SizedBox(height: PpSpacing.md),
-              ],
-              _quitter(l10n, role),
-              if (role.peutSupprimer) ...[
-                const SizedBox(height: PpSpacing.md),
-                _supprimer(l10n, resume),
-              ],
-            ],
-          );
-        },
       ),
     );
   }
