@@ -1,0 +1,14 @@
+[
+  {
+    "relation": [
+      "delegate_permission/common.handle_all_urls"
+    ],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "fr.maxencecoeur.partyplan",
+      "sha256_cert_fingerprints": [
+        "99:AB:98:70:F1:32:06:6A:2D:48:66:05:4F:F3:F1:C6:46:3C:3E:5E:67:CB:82:77:54:CF:AB:E8:48:0D:20:B4"
+      ]
+    }
+  }
+]

@@ -85,6 +85,39 @@ make lan         # affiche l'adresse à utiliser et la commande complète
 L'API doit alors être joignable sur le réseau local — elle écoute déjà sur toutes les
 interfaces en développement — et le pare-feu du poste doit laisser passer le port 5080.
 
+### Liens d'invitation Android
+
+Les liens d'invitation canoniques ont la forme
+`https://partyplan.maxencecoeur.fr/join/<jeton-long>`. Android les ouvre dans PartyPlan
+grâce au filtre App Links de `MainActivity` et à l'association publiée à
+`/.well-known/assetlinks.json` sur ce même domaine. Le filtre est volontairement limité
+à `/join/` : `/rejoindre/` ne doit pas être ajouté.
+
+Vérifier l'association locale avec le keystore utilisé pour l'APK debug :
+
+```bash
+./tools/verifier-app-links-android.sh "$HOME/.android/debug.keystore"
+cd app && flutter build apk --debug
+```
+
+Le vérificateur recalcule l'empreinte SHA-256 du keystore, contrôle le JSON puis génère
+et lit le manifeste debug fusionné. `assetlinks.json` peut contenir plusieurs empreintes
+(par exemple debug et publication), mais doit toujours contenir celle du keystore passé
+en argument.
+
+Avant la publication Play, ajouter l'empreinte SHA-256 réelle de **Play App Signing** à
+`app/web/.well-known/assetlinks.json` (sans retirer celle utile au développement), puis
+redéployer ce fichier à `https://partyplan.maxencecoeur.fr/.well-known/assetlinks.json`.
+
+Sur un appareil Android connecté, remettre l'APK et essayer un lien :
+
+```bash
+adb install -r app/build/app/outputs/flutter-apk/app-debug.apk
+adb shell am start -W -a android.intent.action.VIEW \
+  -d 'https://partyplan.maxencecoeur.fr/join/JETON-RECETTE' \
+  fr.maxencecoeur.partyplan
+```
+
 ---
 
 ## 4. Rider
