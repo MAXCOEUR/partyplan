@@ -59,15 +59,15 @@
 - Consumes: la décision approuvée dans la spécification du 21/08/2026.
 - Produces: règles documentaires cohérentes utilisées par toutes les tâches suivantes.
 
-- [ ] **Step 1: Écrire l’ADR accepté**
+- [x] **Step 1: Écrire l’ADR accepté**
 
 Créer l’ADR 0006 avec les décisions exactes suivantes : aperçu public restreint, compte obligatoire avant POST, nom provenant du profil, statut initial `Unknown`, App/Universal Links directs, SignalR pour le temps réel et FCM uniquement pour les notifications.
 
-- [ ] **Step 2: Remplacer les exigences contradictoires**
+- [x] **Step 2: Remplacer les exigences contradictoires**
 
 Dans `CLAUDE.md`, remplacer la règle « Invité sans compte » par « Compte obligatoire pour rejoindre ». Dans le cahier des charges, réviser `EF-INV-04`, `RG-INV-05`, `EF-AUTH-11`, la matrice des rôles, les routes et le critère global 14. Conserver `event_members.user_id` nullable uniquement pour l’historique financier.
 
-- [ ] **Step 3: Vérifier la cohérence documentaire**
+- [x] **Step 3: Vérifier la cohérence documentaire**
 
 Run:
 
@@ -82,7 +82,7 @@ git diff --check -- CLAUDE.md docs/adr/0006-compte-obligatoire-pour-rejoindre.md
 
 Expected: aucune exigence active ne promet une nouvelle adhésion sans compte ; les mentions historiques sont explicitement qualifiées comme telles ; `git diff --check` sort avec le code 0.
 
-- [ ] **Step 4: Committer uniquement la documentation**
+- [x] **Step 4: Committer uniquement la documentation**
 
 ```bash
 git commit --only CLAUDE.md docs/adr/0006-compte-obligatoire-pour-rejoindre.md \
@@ -105,7 +105,7 @@ git commit --only CLAUDE.md docs/adr/0006-compte-obligatoire-pour-rejoindre.md \
 - Consumes: `ICurrentUser.UserId`, `IUsersDbContext.Users`, `EventMemberStatus.Unknown`.
 - Produces: `IUserIdentityLookup.FindAsync(Guid, CancellationToken)` et deux POST d’adhésion sans corps métier retournant `JoinResult(Guid EventId, Guid MemberId)`.
 
-- [ ] **Step 1: Écrire les tests d’intégration rouges**
+- [x] **Step 1: Écrire les tests d’intégration rouges**
 
 Ajouter ou remplacer les scénarios dans `EvenementsTests` :
 
@@ -155,7 +155,7 @@ internal static Task<HttpResponseMessage> RejoindreBrutAsync(
 Il construit un POST vers `chemin` avec `Content = null` et ajoute
 `Idempotency-Key` seulement quand `cle` n’est pas nulle. Ne pas inspecter un mock.
 
-- [ ] **Step 2: Lancer les tests et constater RED**
+- [x] **Step 2: Lancer les tests et constater RED**
 
 Run:
 
@@ -166,7 +166,7 @@ dotnet test api/tests/PartyPlan.IntegrationTests/PartyPlan.IntegrationTests.cspr
 
 Expected: le POST anonyme est encore accepté et/ou le POST sans ancien `JoinBody` échoue ; le test du nom serveur ne peut pas passer.
 
-- [ ] **Step 3: Ajouter le contrat inter-modules et son implémentation**
+- [x] **Step 3: Ajouter le contrat inter-modules et son implémentation**
 
 Créer :
 
@@ -183,7 +183,7 @@ public interface IUserIdentityLookup
 
 Puis implémenter `UserIdentityLookup(IUsersDbContext db)` dans Users par une projection EF sans suivi vers `UserIdentity`, limitée aux comptes non supprimés. Enregistrer `IUserIdentityLookup` dans `UsersModule`.
 
-- [ ] **Step 4: Simplifier JoinService et les endpoints**
+- [x] **Step 4: Simplifier JoinService et les endpoints**
 
 Remplacer les signatures par :
 
@@ -196,7 +196,7 @@ Dans la méthode privée : exiger `currentUser.UserId`, lire `UserIdentity`, rec
 
 Supprimer `JoinBody`. Les deux POST appellent le service sans corps, gardent `RequireIdempotency()`, gardent la limitation du code court et ajoutent `RequireAuthorization()`.
 
-- [ ] **Step 5: Vérifier GREEN et les mutations importantes**
+- [x] **Step 5: Vérifier GREEN et les mutations importantes**
 
 Ajouter les tests : même compte + nouvelle clé → même `memberId` et présence inchangée ; même clé → réponse rejouée ; deux comptes → deux membres ; compte supprimé/introuvable → refus ; code court inconnu → 404 ; arrivées fermées → 422.
 
@@ -209,7 +209,7 @@ dotnet test api/tests/PartyPlan.IntegrationTests/PartyPlan.IntegrationTests.cspr
 
 Expected: tous les tests `EvenementsTests` réussissent.
 
-- [ ] **Step 6: Committer le contrat API**
+- [x] **Step 6: Committer le contrat API**
 
 ```bash
 git commit --only \
@@ -249,11 +249,11 @@ git commit --only \
 - Consumes: adhésion de compte livrée par Task 2.
 - Produces: toute route protégée exige `ClaimTypes.NameIdentifier`; aucun service ne crée ou rattache une session invitée.
 
-- [ ] **Step 1: Écrire le test rouge du jeton invité historique**
+- [x] **Step 1: Écrire le test rouge du jeton invité historique**
 
 Dans `EventScopeIsolationTests`, conserver `TestTokens.ForGuest(eventId, memberId)` le temps du RED et vérifier qu’un ancien jeton signé reçoit `401` sur `GET /v1/events/{eventId}` et `POST /v1/join/{token}`.
 
-- [ ] **Step 2: Lancer le test et constater RED**
+- [x] **Step 2: Lancer le test et constater RED**
 
 ```bash
 dotnet test api/tests/PartyPlan.IntegrationTests/PartyPlan.IntegrationTests.csproj \
@@ -262,7 +262,7 @@ dotnet test api/tests/PartyPlan.IntegrationTests/PartyPlan.IntegrationTests.cspr
 
 Expected: le jeton invité est encore considéré comme authentifié et atteint au moins une route.
 
-- [ ] **Step 3: Exiger un identifiant de compte dans la politique par défaut**
+- [x] **Step 3: Exiger un identifiant de compte dans la politique par défaut**
 
 Dans `AuthenticationSetup`, construire la politique par défaut avec :
 
@@ -275,7 +275,7 @@ new AuthorizationPolicyBuilder()
 
 Conserver les schémas et politiques administratives existants. Vérifier que les jetons d’accès de compte portent déjà `ClaimTypes.NameIdentifier`.
 
-- [ ] **Step 4: Retirer le code de création et de conversion invité**
+- [x] **Step 4: Retirer le code de création et de conversion invité**
 
 Supprimer `CreateGuestToken`, les claims `GuestEventId`/`MemberId`, les propriétés invitées d’`ICurrentUser`, le contrat et l’implémentation de rattachement, l’endpoint `/auth/guest-claim` et les DTO correspondants. Simplifier `EventScopePrimer`, `AttendanceService` et `EventService` pour ne retrouver le membre courant que par `UserId`.
 
@@ -285,11 +285,11 @@ historiques sans compte restent listables, mais ne peuvent plus représenter l�
 
 Ne pas rendre `EventMember.UserId` non nullable et ne pas produire de migration qui supprime des lignes historiques.
 
-- [ ] **Step 5: Réécrire les tests qui exprimaient l’ancien produit**
+- [x] **Step 5: Réécrire les tests qui exprimaient l’ancien produit**
 
 Remplacer les tests d’invités par des scénarios à deux comptes. Supprimer `ConversionInviteTests.cs`, désormais contradictoire. Dans `OwnershipTransferTests`, garder la règle « seule une cible avec `UserId` peut devenir propriétaire » comme protection des lignes historiques, sans créer de nouvelle adhésion anonyme.
 
-- [ ] **Step 6: Vérifier GREEN sur Auth, Events et isolation**
+- [x] **Step 6: Vérifier GREEN sur Auth, Events et isolation**
 
 ```bash
 dotnet test api/PartyPlan.slnx \
@@ -298,7 +298,7 @@ dotnet test api/PartyPlan.slnx \
 
 Expected: tous les tests filtrés réussissent ; aucune référence compilée ne dépend de `IGuestMembershipLinking` ou `CreateGuestToken`.
 
-- [ ] **Step 7: Committer le retrait invité**
+- [x] **Step 7: Committer le retrait invité**
 
 ```bash
 git commit --only \
@@ -339,7 +339,7 @@ git commit --only \
 - Consumes: routes `/join/{token}`, `/rejoindre/{code}`, `sessionProvider`.
 - Produces: `RetourAuth.destination(String?)`, `RetourAuth.versConnexion(String)` et `RetourAuth.versInscription(String)`.
 
-- [ ] **Step 1: Écrire les tests unitaires rouges de validation**
+- [x] **Step 1: Écrire les tests unitaires rouges de validation**
 
 ```dart
 test('accepte uniquement les deux formes d’invitation internes', () {
@@ -360,7 +360,7 @@ test('refuse une redirection externe ou privilégiée', () {
 });
 ```
 
-- [ ] **Step 2: Lancer et constater RED**
+- [x] **Step 2: Lancer et constater RED**
 
 ```bash
 cd app && flutter test test/app/retour_auth_test.dart
@@ -368,15 +368,15 @@ cd app && flutter test test/app/retour_auth_test.dart
 
 Expected: échec de compilation, car `RetourAuth` n’existe pas.
 
-- [ ] **Step 3: Implémenter la liste positive**
+- [x] **Step 3: Implémenter la liste positive**
 
 Parser avec `Uri.tryParse`, refuser schéma, autorité, query et fragment, puis accepter exactement deux segments non vides : `join/{token}` ou `rejoindre/{code}`. Les constructeurs utilisent `Uri(path: route, queryParameters: {'retour': destination})` afin de laisser Dart encoder la valeur.
 
-- [ ] **Step 4: Brancher le routeur et les écrans auth**
+- [x] **Step 4: Brancher le routeur et les écrans auth**
 
 Ajouter `String? retour` aux constructeurs de `ConnexionPage` et `InscriptionPage`. Les builders de route lisent `state.uri.queryParameters['retour']`. Après succès, naviguer vers `RetourAuth.destination(retour)`. Le lien connexion → inscription conserve le même retour. Quand une session connectée atteint une route auth publique, le redirect du routeur utilise lui aussi la destination validée.
 
-- [ ] **Step 5: Tester le parcours réel du routeur**
+- [x] **Step 5: Tester le parcours réel du routeur**
 
 Ajouter des widget tests : `/connexion?retour=%2Fjoin%2FJETON` mène à l’aperçu après connexion ; le lien `Créer un compte` conserve le retour ; un retour externe mène à `/`. Utiliser le vrai routeur et doubler uniquement l’appel réseau d’authentification.
 
@@ -386,7 +386,7 @@ cd app && flutter test test/app/retour_auth_test.dart test/router_test.dart test
 
 Expected: tous les tests ciblés réussissent.
 
-- [ ] **Step 6: Committer le retour auth**
+- [x] **Step 6: Committer le retour auth**
 
 ```bash
 git commit --only app/lib/app/retour_auth.dart app/test/app/retour_auth_test.dart \
@@ -417,7 +417,7 @@ git commit --only app/lib/app/retour_auth.dart app/test/app/retour_auth_test.dar
 - Consumes: `RetourAuth`, `EtatSession.connecte`, les POST sans corps de Task 2.
 - Produces: `EvenementsApi.rejoindreParJeton({required String jeton})` et `rejoindreParCode({required String code})`, chacun retournant l’identifiant d’événement.
 
-- [ ] **Step 1: Écrire les widget tests rouges**
+- [x] **Step 1: Écrire les widget tests rouges**
 
 Dans `adhesion_test.dart`, remplacer le groupe « Adhésion sans compte » par :
 
@@ -441,7 +441,7 @@ testWidgets('un compte rejoint automatiquement puis ouvre la soirée', (tester) 
 
 Le double enregistre le jeton ou le code reçu et renvoie un `eventId` littéral ; les assertions portent sur la navigation et l’appel public réel de l’écran, pas sur un widget mocké.
 
-- [ ] **Step 2: Lancer et constater RED**
+- [x] **Step 2: Lancer et constater RED**
 
 ```bash
 cd app && flutter test test/features/adhesion_test.dart test/router_test.dart
@@ -449,7 +449,7 @@ cd app && flutter test test/features/adhesion_test.dart test/router_test.dart
 
 Expected: l’aperçu propose encore `Participer` et ouvre encore `AdhesionPage`.
 
-- [ ] **Step 3: Adapter l’API Flutter**
+- [x] **Step 3: Adapter l’API Flutter**
 
 Les deux méthodes de `EvenementsApi` ne prennent plus `prenom` ni `statut`. `_rejoindre` envoie `corps: null`, conserve la clé d’idempotence, ne lit plus `guestToken` et retourne uniquement `eventId`.
 
@@ -459,7 +459,7 @@ Dans `ApiClient`, envoyer uniquement `lireJetonAcces()` dans l’en-tête Bearer
 `SectionCreerUnCompte` et son insertion dans `TableauDeBordPage`, puisqu’aucun membre
 actif n’entre désormais sans compte.
 
-- [ ] **Step 4: Implémenter l’état d’adhésion automatique**
+- [x] **Step 4: Implémenter l’état d’adhésion automatique**
 
 Transformer `ApercuInvitationPage` en `ConsumerStatefulWidget` avec gardes `_adhesionLancee`, `_adhesionEnCours` et `_erreurAdhesion`. Une fois l’aperçu chargé :
 
@@ -471,7 +471,7 @@ Transformer `ApercuInvitationPage` en `ConsumerStatefulWidget` avec gardes `_adh
 
 Supprimer `AdhesionPage`, `adhesionParJeton`, `adhesionParCode`, `versAdhesion` et `versAdhesionParCode`.
 
-- [ ] **Step 5: Vérifier GREEN et les branches d’erreur**
+- [x] **Step 5: Vérifier GREEN et les branches d’erreur**
 
 Ajouter les tests : code court équivalent, arrivées fermées sans POST, erreur réseau avec retry unique, double reconstruction sans double POST, aucune saisie de nom/statut.
 
@@ -482,7 +482,7 @@ cd app && flutter test test/features/adhesion_test.dart test/router_test.dart \
 
 Expected: tous les tests ciblés réussissent.
 
-- [ ] **Step 6: Committer le parcours Flutter**
+- [x] **Step 6: Committer le parcours Flutter**
 
 ```bash
 git commit --only app/lib/features/rejoindre/adhesion_page.dart \
@@ -511,7 +511,7 @@ git commit --only app/lib/features/rejoindre/adhesion_page.dart \
 - Consumes: `App:PublicBaseUrl`, `WEB_DEV_PORT = 5173`, nginx SPA fallback existant.
 - Produces: liens locaux `http://localhost:5173/join/{token}` avec `make api`; recette exécutable des routes profondes Web.
 
-- [ ] **Step 1: Écrire le test API rouge de l’URL locale**
+- [x] **Step 1: Écrire le test API rouge de l’URL locale**
 
 Dans le test d’invitation, vérifier littéralement :
 
@@ -520,7 +520,7 @@ invitation.RootElement.GetProperty("joinUrl").GetString()
     .ShouldStartWith("http://localhost:5173/join/");
 ```
 
-- [ ] **Step 2: Lancer et constater RED**
+- [x] **Step 2: Lancer et constater RED**
 
 ```bash
 dotnet test api/tests/PartyPlan.IntegrationTests/PartyPlan.IntegrationTests.csproj \
@@ -529,17 +529,17 @@ dotnet test api/tests/PartyPlan.IntegrationTests/PartyPlan.IntegrationTests.cspr
 
 Expected: la valeur actuelle commence par `http://localhost:8080`.
 
-- [ ] **Step 3: Aligner la configuration de développement**
+- [x] **Step 3: Aligner la configuration de développement**
 
 Ajouter `App.PublicBaseUrl = http://localhost:5173` dans `appsettings.Development.json` et `App__PublicBaseUrl=http://localhost:$(WEB_DEV_PORT)` dans la cible `make api`. Ne pas modifier Compose, qui sert réellement le Web sur `8080` et surcharge déjà la valeur.
 
-- [ ] **Step 4: Écrire une recette Web comportementale**
+- [x] **Step 4: Écrire une recette Web comportementale**
 
 Créer `tools/verifier-liens-web.sh` qui prend une base URL, requête `/`, `/join/JETON-RECETTE` et `/rejoindre/PLAN-K7M2X9`, exige HTTP 200 et vérifie que les trois réponses portent le même marqueur du shell Flutter. Le script échoue sur une 404 ; il ne se contente pas de chercher `try_files` dans la configuration.
 
 Ajouter dans nginx des locations exactes `/.well-known/assetlinks.json` et `/.well-known/apple-app-site-association` avec `Content-Type: application/json`, `Cache-Control: no-cache` et les en-têtes de sécurité, sans casser le fallback existant.
 
-- [ ] **Step 5: Vérifier GREEN**
+- [x] **Step 5: Vérifier GREEN**
 
 ```bash
 dotnet test api/tests/PartyPlan.IntegrationTests/PartyPlan.IntegrationTests.csproj \
@@ -552,7 +552,7 @@ trap 'docker rm -f "$container_id" >/dev/null' EXIT
 
 Expected: test API vert et trois routes Web servies par le même shell Flutter.
 
-- [ ] **Step 6: Committer la configuration Web**
+- [x] **Step 6: Committer la configuration Web**
 
 ```bash
 git commit --only Makefile api/src/PartyPlan.Api/appsettings.Development.json \
@@ -572,11 +572,11 @@ git commit --only Makefile api/src/PartyPlan.Api/appsettings.Development.json \
 - Consumes: domaine `partyplan.maxencecoeur.fr`, package `fr.maxencecoeur.partyplan`, empreinte SHA-256 réelle du keystore debug `99:AB:98:70:F1:32:06:6A:2D:48:66:05:4F:F3:F1:C6:46:3C:3E:5E:67:CB:82:77:54:CF:AB:E8:48:0D:20:B4`.
 - Produces: association `delegate_permission/common.handle_all_urls` pour `/join/`.
 
-- [ ] **Step 1: Écrire le vérificateur rouge**
+- [x] **Step 1: Écrire le vérificateur rouge**
 
 Le script `tools/verifier-app-links-android.sh` doit : recalculer l’empreinte du keystore fourni, lire `assetlinks.json`, échouer si le package ou l’empreinte diffère, construire le manifeste debug, puis vérifier dans le manifeste fusionné un intent HTTPS `autoVerify` limité à l’hôte et au préfixe `/join/`.
 
-- [ ] **Step 2: Lancer et constater RED**
+- [x] **Step 2: Lancer et constater RED**
 
 ```bash
 ./tools/verifier-app-links-android.sh "$HOME/.android/debug.keystore"
@@ -584,7 +584,7 @@ Le script `tools/verifier-app-links-android.sh` doit : recalculer l’empreinte 
 
 Expected: échec parce que le filtre HTTPS et `assetlinks.json` n’existent pas.
 
-- [ ] **Step 3: Ajouter le filtre et l’association**
+- [x] **Step 3: Ajouter le filtre et l’association**
 
 Dans l’activité principale :
 
@@ -602,7 +602,7 @@ Dans l’activité principale :
 
 Créer `assetlinks.json` avec le package exact et l’empreinte debug recalculée par le script. Documenter que l’empreinte Play App Signing devra être ajoutée avant publication ; le script accepte plusieurs empreintes mais exige toujours celle du keystore testé.
 
-- [ ] **Step 4: Vérifier GREEN et, si un appareil est connecté, la remise réelle**
+- [x] **Step 4: Vérifier GREEN et, si un appareil est connecté, la remise réelle**
 
 ```bash
 ./tools/verifier-app-links-android.sh "$HOME/.android/debug.keystore"
@@ -621,7 +621,7 @@ adb shell am start -W -a android.intent.action.VIEW \
 
 Expected: vérificateur et build verts ; sur appareil, l’activité PartyPlan reçoit `/join/JETON-RECETTE`.
 
-- [ ] **Step 5: Committer Android App Links**
+- [x] **Step 5: Committer Android App Links**
 
 ```bash
 git commit --only app/android/app/src/main/AndroidManifest.xml \
@@ -630,6 +630,9 @@ git commit --only app/android/app/src/main/AndroidManifest.xml \
 ```
 
 ### Task 8: Préparer iOS Universal Links avec l’identité Apple réelle
+
+> **Task 8 reportée par l’utilisateur.** Aucun entitlement, fichier AASA ou
+> vérificateur iOS n’est créé ou vérifié dans ce livrable Web + Android.
 
 **Files:**
 - Create: `app/ios/Runner/Runner.entitlements`
@@ -690,7 +693,7 @@ git commit --only app/ios/Runner/Runner.entitlements \
 - Consumes: Tasks 1 à 8.
 - Produces: OpenAPI et code généré cohérents, preuves de vérification complètes, cases du plan cochées.
 
-- [ ] **Step 1: Régénérer les artefacts**
+- [x] **Step 1: Régénérer les artefacts**
 
 ```bash
 make openapi
@@ -699,7 +702,7 @@ cd app && flutter gen-l10n
 
 Vérifier dans OpenAPI que les POST join exigent une sécurité Bearer, n’ont plus `JoinBody` et que `JoinResult` ne contient que `eventId` et `memberId`.
 
-- [ ] **Step 2: Formater et vérifier les diffs**
+- [x] **Step 2: Formater et vérifier les diffs**
 
 ```bash
 dotnet format api/PartyPlan.slnx --no-restore
@@ -708,7 +711,7 @@ cd ..
 git diff --check
 ```
 
-- [ ] **Step 3: Exécuter toute la vérification locale**
+- [x] **Step 3: Exécuter toute la vérification locale**
 
 ```bash
 make test-api
@@ -720,7 +723,7 @@ make frontieres
 
 Expected: zéro test en échec, zéro diagnostic Flutter, frontières de modules valides.
 
-- [ ] **Step 4: Recette du parcours réel**
+- [x] **Step 4: Recette du parcours réel**
 
 Démarrer `make api` et `make web`, créer une soirée avec un compte A, ouvrir le lien dans une session privée, créer ou connecter un compte B, vérifier l’entrée directe dans la soirée et `Sans réponse`, puis rouvrir le lien et vérifier l’absence de doublon et l’absence de modification d’une présence déjà choisie.
 
@@ -733,7 +736,7 @@ Exécuter aussi :
 
 Exécuter le vérificateur iOS uniquement avec le Team ID Apple réel.
 
-- [ ] **Step 5: Committer les artefacts générés et le plan coché**
+- [x] **Step 5: Committer les artefacts générés et le plan coché**
 
 ```bash
 git commit --only docs/api/openapi.json app/lib/l10n/generated \
@@ -742,6 +745,8 @@ git commit --only docs/api/openapi.json app/lib/l10n/generated \
 ```
 
 - [ ] **Step 6: Demander une revue de code**
+
+> Revue Task 9 omise sur instruction explicite ; aucune case cochée pour cette étape.
 
 Utiliser `superpowers:requesting-code-review`, corriger toute exigence manquante, puis relancer les commandes de Step 3 avant d’annoncer le livrable terminé.
 

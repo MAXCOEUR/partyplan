@@ -70,7 +70,12 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "Bearer": []
+          }
+        ]
       }
     },
     "/v1/admin/users/{userId}": {
@@ -102,7 +107,12 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "Bearer": []
+          }
+        ]
       },
       "delete": {
         "tags": [
@@ -125,7 +135,12 @@
           "200": {
             "description": "OK"
           }
-        }
+        },
+        "security": [
+          {
+            "Bearer": []
+          }
+        ]
       }
     },
     "/v1/admin/metrics": {
@@ -146,7 +161,12 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "Bearer": []
+          }
+        ]
       }
     },
     "/v1/admin/audit": {
@@ -196,7 +216,12 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "Bearer": []
+          }
+        ]
       }
     },
     "/v1/admin/users/{userId}/password-reset": {
@@ -221,7 +246,12 @@
           "200": {
             "description": "OK"
           }
-        }
+        },
+        "security": [
+          {
+            "Bearer": []
+          }
+        ]
       }
     },
     "/v1/admin/users/{userId}/sessions": {
@@ -246,7 +276,12 @@
           "200": {
             "description": "OK"
           }
-        }
+        },
+        "security": [
+          {
+            "Bearer": []
+          }
+        ]
       }
     },
     "/v1/admin/users/{userId}/verify-email": {
@@ -271,7 +306,12 @@
           "200": {
             "description": "OK"
           }
-        }
+        },
+        "security": [
+          {
+            "Bearer": []
+          }
+        ]
       }
     },
     "/v1/admin/users/{userId}/export": {
@@ -296,7 +336,12 @@
           "200": {
             "description": "OK"
           }
-        }
+        },
+        "security": [
+          {
+            "Bearer": []
+          }
+        ]
       }
     },
     "/v1/admin/users/{userId}/avatar": {
@@ -321,7 +366,12 @@
           "200": {
             "description": "OK"
           }
-        }
+        },
+        "security": [
+          {
+            "Bearer": []
+          }
+        ]
       }
     },
     "/v1/admin/users/{userId}/suspend": {
@@ -356,7 +406,12 @@
           "200": {
             "description": "OK"
           }
-        }
+        },
+        "security": [
+          {
+            "Bearer": []
+          }
+        ]
       }
     },
     "/v1/admin/users/{userId}/unsuspend": {
@@ -381,7 +436,12 @@
           "200": {
             "description": "OK"
           }
-        }
+        },
+        "security": [
+          {
+            "Bearer": []
+          }
+        ]
       }
     },
     "/v1/admin/users/{userId}/role": {
@@ -416,7 +476,12 @@
           "200": {
             "description": "OK"
           }
-        }
+        },
+        "security": [
+          {
+            "Bearer": []
+          }
+        ]
       }
     },
     "/v1/events": {
@@ -440,7 +505,12 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "Bearer": []
+          }
+        ]
       },
       "post": {
         "tags": [
@@ -469,7 +539,12 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "Bearer": []
+          }
+        ]
       }
     },
     "/v1/events/{eventId}": {
@@ -511,7 +586,12 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "Bearer": []
+          }
+        ]
       },
       "patch": {
         "tags": [
@@ -551,7 +631,12 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "Bearer": []
+          }
+        ]
       },
       "delete": {
         "tags": [
@@ -581,7 +666,12 @@
           "200": {
             "description": "OK"
           }
-        }
+        },
+        "security": [
+          {
+            "Bearer": []
+          }
+        ]
       }
     },
     "/v1/events/{eventId}/invitation": {
@@ -613,7 +703,12 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "Bearer": []
+          }
+        ]
       }
     },
     "/v1/events/{eventId}/invitation/rotate": {
@@ -645,7 +740,12 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "Bearer": []
+          }
+        ]
       }
     },
     "/v1/events/{eventId}/join-enabled": {
@@ -680,7 +780,12 @@
           "200": {
             "description": "OK"
           }
-        }
+        },
+        "security": [
+          {
+            "Bearer": []
+          }
+        ]
       }
     },
     "/v1/join/{token}": {
@@ -717,7 +822,7 @@
         "tags": [
           "Invitations"
         ],
-        "summary": "Rejoint l'événement. Aucun compte n'est exigé. En-tête Idempotency-Key obligatoire.",
+        "summary": "Rejoint l'événement avec le compte connecté. En-tête Idempotency-Key obligatoire.",
         "operationId": "JoinEvent",
         "parameters": [
           {
@@ -729,16 +834,6 @@
             }
           }
         ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/JoinBody"
-              }
-            }
-          },
-          "required": true
-        },
         "responses": {
           "200": {
             "description": "OK",
@@ -750,7 +845,12 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "Bearer": []
+          }
+        ]
       }
     },
     "/v1/join/code/{shortCode}": {
@@ -799,16 +899,6 @@
             }
           }
         ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/JoinBody"
-              }
-            }
-          },
-          "required": true
-        },
         "responses": {
           "200": {
             "description": "OK",
@@ -820,7 +910,12 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "Bearer": []
+          }
+        ]
       }
     },
     "/v1/events/{eventId}/members": {
@@ -855,7 +950,12 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "Bearer": []
+          }
+        ]
       }
     },
     "/v1/events/{eventId}/members/me": {
@@ -897,7 +997,12 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "Bearer": []
+          }
+        ]
       },
       "delete": {
         "tags": [
@@ -920,7 +1025,12 @@
           "200": {
             "description": "OK"
           }
-        }
+        },
+        "security": [
+          {
+            "Bearer": []
+          }
+        ]
       }
     },
     "/v1/events/{eventId}/members/{memberId}": {
@@ -954,7 +1064,12 @@
           "200": {
             "description": "OK"
           }
-        }
+        },
+        "security": [
+          {
+            "Bearer": []
+          }
+        ]
       }
     },
     "/v1/events/{eventId}/members/{memberId}/transfer-ownership": {
@@ -988,7 +1103,12 @@
           "200": {
             "description": "OK"
           }
-        }
+        },
+        "security": [
+          {
+            "Bearer": []
+          }
+        ]
       }
     },
     "/v1/events/{eventId}/expenses": {
@@ -1020,7 +1140,12 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "Bearer": []
+          }
+        ]
       },
       "post": {
         "tags": [
@@ -1060,7 +1185,12 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "Bearer": []
+          }
+        ]
       }
     },
     "/v1/events/{eventId}/expenses/{expenseId}": {
@@ -1101,7 +1231,12 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "Bearer": []
+          }
+        ]
       },
       "patch": {
         "tags": [
@@ -1150,7 +1285,12 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "Bearer": []
+          }
+        ]
       },
       "delete": {
         "tags": [
@@ -1182,7 +1322,12 @@
           "200": {
             "description": "OK"
           }
-        }
+        },
+        "security": [
+          {
+            "Bearer": []
+          }
+        ]
       }
     },
     "/v1/events/{eventId}/messages": {
@@ -1190,7 +1335,7 @@
         "tags": [
           "Messages"
         ],
-        "summary": "Fil de discussion, du plus ancien au plus récent.",
+        "summary": "Fil de discussion : les derniers messages, du plus ancien au plus récent. `before` remonte vers les plus anciens.",
         "operationId": "ListMessages",
         "parameters": [
           {
@@ -1200,6 +1345,26 @@
             "schema": {
               "type": "string",
               "format": "uuid"
+            }
+          },
+          {
+            "name": "before",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
             }
           }
         ],
@@ -1214,7 +1379,12 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "Bearer": []
+          }
+        ]
       },
       "post": {
         "tags": [
@@ -1254,7 +1424,52 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "Bearer": []
+          }
+        ]
+      }
+    },
+    "/v1/events/{eventId}/messages/read": {
+      "post": {
+        "tags": [
+          "Messages"
+        ],
+        "summary": "Avance le repère de lecture jusqu'à ce message.",
+        "operationId": "MarkMessagesRead",
+        "parameters": [
+          {
+            "name": "eventId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LectureBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "Bearer": []
+          }
+        ]
       }
     },
     "/v1/events/{eventId}/messages/{messageId}": {
@@ -1305,7 +1520,12 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "Bearer": []
+          }
+        ]
       },
       "delete": {
         "tags": [
@@ -1337,7 +1557,12 @@
           "200": {
             "description": "OK"
           }
-        }
+        },
+        "security": [
+          {
+            "Bearer": []
+          }
+        ]
       }
     },
     "/v1/events/{eventId}/messages/{messageId}/reactions": {
@@ -1388,7 +1613,12 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "Bearer": []
+          }
+        ]
       }
     },
     "/v1/events/{eventId}/messages/images": {
@@ -1413,7 +1643,12 @@
           "200": {
             "description": "OK"
           }
-        }
+        },
+        "security": [
+          {
+            "Bearer": []
+          }
+        ]
       }
     },
     "/v1/events/{eventId}/messages/{messageId}/pin": {
@@ -1464,7 +1699,12 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "Bearer": []
+          }
+        ]
       },
       "delete": {
         "tags": [
@@ -1496,7 +1736,12 @@
           "200": {
             "description": "OK"
           }
-        }
+        },
+        "security": [
+          {
+            "Bearer": []
+          }
+        ]
       }
     },
     "/v1/events/{eventId}/pins": {
@@ -1536,7 +1781,12 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "Bearer": []
+          }
+        ]
       }
     },
     "/v1/events/{eventId}/pins/folders": {
@@ -1578,7 +1828,12 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "Bearer": []
+          }
+        ]
       }
     },
     "/v1/events/{eventId}/pins/folders/{folderId}": {
@@ -1612,7 +1867,12 @@
           "200": {
             "description": "OK"
           }
-        }
+        },
+        "security": [
+          {
+            "Bearer": []
+          }
+        ]
       }
     },
     "/v1/events/{eventId}/polls": {
@@ -1644,7 +1904,12 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "Bearer": []
+          }
+        ]
       },
       "post": {
         "tags": [
@@ -1684,7 +1949,12 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "Bearer": []
+          }
+        ]
       }
     },
     "/v1/events/{eventId}/polls/{pollId}/votes": {
@@ -1735,7 +2005,12 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "Bearer": []
+          }
+        ]
       }
     },
     "/v1/events/{eventId}/polls/{pollId}/close": {
@@ -1776,7 +2051,12 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "Bearer": []
+          }
+        ]
       }
     },
     "/v1/events/{eventId}/polls/{pollId}": {
@@ -1810,7 +2090,12 @@
           "200": {
             "description": "OK"
           }
-        }
+        },
+        "security": [
+          {
+            "Bearer": []
+          }
+        ]
       }
     },
     "/v1/events/{eventId}/settlements": {
@@ -1842,7 +2127,12 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "Bearer": []
+          }
+        ]
       },
       "post": {
         "tags": [
@@ -1882,7 +2172,12 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "Bearer": []
+          }
+        ]
       }
     },
     "/v1/events/{eventId}/settlements/{settlementId}": {
@@ -1923,7 +2218,12 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "Bearer": []
+          }
+        ]
       }
     },
     "/v1/events/{eventId}/shopping": {
@@ -1955,7 +2255,12 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "Bearer": []
+          }
+        ]
       },
       "post": {
         "tags": [
@@ -1995,7 +2300,12 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "Bearer": []
+          }
+        ]
       }
     },
     "/v1/events/{eventId}/shopping/{itemId}": {
@@ -2046,7 +2356,12 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "Bearer": []
+          }
+        ]
       },
       "delete": {
         "tags": [
@@ -2078,7 +2393,12 @@
           "200": {
             "description": "OK"
           }
-        }
+        },
+        "security": [
+          {
+            "Bearer": []
+          }
+        ]
       }
     },
     "/v1/events/{eventId}/shopping/{itemId}/claim": {
@@ -2119,7 +2439,12 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "Bearer": []
+          }
+        ]
       },
       "delete": {
         "tags": [
@@ -2158,7 +2483,12 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "Bearer": []
+          }
+        ]
       }
     },
     "/v1/events/{eventId}/shopping/{itemId}/purchase": {
@@ -2209,7 +2539,12 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "Bearer": []
+          }
+        ]
       }
     },
     "/v1/auth/register": {
@@ -2374,7 +2709,12 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "Bearer": []
+          }
+        ]
       }
     },
     "/v1/auth/providers/{provider}/link": {
@@ -2408,7 +2748,12 @@
           "200": {
             "description": "OK"
           }
-        }
+        },
+        "security": [
+          {
+            "Bearer": []
+          }
+        ]
       }
     },
     "/v1/auth/providers/{provider}": {
@@ -2432,7 +2777,12 @@
           "200": {
             "description": "OK"
           }
-        }
+        },
+        "security": [
+          {
+            "Bearer": []
+          }
+        ]
       }
     },
     "/v1/auth/totp/setup": {
@@ -2453,7 +2803,12 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "Bearer": []
+          }
+        ]
       }
     },
     "/v1/auth/totp/activate": {
@@ -2484,7 +2839,12 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "Bearer": []
+          }
+        ]
       }
     },
     "/v1/auth/totp": {
@@ -2508,7 +2868,12 @@
           "200": {
             "description": "OK"
           }
-        }
+        },
+        "security": [
+          {
+            "Bearer": []
+          }
+        ]
       }
     },
     "/v1/auth/totp/recovery-codes": {
@@ -2529,7 +2894,12 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "Bearer": []
+          }
+        ]
       }
     },
     "/v1/auth/refresh": {
@@ -2563,37 +2933,6 @@
         }
       }
     },
-    "/v1/auth/guest-claim": {
-      "post": {
-        "tags": [
-          "Auth"
-        ],
-        "summary": "Rattache au compte les participations rejointes sans compte.",
-        "operationId": "ClaimGuestParticipations",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/ClaimGuestRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ClaimGuestResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "/v1/auth/logout": {
       "post": {
         "tags": [
@@ -2605,7 +2944,12 @@
           "200": {
             "description": "OK"
           }
-        }
+        },
+        "security": [
+          {
+            "Bearer": []
+          }
+        ]
       }
     },
     "/v1/auth/password/forgot": {
@@ -2677,7 +3021,12 @@
           "200": {
             "description": "OK"
           }
-        }
+        },
+        "security": [
+          {
+            "Bearer": []
+          }
+        ]
       }
     },
     "/v1/auth/email/verify": {
@@ -2722,7 +3071,12 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "Bearer": []
+          }
+        ]
       },
       "patch": {
         "tags": [
@@ -2751,7 +3105,12 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "Bearer": []
+          }
+        ]
       },
       "delete": {
         "tags": [
@@ -2773,7 +3132,12 @@
           "200": {
             "description": "OK"
           }
-        }
+        },
+        "security": [
+          {
+            "Bearer": []
+          }
+        ]
       }
     },
     "/v1/me/email": {
@@ -2797,7 +3161,12 @@
           "200": {
             "description": "OK"
           }
-        }
+        },
+        "security": [
+          {
+            "Bearer": []
+          }
+        ]
       }
     },
     "/v1/me/sessions": {
@@ -2821,7 +3190,12 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "Bearer": []
+          }
+        ]
       },
       "delete": {
         "tags": [
@@ -2833,7 +3207,12 @@
           "200": {
             "description": "OK"
           }
-        }
+        },
+        "security": [
+          {
+            "Bearer": []
+          }
+        ]
       }
     },
     "/v1/me/sessions/{sessionId}": {
@@ -2858,7 +3237,12 @@
           "200": {
             "description": "OK"
           }
-        }
+        },
+        "security": [
+          {
+            "Bearer": []
+          }
+        ]
       }
     },
     "/v1/me/avatar": {
@@ -2872,7 +3256,12 @@
           "200": {
             "description": "OK"
           }
-        }
+        },
+        "security": [
+          {
+            "Bearer": []
+          }
+        ]
       },
       "delete": {
         "tags": [
@@ -2884,7 +3273,12 @@
           "200": {
             "description": "OK"
           }
-        }
+        },
+        "security": [
+          {
+            "Bearer": []
+          }
+        ]
       }
     },
     "/v1/me/export": {
@@ -2898,7 +3292,12 @@
           "200": {
             "description": "OK"
           }
-        }
+        },
+        "security": [
+          {
+            "Bearer": []
+          }
+        ]
       }
     }
   },
@@ -3051,35 +3450,6 @@
             "type": "string"
           }
         }
-      },
-      "ClaimGuestRequest": {
-        "required": [
-          "guestToken"
-        ],
-        "type": "object",
-        "properties": {
-          "guestToken": {
-            "type": "string"
-          }
-        },
-        "description": "            Rattachement d'une participation d'invité au compte connecté (EF-AUTH-11).\n            Endpoint distinct plutôt que champ ajouté à l'inscription et à la connexion :\nl'API compte quatre points d'ouverture de session — inscription, connexion, second\nfacteur, connexion tierce. Un champ n'en couvrirait que deux, et tout compte protégé\npar un second facteur perdrait silencieusement sa participation."
-      },
-      "ClaimGuestResponse": {
-        "required": [
-          "linked"
-        ],
-        "type": "object",
-        "properties": {
-          "linked": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
-            "type": [
-              "integer",
-              "string"
-            ],
-            "format": "int32"
-          }
-        },
-        "description": "Nombre de participations rattachées. Zéro n'est pas une erreur."
       },
       "CreateEventBody": {
         "required": [
@@ -3696,29 +4066,6 @@
           }
         }
       },
-      "JoinBody": {
-        "required": [
-          "displayName",
-          "status",
-          "arrivalTime"
-        ],
-        "type": "object",
-        "properties": {
-          "displayName": {
-            "type": "string"
-          },
-          "status": {
-            "type": "string"
-          },
-          "arrivalTime": {
-            "type": [
-              "null",
-              "string"
-            ],
-            "format": "time"
-          }
-        }
-      },
       "JoinEnabledBody": {
         "required": [
           "joinEnabled"
@@ -3789,9 +4136,7 @@
       "JoinResult": {
         "required": [
           "eventId",
-          "memberId",
-          "guestToken",
-          "guestTokenExpiresAt"
+          "memberId"
         ],
         "type": "object",
         "properties": {
@@ -3802,22 +4147,22 @@
           "memberId": {
             "type": "string",
             "format": "uuid"
-          },
-          "guestToken": {
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "guestTokenExpiresAt": {
-            "type": [
-              "null",
-              "string"
-            ],
-            "format": "date-time"
           }
         },
-        "description": "Résultat d'une participation : la session d'invité, ou la confirmation d'adhésion."
+        "description": "Confirmation d'une participation."
+      },
+      "LectureBody": {
+        "required": [
+          "messageId"
+        ],
+        "type": "object",
+        "properties": {
+          "messageId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "description": "Jusqu'où la discussion a été lue."
       },
       "LoginRequest": {
         "required": [
@@ -4047,7 +4392,10 @@
       },
       "MessagePage": {
         "required": [
-          "items"
+          "items",
+          "hasMore",
+          "unreadCount",
+          "firstUnreadId"
         ],
         "type": "object",
         "properties": {
@@ -4056,9 +4404,27 @@
             "items": {
               "$ref": "#/components/schemas/MessageView"
             }
+          },
+          "hasMore": {
+            "type": "boolean"
+          },
+          "unreadCount": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "firstUnreadId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
           }
         },
-        "description": "Fil de discussion."
+        "description": "Une page du fil, du plus ancien au plus récent.\nHasMore dit s'il reste des messages plus anciens à demander. Sans\nlui, l'application redemanderait indéfiniment une page qui n'existe pas chaque fois\nque la personne remonte le fil."
       },
       "MessageView": {
         "required": [
@@ -4379,7 +4745,11 @@
         "description": "Message épinglé, avec son rangement."
       },
       "PlatformRole": {
-        "type": "integer",
+        "enum": [
+          "User",
+          "Support",
+          "PlatformAdmin"
+        ],
         "description": "Rôle de portée « instance entière » (§3.1). Sans rapport avec EventMemberRole :\nun PlatformRole.PlatformAdmin n'a aucun droit dans un événement dont il n'est pas membre."
       },
       "PollBody": {
@@ -5378,6 +5748,13 @@
             }
           }
         }
+      }
+    },
+    "securitySchemes": {
+      "Bearer": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
       }
     }
   },

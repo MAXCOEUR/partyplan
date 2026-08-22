@@ -1,6 +1,8 @@
 namespace PartyPlan.IntegrationTests;
 
 using System.Net;
+using System.Net.Http.Json;
+using System.Text.Json;
 using PartyPlan.IntegrationTests.Infrastructure;
 using Shouldly;
 using Xunit;
@@ -43,6 +45,30 @@ public sealed class HealthAndContractTests(PartyPlanApiFixture fixture)
     }
 
     [Fact]
+    public async Task Le_contrat_openapi_decrit_le_bearer_uniquement_sur_les_routes_protegees()
+    {
+        using var client = fixture.CreateClient();
+
+        var document = (await client.GetFromJsonAsync<JsonDocument>(
+            new Uri("/openapi/v1.json", UriKind.Relative)))!.RootElement;
+
+        var bearer = document.GetProperty("components")
+            .GetProperty("securitySchemes")
+            .GetProperty("Bearer");
+        bearer.GetProperty("type").GetString().ShouldBe("http");
+        bearer.GetProperty("scheme").GetString().ShouldBe("bearer");
+        bearer.GetProperty("bearerFormat").GetString().ShouldBe("JWT");
+
+        ExigerBearer(document, "/v1/join/{token}", "post");
+        ExigerBearer(document, "/v1/join/code/{shortCode}", "post");
+
+        document.GetProperty("paths").GetProperty("/v1/join/{token}")
+            .GetProperty("get").TryGetProperty("security", out _).ShouldBeFalse();
+        document.GetProperty("paths").GetProperty("/v1/join/code/{shortCode}")
+            .GetProperty("get").TryGetProperty("security", out _).ShouldBeFalse();
+    }
+
+    [Fact]
     public async Task Les_entetes_de_securite_sont_presents()
     {
         using var client = fixture.CreateClient();
@@ -64,5 +90,16 @@ public sealed class HealthAndContractTests(PartyPlanApiFixture fixture)
         var response = await client.SendAsync(request);
 
         response.Headers.GetValues("X-Correlation-Id").ShouldContain("trace-de-test-1234");
+    }
+
+    private static void ExigerBearer(JsonElement document, string chemin, string methode)
+    {
+        var exigences = document.GetProperty("paths").GetProperty(chemin)
+            .GetProperty(methode).GetProperty("security");
+
+        exigences.GetArrayLength().ShouldBe(1);
+        var bearer = exigences[0].GetProperty("Bearer");
+        bearer.ValueKind.ShouldBe(JsonValueKind.Array);
+        bearer.GetArrayLength().ShouldBe(0);
     }
 }

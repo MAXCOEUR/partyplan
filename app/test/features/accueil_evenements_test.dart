@@ -42,11 +42,17 @@ void main() {
     ) async {
       // L'accueil d'une application de soirées doit répondre à « c'est bientôt ? »
       // avant tout le reste. Une liste plate ne répond à rien.
+      final maintenant = DateTime.now();
       await _monter(tester, [
         itemListe(
           id: 'a',
           nom: 'Crémaillère',
-          debut: DateTime.now().add(const Duration(days: 11, hours: 2)),
+          debut: DateTime(
+            maintenant.year,
+            maintenant.month,
+            maintenant.day + 11,
+            12,
+          ),
         ),
         itemListe(
           id: 'b',
