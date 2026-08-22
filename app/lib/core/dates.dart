@@ -12,7 +12,9 @@ library;
 int joursCalendairesJusqua(DateTime cible, {DateTime? depuis}) {
   final maintenant = depuis ?? DateTime.now();
 
-  return DateTime(cible.year, cible.month, cible.day)
-      .difference(DateTime(maintenant.year, maintenant.month, maintenant.day))
+  return DateTime.utc(cible.year, cible.month, cible.day)
+      .difference(
+        DateTime.utc(maintenant.year, maintenant.month, maintenant.day),
+      )
       .inDays;
 }

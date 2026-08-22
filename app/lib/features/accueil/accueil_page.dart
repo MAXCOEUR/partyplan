@@ -23,7 +23,9 @@ import '../evenement/presence_vers_pastille.dart';
 
 /// Écran d'accueil : les événements de la personne, à venir puis passés (EF-EVT-05).
 class AccueilPage extends ConsumerWidget {
-  const AccueilPage({super.key});
+  const AccueilPage({super.key, this.maintenant});
+
+  final DateTime? maintenant;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -81,7 +83,7 @@ class AccueilPage extends ConsumerWidget {
                 ),
                 data: (liste) => liste.isEmpty
                     ? _etatVide(context)
-                    : _Liste(evenements: liste),
+                    : _Liste(evenements: liste, maintenant: maintenant),
               ),
             ),
           ),
@@ -120,9 +122,10 @@ class AccueilPage extends ConsumerWidget {
 /// L'appartenance à une section vient du serveur (`isPast`) et n'est jamais recalculée :
 /// l'horloge d'un téléphone peut être fausse, et une soirée passerait du mauvais côté.
 class _Liste extends ConsumerWidget {
-  const _Liste({required this.evenements});
+  const _Liste({required this.evenements, this.maintenant});
 
   final List<EvenementDeLaListe> evenements;
+  final DateTime? maintenant;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -144,7 +147,7 @@ class _Liste extends ConsumerWidget {
         ),
         children: [
           if (aVenir.isNotEmpty) ...[
-            _ProchaineSoiree(evenement: aVenir.first),
+            _ProchaineSoiree(evenement: aVenir.first, maintenant: maintenant),
             const SizedBox(height: PpSpacing.lg),
             PpEyebrow(l10n.evenementsAVenir),
             const SizedBox(height: PpSpacing.sm),
@@ -172,14 +175,15 @@ class _Liste extends ConsumerWidget {
 /// soirée à venir. Étendu aux autres surfaces, il cesserait de désigner quoi que ce
 /// soit.
 class _ProchaineSoiree extends StatelessWidget {
-  const _ProchaineSoiree({required this.evenement});
+  const _ProchaineSoiree({required this.evenement, this.maintenant});
 
   final EvenementDeLaListe evenement;
+  final DateTime? maintenant;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final jours = joursCalendairesJusqua(evenement.debut);
+    final jours = joursCalendairesJusqua(evenement.debut, depuis: maintenant);
 
     return Container(
       padding: const EdgeInsets.all(PpSpacing.lg),

@@ -42,24 +42,15 @@ void main() {
     ) async {
       // L'accueil d'une application de soirées doit répondre à « c'est bientôt ? »
       // avant tout le reste. Une liste plate ne répond à rien.
-      final maintenant = DateTime.now();
+      final maintenant = DateTime(2027, 3, 20, 23, 59);
       await _monter(tester, [
         itemListe(
           id: 'a',
           nom: 'Crémaillère',
-          debut: DateTime(
-            maintenant.year,
-            maintenant.month,
-            maintenant.day + 11,
-            12,
-          ),
+          debut: DateTime(2027, 3, 31, 12),
         ),
-        itemListe(
-          id: 'b',
-          nom: 'Plus tard',
-          debut: DateTime.now().add(const Duration(days: 40)),
-        ),
-      ]);
+        itemListe(id: 'b', nom: 'Plus tard', debut: DateTime(2027, 4, 29, 12)),
+      ], maintenant: maintenant);
 
       expect(find.textContaining('Dans 11 jours'), findsOneWidget);
       // La soirée annoncée est la plus proche, pas la première venue.
@@ -137,8 +128,9 @@ void main() {
 
 Future<void> _monter(
   WidgetTester tester,
-  List<EvenementDeLaListe> evenements,
-) async {
+  List<EvenementDeLaListe> evenements, {
+  DateTime? maintenant,
+}) async {
   final conteneur = ProviderContainer(
     overrides: [
       sessionStoreProvider.overrideWithValue(SessionStoreDouble()),
@@ -147,5 +139,9 @@ Future<void> _monter(
   );
   addTearDown(conteneur.dispose);
 
-  await monterEcran(tester, const AccueilPage(), conteneur: conteneur);
+  await monterEcran(
+    tester,
+    AccueilPage(maintenant: maintenant),
+    conteneur: conteneur,
+  );
 }

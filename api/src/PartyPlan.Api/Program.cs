@@ -1,4 +1,5 @@
 using System.Diagnostics.CodeAnalysis;
+using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.HttpOverrides;
 using PartyPlan.Api.Setup;
 using PartyPlan.Infrastructure;
@@ -33,6 +34,14 @@ builder.Services.AddInfrastructure(builder.Configuration);
 
 var modules = ModuleRegistry.Discover([.. ModuleAssemblies.All]);
 builder.Services.AddModules(builder.Configuration, modules);
+
+// Les énumérations sortent nommées, jamais numérotées. Sans ce réglage, un rôle
+// plateforme partait en « 0 » ou « 2 » là où le reste de l'API et l'application le
+// nomment : la liste des comptes n'a jamais pu s'afficher, l'écran annonçant une panne
+// réseau alors que le serveur avait répondu. Un nombre est en outre un mauvais contrat —
+// insérer une valeur au milieu de l'énumération renumérote silencieusement les autres.
+builder.Services.ConfigureHttpJsonOptions(options =>
+    options.SerializerOptions.Converters.Add(new JsonStringEnumConverter()));
 
 builder.Services.AddPartyPlanProblemDetails();
 builder.Services.AddPartyPlanRateLimiting(builder.Configuration);
