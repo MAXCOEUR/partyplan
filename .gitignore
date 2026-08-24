@@ -71,3 +71,10 @@ app/lib/l10n/generated/
 # le paquet généré n'est pas compilable en l'état et n'a aucun appelant. Seul
 # docs/api/openapi.json est versionné, comme trace de revue.
 app/packages/partyplan_api/
+
+# Captures de vérification prises à la main pendant le développement. Utiles sur le
+# moment, périmées le lendemain : elles montrent une interface qui a déjà changé, et
+# personne ne pense à les remplacer. Les captures qui doivent durer — fiche Google Play,
+# site vitrine — vivent auprès de ce qu'elles illustrent, pas à la racine du dépôt.
+/*.png
+/*.jpg
