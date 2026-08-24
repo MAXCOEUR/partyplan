@@ -63,8 +63,6 @@ services:
       Google__IosClientId: ${GOOGLE_IOS_CLIENT_ID:-}
       # Notifications poussées journalisées en console faute de clé — NF-DEV-04
       Push__FirebaseServiceAccountJson: ${FIREBASE_SERVICE_ACCOUNT_JSON:-}
-      # Chiffrement des secrets de double authentification
-      Totp__Name: PartyPlan (dev)
       App__PublicBaseUrl: http://localhost:${WEB_PORT:-8080}
       Media__RootPath: /tmp/partyplan-media
       Media__PublicBaseUrl: http://localhost:${API_PORT:-5080}/media
