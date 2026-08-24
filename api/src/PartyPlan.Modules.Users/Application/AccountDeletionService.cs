@@ -98,8 +98,6 @@ public sealed class AccountDeletionService(
         utilisateur.Email = null;
         utilisateur.EmailVerifiedAt = null;
         utilisateur.PasswordHash = null;
-        utilisateur.TotpSecretEncrypted = null;
-        utilisateur.TotpEnabledAt = null;
         utilisateur.GoogleSubject = null;
         utilisateur.AppleSubject = null;
         utilisateur.AvatarUrl = null;
@@ -196,7 +194,6 @@ public sealed class AccountDeletionService(
                 role = utilisateur.PlatformRole.ToString(),
                 adresseVerifiee = utilisateur.EmailVerifiedAt,
                 motDePasseDefini = utilisateur.PasswordHash is not null,
-                doubleAuthentification = utilisateur.TotpEnabledAt is not null,
                 connexionGoogle = utilisateur.GoogleSubject is not null,
                 connexionApple = utilisateur.AppleSubject is not null,
                 utilisateur.LastLoginAt,

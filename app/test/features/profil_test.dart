@@ -17,7 +17,6 @@ Profil _profil({String role = 'User'}) => Profil(
   fuseau: 'Europe/Paris',
   rolePlateforme: role,
   aUnMotDePasse: true,
-  doubleAuthentification: false,
   motDePasseAChanger: false,
   creeLe: DateTime(2026, 8, 1),
 );

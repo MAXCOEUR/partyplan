@@ -97,49 +97,11 @@ public sealed class ProductionGuardTests
     }
 
     [Fact]
-    public void En_production_la_cle_de_chiffrement_est_obligatoire()
-    {
-        // Sans elle, les secrets de double authentification ne peuvent pas être chiffrés
-        // au repos (RG-ADM-04).
-        var configuration = Build(new Dictionary<string, string?>
-        {
-            ["Jwt:SigningKey"] = new string('k', 48),
-            ["Admin:Email"] = "admin@partyplan.fr",
-            ["Admin:Password"] = "UnMotDePasseSolide2026",
-        });
-
-        Should.Throw<InvalidOperationException>(
-            () => ProductionGuard.Validate(Environment("Production"), configuration))
-            .Message.ShouldContain("Security:EncryptionKey");
-    }
-
-    [Fact]
-    public void En_production_la_cle_de_chiffrement_doit_differer_de_la_cle_de_signature()
-    {
-        // Une clé unique ferait qu'une compromission donnerait à la fois la capacité de
-        // forger des sessions et celle de lire les seconds facteurs.
-        var partagee = new string('k', 48);
-
-        var configuration = Build(new Dictionary<string, string?>
-        {
-            ["Jwt:SigningKey"] = partagee,
-            ["Security:EncryptionKey"] = partagee,
-            ["Admin:Email"] = "admin@partyplan.fr",
-            ["Admin:Password"] = "UnMotDePasseSolide2026",
-        });
-
-        Should.Throw<InvalidOperationException>(
-            () => ProductionGuard.Validate(Environment("Production"), configuration))
-            .Message.ShouldContain("deux clés distinctes");
-    }
-
-    [Fact]
     public void Une_configuration_de_production_correcte_passe()
     {
         var configuration = Build(new Dictionary<string, string?>
         {
             ["Jwt:SigningKey"] = new string('k', 48),
-            ["Security:EncryptionKey"] = Convert.ToBase64String(new byte[32]),
             ["Admin:Email"] = "admin@partyplan.fr",
             ["Admin:Password"] = "UnMotDePasseSolide2026",
         });

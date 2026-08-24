@@ -72,7 +72,7 @@ public sealed class ExternalSignInService(
     /// contournement.
     /// </para>
     /// </summary>
-    public async Task<Result<LoginOutcome>> SignInAsync(
+    public async Task<Result<SessionTokens>> SignInAsync(
         string provider,
         string idToken,
         string? deviceLabel,
@@ -316,7 +316,7 @@ public sealed class ExternalSignInService(
             _ => Task.FromResult<User?>(null),
         };
 
-    private async Task<Result<LoginOutcome>> OuvrirAsync(
+    private async Task<Result<SessionTokens>> OuvrirAsync(
         User utilisateur,
         string? deviceLabel,
         IPAddress? ip,

@@ -18,26 +18,6 @@ public sealed record SessionTokens(
     DateTimeOffset RefreshTokenExpiresAt);
 
 /// <summary>
-/// Résultat d'une connexion : soit une session ouverte, soit un défi de second facteur.
-/// <para>
-/// Deux formes plutôt qu'une session partiellement valide : un jeton d'accès émis avant
-/// la vérification du second facteur donnerait accès à l'API sans lui, ce qui viderait
-/// la double authentification de son sens.
-/// </para>
-/// </summary>
-public sealed record LoginOutcome(SessionTokens? Session, MfaChallenge? Challenge)
-{
-    public static LoginOutcome Connected(SessionTokens session) => new(session, null);
-
-    public static LoginOutcome NeedsSecondFactor(MfaChallenge challenge) => new(null, challenge);
-
-    public bool RequiresSecondFactor => Challenge is not null;
-}
-
-/// <summary>Défi de second facteur, à présenter avec un code temporel ou de secours.</summary>
-public sealed record MfaChallenge(string ChallengeToken, DateTimeOffset ExpiresAt);
-
-/// <summary>
 /// Inscription, connexion, rafraîchissement et déconnexion.
 /// <para>
 /// Les échecs de connexion sont volontairement indistincts : adresse inconnue, mot de
@@ -130,7 +110,7 @@ public sealed class AuthenticationService(
             .ConfigureAwait(false);
     }
 
-    public async Task<Result<LoginOutcome>> LoginAsync(
+    public async Task<Result<SessionTokens>> LoginAsync(
         string emailAddress,
         string password,
         string? deviceLabel,
@@ -175,33 +155,16 @@ public sealed class AuthenticationService(
 
         utilisateur.FailedLoginCount = 0;
 
-        // Second facteur exigé : aucune session n'est ouverte à ce stade, seul un défi
-        // de courte durée est remis (EF-AUTH-12).
-        if (utilisateur.TotpEnabledAt is not null)
-        {
-            await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
-
-            var defi = tokens.CreateMfaChallenge(utilisateur.Id);
-
-            return LoginOutcome.NeedsSecondFactor(new MfaChallenge(defi.Value, defi.ExpiresAt));
-        }
-
+        // Le mot de passe vérifié, la session est ouverte : il n'y a pas de seconde
+        // étape. La double authentification est retirée du produit — ADR 0007.
         utilisateur.LastLoginAt = clock.UtcNow;
 
-        var session = await OpenSessionAsync(utilisateur, deviceLabel, ip, cancellationToken)
+        return await OpenSessionAsync(utilisateur, deviceLabel, ip, cancellationToken)
             .ConfigureAwait(false);
-
-        return LoginOutcome.Connected(session);
     }
 
-    /// <summary>
-    /// Achève une connexion par fournisseur tiers.
-    /// <para>
-    /// La double authentification s'applique aussi ici : sans cela, la connexion tierce
-    /// serait une porte de contournement du second facteur.
-    /// </para>
-    /// </summary>
-    public async Task<Result<LoginOutcome>> CompleteExternalSignInAsync(
+    /// <summary>Achève une connexion par fournisseur tiers.</summary>
+    public async Task<Result<SessionTokens>> CompleteExternalSignInAsync(
         Guid userId,
         string? deviceLabel,
         IPAddress? ip,
@@ -214,44 +177,10 @@ public sealed class AuthenticationService(
         if (utilisateur is null || utilisateur.IsSuspended)
         {
             return InvalidCredentials;
-        }
-
-        if (utilisateur.TotpEnabledAt is not null)
-        {
-            var defi = tokens.CreateMfaChallenge(utilisateur.Id);
-
-            return LoginOutcome.NeedsSecondFactor(new MfaChallenge(defi.Value, defi.ExpiresAt));
         }
 
         utilisateur.LastLoginAt = clock.UtcNow;
         utilisateur.FailedLoginCount = 0;
-
-        var session = await OpenSessionAsync(utilisateur, deviceLabel, ip, cancellationToken)
-            .ConfigureAwait(false);
-
-        return LoginOutcome.Connected(session);
-    }
-
-    /// <summary>
-    /// Achève une connexion après vérification du second facteur. La vérification du code
-    /// est confiée à l'appelant : ce service ne connaît pas les mécanismes de TOTP.
-    /// </summary>
-    public async Task<Result<SessionTokens>> CompleteMfaAsync(
-        Guid userId,
-        string? deviceLabel,
-        IPAddress? ip,
-        CancellationToken cancellationToken)
-    {
-        var utilisateur = await db.Users
-            .FirstOrDefaultAsync(u => u.Id == userId && u.DeletedAt == null, cancellationToken)
-            .ConfigureAwait(false);
-
-        if (utilisateur is null || utilisateur.IsSuspended)
-        {
-            return InvalidCredentials;
-        }
-
-        utilisateur.LastLoginAt = clock.UtcNow;
 
         return await OpenSessionAsync(utilisateur, deviceLabel, ip, cancellationToken)
             .ConfigureAwait(false);
@@ -295,7 +224,6 @@ public sealed class AuthenticationService(
             utilisateur.Id,
             utilisateur.PlatformRole,
             session.Id,
-            utilisateur.TotpEnabledAt is not null,
             utilisateur.MustChangePassword);
 
         await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
@@ -354,7 +282,6 @@ public sealed class AuthenticationService(
             utilisateur.Id,
             utilisateur.PlatformRole,
             session.Id,
-            utilisateur.TotpEnabledAt is not null,
             utilisateur.MustChangePassword);
 
         return new SessionTokens(

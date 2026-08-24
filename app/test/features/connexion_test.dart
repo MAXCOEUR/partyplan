@@ -258,7 +258,6 @@ class _ServeurAuth extends Interceptor {
         data: {
           'accessToken': 'jeton-test',
           'refreshToken': 'rafraichissement-test',
-          'requiresSecondFactor': false,
         },
       ),
     );

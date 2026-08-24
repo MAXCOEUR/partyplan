@@ -42,16 +42,8 @@ public sealed record UpdateProfileRequest(
 public sealed record DeleteAccountRequest(
     [Required][EmailAddress] string EmailConfirmation);
 
-public sealed record TotpActivateRequest([Required] string Code);
-
-public sealed record TotpDisableRequest([Required] string Password);
-
 /// <summary>Jeton d'identité obtenu auprès du fournisseur par le client.</summary>
 public sealed record ExternalSignInRequest([Required] string IdToken);
-
-public sealed record MfaVerifyRequest(
-    [Required] string ChallengeToken,
-    [Required] string Code);
 
 /// <summary>Jetons remis au client.</summary>
 public sealed record TokenResponse(
@@ -59,16 +51,3 @@ public sealed record TokenResponse(
     DateTimeOffset AccessTokenExpiresAt,
     string RefreshToken,
     DateTimeOffset RefreshTokenExpiresAt);
-
-/// <summary>
-/// Réponse de connexion. Soit les jetons de session, soit un défi de second facteur —
-/// jamais les deux.
-/// </summary>
-public sealed record LoginResponse(
-    bool RequiresSecondFactor,
-    string? AccessToken,
-    DateTimeOffset? AccessTokenExpiresAt,
-    string? RefreshToken,
-    DateTimeOffset? RefreshTokenExpiresAt,
-    string? ChallengeToken,
-    DateTimeOffset? ChallengeExpiresAt);

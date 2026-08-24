@@ -27,11 +27,6 @@ public sealed class User : IAuditable, ISoftDeletable
     /// <summary>Imposé au compte administrateur amorcé (RG-ADM-10).</summary>
     public bool MustChangePassword { get; set; }
 
-    /// <summary>Secret TOTP chiffré au repos. Jamais renvoyé par l'API après l'enrôlement.</summary>
-    public string? TotpSecretEncrypted { get; set; }
-
-    public DateTimeOffset? TotpEnabledAt { get; set; }
-
     /// <summary>Rôle de portée « instance » (§3.1). N'accorde aucun droit dans un événement : RG-ADM-01.</summary>
     public PlatformRole PlatformRole { get; set; } = PlatformRole.User;
 

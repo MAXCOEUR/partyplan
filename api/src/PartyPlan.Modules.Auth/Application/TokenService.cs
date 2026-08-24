@@ -49,23 +49,8 @@ public sealed class TokenService(IOptions<TokenOptions> options, IClock clock) :
 
     public const string SessionClaim = "pp:session";
 
-    /// <summary>Double authentification active. Exigée pour tout rôle plateforme (RG-ADM-04).</summary>
-    public const string TotpClaim = "pp:totp";
-
     /// <summary>Mot de passe à changer avant toute autre action (RG-ADM-10).</summary>
     public const string MustChangePasswordClaim = "pp:must_change_password";
-
-    /// <summary>
-    /// Audience des jetons intermédiaires de double authentification. Distincte de celle
-    /// des jetons d'accès : c'est ce qui empêche d'utiliser l'un pour l'autre.
-    /// </summary>
-    public const string MfaAudienceSuffix = "-mfa";
-
-    /// <summary>
-    /// Durée du jeton intermédiaire. Le temps de lire un code sur son téléphone, pas
-    /// davantage.
-    /// </summary>
-    public const int MfaChallengeMinutes = 5;
 
     private TokenOptions Options => options.Value;
 
@@ -73,7 +58,6 @@ public sealed class TokenService(IOptions<TokenOptions> options, IClock clock) :
         Guid userId,
         PlatformRole role,
         Guid sessionId,
-        bool totpEnabled,
         bool mustChangePassword)
     {
         var revendications = new List<Claim>
@@ -84,69 +68,14 @@ public sealed class TokenService(IOptions<TokenOptions> options, IClock clock) :
             new(SessionClaim, sessionId.ToString()),
         };
 
-        // Revendications posées seulement lorsqu'elles sont vraies : une politique
+        // Revendication posée seulement lorsqu'elle est vraie : une politique
         // d'autorisation exige la présence d'une revendication, pas sa valeur.
-        if (totpEnabled)
-        {
-            revendications.Add(new Claim(TotpClaim, "true"));
-        }
-
         if (mustChangePassword)
         {
             revendications.Add(new Claim(MustChangePasswordClaim, "true"));
         }
 
         return Create([.. revendications]);
-    }
-
-    public AccessToken CreateMfaChallenge(Guid userId)
-    {
-        var expiration = clock.UtcNow.AddMinutes(MfaChallengeMinutes);
-
-        var descripteur = new SecurityTokenDescriptor
-        {
-            Issuer = Options.Issuer,
-            Audience = Options.Audience + MfaAudienceSuffix,
-            Subject = new ClaimsIdentity(
-            [
-                new Claim(JwtRegisteredClaimNames.Sub, userId.ToString()),
-            ]),
-            NotBefore = clock.UtcNow.UtcDateTime,
-            Expires = expiration.UtcDateTime,
-            SigningCredentials = SigningCredentials(),
-        };
-
-        return new AccessToken(new JsonWebTokenHandler().CreateToken(descripteur), expiration);
-    }
-
-    public Guid? ReadMfaChallenge(string token)
-    {
-        var parametres = new TokenValidationParameters
-        {
-            ValidateIssuer = true,
-            ValidIssuer = Options.Issuer,
-            ValidateAudience = true,
-            ValidAudience = Options.Audience + MfaAudienceSuffix,
-            ValidateIssuerSigningKey = true,
-            IssuerSigningKey = SigningKey(),
-            ValidateLifetime = true,
-            ClockSkew = TimeSpan.FromSeconds(30),
-        };
-
-        var resultat = new JsonWebTokenHandler()
-            .ValidateTokenAsync(token, parametres)
-            .GetAwaiter()
-            .GetResult();
-
-        if (!resultat.IsValid)
-        {
-            return null;
-        }
-
-        return resultat.Claims.TryGetValue(JwtRegisteredClaimNames.Sub, out var sujet)
-               && Guid.TryParse(sujet?.ToString(), out var identifiant)
-            ? identifiant
-            : null;
     }
 
     public RefreshToken CreateRefreshToken()

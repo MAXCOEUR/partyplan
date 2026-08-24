@@ -5,10 +5,7 @@ using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
 using PartyPlan.IntegrationTests.Infrastructure;
-using PartyPlan.Modules.Auth.Application;
-using PartyPlan.SharedKernel.Contracts;
 using PartyPlan.SharedKernel.Enums;
 using Shouldly;
 using Xunit;
@@ -214,16 +211,22 @@ public sealed class CompteEtAdministrationTests(PartyPlanApiFixture fixture)
     }
 
     [Fact]
-    public async Task Un_role_plateforme_sans_second_facteur_est_refuse()
+    public async Task Un_role_plateforme_accede_sans_second_facteur()
     {
+        // ADR 0007 : la double authentification n'est plus exigée des rôles plateforme.
+        // Elle rendait l'administration inatteignable — le compte amorcé n'en a pas,
+        // l'activer demandait d'y accéder, et le back-office répondait « accès refusé »
+        // à son seul administrateur.
+        //
+        // Le mot de passe devient donc l'unique protection d'un compte capable de
+        // réinitialiser et de supprimer tous les autres. Ce test fixe ce choix pour
+        // qu'un retour en arrière soit délibéré et non accidentel.
         using var client = fixture.CreateClient();
         var adresse = Adresse();
         await Inscrire(client, adresse);
         var identifiant = await IdentifiantDe(adresse);
 
-        // Promotion forcée en base, sans double authentification : l'API la refuserait,
-        // et c'est précisément l'état dangereux que la garde doit couvrir.
-        await PromouvoirAsync(identifiant, PlatformRole.PlatformAdmin, avecTotp: false);
+        await PromouvoirAsync(identifiant, PlatformRole.PlatformAdmin);
 
         var session = await client.PostAsJsonAsync("/v1/auth/login", new
         {
@@ -237,9 +240,8 @@ public sealed class CompteEtAdministrationTests(PartyPlanApiFixture fixture)
         using var admin = fixture.CreateClient();
         admin.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", acces);
 
-        // RG-ADM-04 : sans second facteur, le rôle ne donne aucun accès.
         (await admin.GetAsync(new Uri("/v1/admin/users", UriKind.Relative)))
-            .StatusCode.ShouldBe(HttpStatusCode.Forbidden);
+            .StatusCode.ShouldBe(HttpStatusCode.OK);
     }
 
     [Fact]
@@ -250,11 +252,10 @@ public sealed class CompteEtAdministrationTests(PartyPlanApiFixture fixture)
         var jetons = await Inscrire(client, adresse);
         var identifiant = await IdentifiantDe(adresse);
 
-        var secret = await PromouvoirAsync(identifiant, PlatformRole.Support, avecTotp: true);
+        await PromouvoirAsync(identifiant, PlatformRole.Support);
 
-        // Le rôle est porté par le jeton : une nouvelle session est nécessaire. Et le
-        // compte portant désormais un second facteur, la connexion se fait en deux temps.
-        var acces = await ConnecterEnDeuxTempsAsync(client, adresse, secret!);
+        // Le rôle est porté par le jeton : une nouvelle session est nécessaire.
+        var acces = await ConnecterAsync(client, adresse);
 
         using var support = fixture.CreateClient();
         support.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", acces);
@@ -347,8 +348,8 @@ public sealed class CompteEtAdministrationTests(PartyPlanApiFixture fixture)
 
         creation.StatusCode.ShouldBe(HttpStatusCode.OK);
 
-        var secret = await PromouvoirAsync(identifiant, PlatformRole.PlatformAdmin, avecTotp: true);
-        var acces = await ConnecterEnDeuxTempsAsync(client, adresse, secret!);
+        await PromouvoirAsync(identifiant, PlatformRole.PlatformAdmin);
+        var acces = await ConnecterAsync(client, adresse);
 
         using var admin = fixture.CreateClient();
         admin.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", acces);
@@ -376,8 +377,8 @@ public sealed class CompteEtAdministrationTests(PartyPlanApiFixture fixture)
         await Inscrire(client, cible);
         var identifiantCible = await IdentifiantDe(cible);
 
-        var secret = await PromouvoirAsync(identifiantAdmin, PlatformRole.Support, avecTotp: true);
-        var acces = await ConnecterEnDeuxTempsAsync(client, adresseAdmin, secret!);
+        await PromouvoirAsync(identifiantAdmin, PlatformRole.Support);
+        var acces = await ConnecterAsync(client, adresseAdmin);
 
         using var support = fixture.CreateClient();
         support.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", acces);
@@ -482,66 +483,35 @@ public sealed class CompteEtAdministrationTests(PartyPlanApiFixture fixture)
             await db.SaveChangesAsync();
         });
 
-    /// <summary>
-    /// Promeut directement en base. <paramref name="avecTotp"/> simule un second facteur
-    /// actif : l'enrôlement complet suppose un code temporel, hors sujet ici.
-    /// </summary>
-    private async Task<byte[]?> PromouvoirAsync(Guid identifiant, PlatformRole role, bool avecTotp)
-    {
-        byte[]? secret = avecTotp ? Totp.GenerateSecret() : null;
-
-        // Le secret est chiffré par le même service que l'application : le test vérifie
-        // ainsi aussi que le format stocké est relisible.
-        var protecteur = fixture.Services.GetRequiredService<ISecretProtector>();
-
+    /// <summary>Promeut directement en base.</summary>
+    private async Task PromouvoirAsync(Guid identifiant, PlatformRole role) =>
         await fixture.WithDatabaseAsync(async db =>
         {
             var compte = await db.Users.SingleAsync(u => u.Id == identifiant);
             compte.PlatformRole = role;
-            compte.TotpEnabledAt = avecTotp ? DateTimeOffset.UtcNow : null;
-            compte.TotpSecretEncrypted = secret is null ? null : protecteur.Protect(secret);
             await db.SaveChangesAsync();
         });
 
-        return secret;
-    }
-
     /// <summary>
-    /// Déroule la connexion en deux temps : mot de passe, puis code temporel. Renvoie le
-    /// jeton d'accès.
+    /// Ouvre une session et renvoie le jeton d'accès.
+    /// <para>
+    /// En une seule étape : la double authentification est retirée du produit — ADR 0007 —
+    /// y compris pour les rôles plateforme.
+    /// </para>
     /// </summary>
-    private static async Task<string> ConnecterEnDeuxTempsAsync(
-        HttpClient client,
-        string adresse,
-        byte[] secret)
+    private static async Task<string> ConnecterAsync(HttpClient client, string adresse)
     {
-        var premiere = await client.PostAsJsonAsync("/v1/auth/login", new
+        var connexion = await client.PostAsJsonAsync("/v1/auth/login", new
         {
             email = adresse,
             password = MotDePasseValide,
         });
 
-        premiere.StatusCode.ShouldBe(HttpStatusCode.OK);
+        connexion.StatusCode.ShouldBe(HttpStatusCode.OK);
 
-        var corps = (await premiere.Content.ReadFromJsonAsync<JsonDocument>())!.RootElement;
+        var corps = (await connexion.Content.ReadFromJsonAsync<JsonDocument>())!.RootElement;
 
-        // Aucun jeton d'accès à la première étape : c'est ce qui distingue une double
-        // authentification réelle d'un affichage décoratif.
-        corps.GetProperty("requiresSecondFactor").GetBoolean().ShouldBeTrue();
-        corps.GetProperty("accessToken").ValueKind.ShouldBe(JsonValueKind.Null);
-
-        var defi = corps.GetProperty("challengeToken").GetString();
-
-        var seconde = await client.PostAsJsonAsync("/v1/auth/mfa/verify", new
-        {
-            challengeToken = defi,
-            code = Totp.Compute(secret, DateTimeOffset.UtcNow),
-        });
-
-        seconde.StatusCode.ShouldBe(HttpStatusCode.OK);
-
-        return (await seconde.Content.ReadFromJsonAsync<JsonDocument>())!
-            .RootElement.GetProperty("accessToken").GetString()!;
+        return corps.GetProperty("accessToken").GetString()!;
     }
 }
 

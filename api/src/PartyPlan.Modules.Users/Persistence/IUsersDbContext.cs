@@ -22,7 +22,6 @@ public interface IUsersDbContext
 
     DbSet<EmailVerificationToken> EmailVerificationTokens { get; }
 
-    DbSet<TotpRecoveryCode> TotpRecoveryCodes { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

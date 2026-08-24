@@ -162,8 +162,7 @@ class _SecuritePageState extends ConsumerState<SecuritePage> {
               ],
             ),
           ),
-          const SizedBox(height: PpSpacing.lg),
-          const _EntreeSecondFacteur(),
+
           const SizedBox(height: PpSpacing.lg),
           const _EntreeConnexions(),
           const SizedBox(height: PpSpacing.lg),
@@ -288,44 +287,6 @@ class _EntreeConnexions extends StatelessWidget {
         subtitle: Text(
           'Mot de passe et services tiers rattachés à ton compte',
           style: theme.textTheme.bodySmall,
-        ),
-        trailing: const Icon(Icons.chevron_right_rounded),
-      ),
-    );
-  }
-}
-
-class _EntreeSecondFacteur extends ConsumerWidget {
-  const _EntreeSecondFacteur();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final profil = ref.watch(profilProvider).value;
-    final theme = Theme.of(context);
-    final active = profil?.doubleAuthentification ?? false;
-    final couleur = active
-        ? PpColors.texteSur(PpColors.vert, theme.brightness)
-        : PpColors.texteSur(PpColors.orange, theme.brightness);
-
-    return PpCard(
-      padding: EdgeInsets.zero,
-      onTap: () => context.push(PpRoutes.secondFacteurReglage),
-      child: ListTile(
-        onTap: () => context.push(PpRoutes.secondFacteurReglage),
-        minVerticalPadding: PpSpacing.md,
-        leading: Icon(
-          active ? Icons.verified_user_rounded : Icons.shield_outlined,
-          color: couleur,
-        ),
-        title: Text(
-          'Double authentification',
-          style: theme.textTheme.titleMedium,
-        ),
-        subtitle: Text(
-          active
-              ? 'Active — un code est demandé à chaque connexion'
-              : 'Inactive — ton mot de passe est ta seule protection',
-          style: theme.textTheme.bodySmall?.copyWith(color: couleur),
         ),
         trailing: const Icon(Icons.chevron_right_rounded),
       ),

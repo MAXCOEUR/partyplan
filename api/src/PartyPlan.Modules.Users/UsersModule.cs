@@ -40,12 +40,7 @@ public sealed class UsersModule : IModule
             .ValidateOnStart();
 
         services.AddScoped<AdminSeeder>();
-        services.AddScoped<TotpService>();
         services.AddScoped<ExternalSignInService>();
-
-        services.AddOptions<TotpIssuerOptions>()
-            .Bind(configuration.GetSection(TotpIssuerOptions.SectionName))
-            .ValidateOnStart();
     }
 
     public void MapEndpoints(IEndpointRouteBuilder routes)

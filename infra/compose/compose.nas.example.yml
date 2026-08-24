@@ -149,7 +149,6 @@ services:
       # ---------- Chiffrement des secrets de double authentification ----------
       # RG-AUTH-10 : doit différer de Jwt__SigningKey, l'API refuse de démarrer
       # sinon. openssl rand -base64 32
-      Security__EncryptionKey: REMPLACER_CLE_CHIFFREMENT
       Totp__Name: PartyPlan
 
       # ---------- Amorçage de l'administrateur — RG-ADM-09 à RG-ADM-12 ----------

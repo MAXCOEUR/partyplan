@@ -69,7 +69,6 @@ public sealed record UserRecord(
     PlatformRole PlatformRole,
     bool EmailVerified,
     bool HasPassword,
-    bool TotpEnabled,
     bool GoogleLinked,
     bool AppleLinked,
     bool IsSuspended,

@@ -13,9 +13,6 @@ public static class PartyPlanClaims
 
     public const string SessionId = "pp:session";
 
-    /// <summary>Double authentification active (RG-ADM-04).</summary>
-    public const string TotpEnabled = "pp:totp";
-
     /// <summary>Mot de passe à changer avant toute autre action (RG-ADM-10).</summary>
     public const string MustChangePassword = "pp:must_change_password";
 }

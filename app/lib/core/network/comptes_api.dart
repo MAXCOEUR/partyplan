@@ -32,72 +32,10 @@ class ComptesApi {
     'displayName': nomAffiche,
   });
 
-  /// Connexion. Renvoie le résultat : session ouverte, ou second facteur exigé.
-  Future<ResultatConnexion> connecter({
-    required String email,
-    required String motDePasse,
-  }) async {
-    final reponse = await _client.post<Map<String, dynamic>>(
-      '/auth/login',
-      corps: {'email': email, 'password': motDePasse},
-      analyser: (corps) => corps! as Map<String, dynamic>,
-    );
-
-    final resultat = ResultatConnexion.depuisJson(reponse);
-
-    if (!resultat.secondFacteurRequis) {
-      await _enregistrer(reponse);
-    }
-
-    return resultat;
-  }
-
-  /// Achève la connexion avec un code temporel ou un code de secours.
-  Future<void> verifierSecondFacteur({
-    required String jetonDefi,
-    required String code,
-  }) async {
-    final reponse = await _client.post<Map<String, dynamic>>(
-      '/auth/mfa/verify',
-      corps: {'challengeToken': jetonDefi, 'code': code},
-      analyser: (corps) => corps! as Map<String, dynamic>,
-    );
-
-    await _enregistrer(reponse);
-  }
-
-  // --------------------------------------------------- double authentification ----
-
-  Future<EnrolementTotp> preparerSecondFacteur() =>
-      _client.post<EnrolementTotp>(
-        '/auth/totp/setup',
-        analyser: (corps) =>
-            EnrolementTotp.depuisJson(corps! as Map<String, dynamic>),
-      );
-
-  Future<List<String>> activerSecondFacteur(String code) =>
-      _client.post<List<String>>(
-        '/auth/totp/activate',
-        corps: {'code': code},
-        analyser: (corps) => [
-          for (final c
-              in (corps! as Map<String, dynamic>)['recoveryCodes']
-                  as List<dynamic>)
-            c as String,
-        ],
-      );
-
-  Future<void> desactiverSecondFacteur(String motDePasse) =>
-      _client.deleteWithBody('/auth/totp', corps: {'password': motDePasse});
-
-  Future<List<String>> regenererCodesDeSecours() => _client.post<List<String>>(
-    '/auth/totp/recovery-codes',
-    analyser: (corps) => [
-      for (final c
-          in (corps! as Map<String, dynamic>)['recoveryCodes'] as List<dynamic>)
-        c as String,
-    ],
-  );
+  /// Connexion. Il n'y a pas de seconde étape : la double authentification est
+  /// retirée du produit (ADR 0007).
+  Future<void> connecter({required String email, required String motDePasse}) =>
+      _ouvrirSession('/auth/login', {'email': email, 'password': motDePasse});
 
   Future<void> deconnecter() async {
     try {

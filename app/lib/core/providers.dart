@@ -130,35 +130,15 @@ class SessionCourante extends AsyncNotifier<EtatSession> {
     return EtatSession.anonyme;
   }
 
-  /// Connexion.
-  ///
-  /// Renvoie le jeton de défi lorsqu'un second facteur est exigé ; l'état reste alors
-  /// « anonyme », car aucune session n'est ouverte à ce stade.
-  Future<String?> connecter({
+  /// Connexion. Une seule étape : la double authentification est retirée du produit
+  /// (ADR 0007).
+  Future<void> connecter({
     required String email,
     required String motDePasse,
   }) async {
-    final resultat = await ref
-        .read(comptesApiProvider)
-        .connecter(email: email, motDePasse: motDePasse);
-
-    if (resultat.secondFacteurRequis) {
-      return resultat.jetonDefi;
-    }
-
-    state = const AsyncData(EtatSession.connecte);
-
-    return null;
-  }
-
-  /// Achève une connexion en attente de second facteur.
-  Future<void> verifierSecondFacteur({
-    required String jetonDefi,
-    required String code,
-  }) async {
     await ref
         .read(comptesApiProvider)
-        .verifierSecondFacteur(jetonDefi: jetonDefi, code: code);
+        .connecter(email: email, motDePasse: motDePasse);
 
     state = const AsyncData(EtatSession.connecte);
   }

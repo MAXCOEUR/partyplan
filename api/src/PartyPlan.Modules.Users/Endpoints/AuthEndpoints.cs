@@ -57,51 +57,12 @@ internal static class AuthEndpoints
                     http.Connection.RemoteIpAddress,
                     cancellationToken).ConfigureAwait(false);
 
-                if (resultat.IsFailure)
-                {
-                    return Problem(resultat.Error!);
-                }
-
-                return Results.Ok(Map(resultat.Value));
-            })
-            .WithName("Login")
-            .WithSummary("Ouvre une session, ou renvoie un défi de second facteur.")
-            .Produces<LoginResponse>()
-            .ProducesValidationProblem();
-
-        groupe.MapPost("/mfa/verify", async (
-                MfaVerifyRequest corps,
-                AuthenticationService service,
-                TotpService totp,
-                ITokenService tokens,
-                HttpContext http,
-                CancellationToken cancellationToken) =>
-            {
-                var utilisateur = tokens.ReadMfaChallenge(corps.ChallengeToken);
-
-                if (utilisateur is null)
-                {
-                    return Problem(ChallengeExpired);
-                }
-
-                if (!await totp.VerifyAsync(utilisateur.Value, corps.Code, cancellationToken)
-                        .ConfigureAwait(false))
-                {
-                    return Problem(TotpService.InvalidCode);
-                }
-
-                var resultat = await service.CompleteMfaAsync(
-                    utilisateur.Value,
-                    http.Request.Headers.UserAgent.ToString(),
-                    http.Connection.RemoteIpAddress,
-                    cancellationToken).ConfigureAwait(false);
-
                 return Respond(resultat);
             })
-            .WithName("VerifySecondFactor")
-            .WithSummary("Achève la connexion avec un code temporel ou un code de secours.")
-            .RequireRateLimiting(AuthAttemptPolicy)
-            .Produces<TokenResponse>();
+            .WithName("Login")
+            .WithSummary("Ouvre une session.")
+            .Produces<TokenResponse>()
+            .ProducesValidationProblem();
 
         // --- Connexions tierces (EF-AUTH-06, EF-AUTH-08) ---
 
@@ -118,14 +79,12 @@ internal static class AuthEndpoints
                     http.Connection.RemoteIpAddress,
                     cancellationToken).ConfigureAwait(false);
 
-                return resultat.IsFailure
-                    ? Problem(resultat.Error!)
-                    : Results.Ok(Map(resultat.Value));
+                return Respond(resultat);
             })
             .WithName("SignInWithGoogle")
             .WithSummary("Connexion Google. Sans clé configurée, renvoie une erreur explicite.")
             .RequireRateLimiting(AuthAttemptPolicy)
-            .Produces<LoginResponse>();
+            .Produces<TokenResponse>();
 
         groupe.MapGet("/providers", async (
                 ExternalSignInService service,
@@ -181,86 +140,6 @@ internal static class AuthEndpoints
             .WithName("UnlinkProvider")
             .WithSummary("Détache une connexion tierce. Refusé si c'est le dernier accès.")
             .RequireAuthorization();
-
-        // --- Double authentification ---
-
-        groupe.MapPost("/totp/setup", async (
-                TotpService totp,
-                HttpContext http,
-                CancellationToken cancellationToken) =>
-            {
-                var utilisateur = UserId(http.User);
-
-                return utilisateur is null
-                    ? Results.Unauthorized()
-                    : Respond(await totp.BeginEnrollmentAsync(utilisateur.Value, cancellationToken)
-                        .ConfigureAwait(false));
-            })
-            .WithName("SetupTotp")
-            .WithSummary("Génère un secret et l'URI otpauth. N'active rien.")
-            .RequireAuthorization()
-            .Produces<TotpEnrollment>();
-
-        groupe.MapPost("/totp/activate", async (
-                TotpActivateRequest corps,
-                TotpService totp,
-                HttpContext http,
-                CancellationToken cancellationToken) =>
-            {
-                var utilisateur = UserId(http.User);
-
-                return utilisateur is null
-                    ? Results.Unauthorized()
-                    : Respond(await totp
-                        .ActivateAsync(utilisateur.Value, corps.Code, cancellationToken)
-                        .ConfigureAwait(false));
-            })
-            .WithName("ActivateTotp")
-            .WithSummary("Active la double authentification et remet les codes de secours.")
-            .RequireAuthorization()
-            .RequireRateLimiting(AuthAttemptPolicy)
-            .Produces<TotpActivation>();
-
-        groupe.MapDelete("/totp", async (
-                [Microsoft.AspNetCore.Mvc.FromBody] TotpDisableRequest corps,
-                TotpService totp,
-                HttpContext http,
-                CancellationToken cancellationToken) =>
-            {
-                var utilisateur = UserId(http.User);
-
-                return utilisateur is null
-                    ? Results.Unauthorized()
-                    : Respond(await totp
-                        .DisableAsync(utilisateur.Value, corps.Password, cancellationToken)
-                        .ConfigureAwait(false));
-            })
-            .WithName("DisableTotp")
-            .WithSummary("Désactive la double authentification. Exige le mot de passe.")
-            .RequireAuthorization();
-
-        groupe.MapPost("/totp/recovery-codes", async (
-                TotpService totp,
-                HttpContext http,
-                CancellationToken cancellationToken) =>
-            {
-                var utilisateur = UserId(http.User);
-
-                if (utilisateur is null)
-                {
-                    return Results.Unauthorized();
-                }
-
-                var codes = await totp
-                    .RegenerateRecoveryCodesAsync(utilisateur.Value, cancellationToken)
-                    .ConfigureAwait(false);
-
-                return Results.Ok(new TotpActivation(codes));
-            })
-            .WithName("RegenerateRecoveryCodes")
-            .WithSummary("Régénère les codes de secours. Les précédents deviennent inutilisables.")
-            .RequireAuthorization()
-            .Produces<TotpActivation>();
 
         groupe.MapPost("/refresh", async (
                 RefreshRequest corps,
@@ -378,28 +257,6 @@ internal static class AuthEndpoints
             .WithSummary("Confirme une adresse à partir du code reçu.")
             .RequireRateLimiting(AuthAttemptPolicy);
     }
-
-    internal static readonly DomainError ChallengeExpired = DomainError.Validation(
-        "auth.challenge_expired",
-        "Cette demande a expiré. Reconnecte-toi.");
-
-    private static LoginResponse Map(LoginOutcome resultat) => resultat.RequiresSecondFactor
-        ? new LoginResponse(
-            true,
-            null,
-            null,
-            null,
-            null,
-            resultat.Challenge!.ChallengeToken,
-            resultat.Challenge.ExpiresAt)
-        : new LoginResponse(
-            false,
-            resultat.Session!.AccessToken,
-            resultat.Session.AccessTokenExpiresAt,
-            resultat.Session.RefreshToken,
-            resultat.Session.RefreshTokenExpiresAt,
-            null,
-            null);
 
     internal static Guid? UserId(ClaimsPrincipal principal) =>
         Guid.TryParse(principal.FindFirstValue(ClaimTypes.NameIdentifier), out var id) ? id : null;

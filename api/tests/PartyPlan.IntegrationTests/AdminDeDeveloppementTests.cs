@@ -69,6 +69,39 @@ public sealed class AdminDeDeveloppementTests(PartyPlanApiFixture fixture)
             .StatusCode.ShouldBe(HttpStatusCode.OK);
     }
 
+    [Fact]
+    public async Task La_liste_des_comptes_nomme_le_role_au_lieu_de_le_numeroter()
+    {
+        // Le rôle sortait en nombre — 0, 1, 2 — là où l'application, l'OpenAPI et le
+        // reste de l'API le nomment. La liste ne s'affichait donc jamais : l'écran
+        // annonçait « impossible de joindre PartyPlan » alors que le serveur avait
+        // répondu 200.
+        await ReamorcerAsync();
+
+        using var client = fixture.CreateClient();
+        var connexion = await client.PostAsJsonAsync(
+            new Uri("/v1/auth/login", UriKind.Relative),
+            new { email = Adresse, password = MotDePasseAmorce });
+
+        var jetons = await connexion.Content.ReadFromJsonAsync<JsonDocument>();
+
+        using var admin = fixture.CreateClient();
+        admin.DefaultRequestHeaders.Authorization =
+            new System.Net.Http.Headers.AuthenticationHeaderValue(
+                "Bearer",
+                jetons!.RootElement.GetProperty("accessToken").GetString());
+
+        var liste = await admin.GetFromJsonAsync<JsonDocument>(
+            new Uri("/v1/admin/users?pageSize=5", UriKind.Relative));
+
+        var premier = liste!.RootElement.GetProperty("items")[0];
+
+        premier.GetProperty("platformRole").ValueKind.ShouldBe(JsonValueKind.String);
+        // Les mêmes noms que le reste de l'API : « User », « Support », « PlatformAdmin ».
+        premier.GetProperty("platformRole").GetString()
+            .ShouldBeOneOf("User", "Support", "PlatformAdmin");
+    }
+
     // ------------------------------------------------------------------ aides ----
 
     /// <summary>Change le mot de passe de l'administrateur, directement en base.</summary>

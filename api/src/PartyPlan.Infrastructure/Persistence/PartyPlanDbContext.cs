@@ -76,7 +76,6 @@ public sealed class PartyPlanDbContext(
 
     public DbSet<EmailVerificationToken> EmailVerificationTokens => Set<EmailVerificationToken>();
 
-    public DbSet<TotpRecoveryCode> TotpRecoveryCodes => Set<TotpRecoveryCode>();
 
     // --- Administration ---
     public DbSet<AdminAuditEntry> AdminAuditEntries => Set<AdminAuditEntry>();

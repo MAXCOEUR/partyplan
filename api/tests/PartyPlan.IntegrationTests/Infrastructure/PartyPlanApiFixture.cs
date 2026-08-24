@@ -73,11 +73,6 @@ public sealed class PartyPlanApiFixture : WebApplicationFactory<Program>, IAsync
                 ["Jwt:SigningKey"] = SigningKey,
                 ["Jwt:Issuer"] = Issuer,
                 ["Jwt:Audience"] = Audience,
-                // Clé de chiffrement des secrets de double authentification. Distincte
-                // de la clé de signature, comme l'exige la garde de production.
-                ["Security:EncryptionKey"] = Convert.ToBase64String(
-                    System.Text.Encoding.ASCII.GetBytes("cle-de-chiffrement-de-test-32oct")),
-                ["Totp:Name"] = "PartyPlan (tests)",
                 ["Admin:Email"] = "admin@partyplan.test",
                 ["Admin:Password"] = "MotDePasseDeTest2026",
                 // Les tests partagent une seule adresse IP : une limite pensée pour un

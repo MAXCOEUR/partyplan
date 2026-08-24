@@ -15,7 +15,6 @@ internal sealed class UserConfiguration : IEntityTypeConfiguration<User>
         builder.Property(u => u.Email).HasColumnType("citext").HasMaxLength(320);
         builder.Property(u => u.DisplayName).HasMaxLength(120).IsRequired();
         builder.Property(u => u.PasswordHash).HasMaxLength(256);
-        builder.Property(u => u.TotpSecretEncrypted).HasMaxLength(512);
         builder.Property(u => u.Locale).HasMaxLength(10).IsRequired();
         builder.Property(u => u.Timezone).HasMaxLength(64).IsRequired();
         builder.Property(u => u.AvatarUrl).HasMaxLength(512);
