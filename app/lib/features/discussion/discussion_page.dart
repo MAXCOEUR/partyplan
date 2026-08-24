@@ -1098,7 +1098,11 @@ class _ListeMentions extends StatelessWidget {
             ListTile(
               key: Key('mention-choix-${membre.id}'),
               dense: true,
-              leading: PpAvatar(nom: membre.nomAffiche, taille: 28),
+              leading: PpAvatar(
+                nom: membre.nomAffiche,
+                urlPhoto: membre.avatarUrl,
+                taille: 28,
+              ),
               title: Text(membre.nomAffiche),
               onTap: () => onChoisir(membre),
             ),

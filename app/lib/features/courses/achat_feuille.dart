@@ -91,7 +91,15 @@ class _AchatFeuilleState extends ConsumerState<AchatFeuille> {
             prixPaye: _montant,
           );
 
-      ref.invalidate(listeCoursesProvider(widget.evenementId));
+      // Un prix payé engendre une dépense côté serveur, et l'effacer la supprime
+      // (EF-CRS-07). Les deux écrans d'argent doivent donc relire : la coquille
+      // d'événement empile ses onglets dans un `IndexedStack`, celui des dépenses n'est
+      // jamais reconstruit, et il resservirait la page chargée avant l'achat. La
+      // dépense existerait sans qu'on la voie.
+      ref
+        ..invalidate(listeCoursesProvider(widget.evenementId))
+        ..invalidate(depensesProvider(widget.evenementId))
+        ..invalidate(reglementsProvider(widget.evenementId));
 
       if (mounted) {
         Navigator.of(context).maybePop();
