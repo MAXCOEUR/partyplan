@@ -69,7 +69,7 @@ utilisateur ne nécessite pas le droit de supprimer un compte.
   `email_verification_tokens`. La table `magic_links` disparaît, remplacée par les deux
   dernières.
 - La table `users` porte le hachage, le rôle plateforme, l'état de vérification, l'état
-  de suspension et le secret TOTP chiffré.
+  de suspension. *(Le secret TOTP chiffré a disparu avec l'`ADR 0007`.)*
 - L'accès administratif devient un traitement au sens du RGPD : base légale, durée de
   conservation du journal, et description dans la politique de confidentialité —
   `RG-RGPD-04`.

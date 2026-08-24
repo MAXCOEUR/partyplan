@@ -234,7 +234,6 @@ Depuis l'interface, avec `make app` :
 | Édition du profil | `/profil` |
 | Sécurité et sessions | `/securite` |
 | Mes données | `/mes-donnees` |
-| Double authentification | `/securite/double-authentification` |
 | Gestion des comptes | `/admin/comptes` |
 | Journal d'audit | `/admin/audit` |
 
@@ -242,22 +241,17 @@ Les deux derniers n'apparaissent dans le menu que pour un rôle plateforme.
 
 ### Premier démarrage : l'administrateur amorcé
 
-Se connecter avec `admin@partyplan.local` / `MotDePasseDeDeveloppement`. Trois étapes
-sont imposées, dans cet ordre :
+Se connecter avec `admin@partyplan.local` / `MotDePasseDeDeveloppement`. Une seule étape
+est imposée : **changer le mot de passe**. Tant que ce n'est pas fait, seuls le profil, le
+changement de mot de passe et la déconnexion répondent — tout le reste renvoie 403 avec
+le code `auth.must_change_password` (`RG-ADM-10`). Le mot de passe d'amorçage figure dans
+un fichier de configuration : le laisser actif reviendrait à ne pas avoir posé la
+contrainte.
 
-1. **Changer le mot de passe.** Tant que ce n'est pas fait, seuls le profil, le
-   changement de mot de passe et la déconnexion répondent — tout le reste renvoie 403
-   avec le code `auth.must_change_password` (`RG-ADM-10`). Le mot de passe d'amorçage
-   figure dans un fichier de configuration : le laisser actif reviendrait à ne pas avoir
-   posé la contrainte.
-2. **Activer la double authentification** depuis *Sécurité → Double authentification*.
-   Le secret est affiché en clair et copiable ; l'ajouter dans une application
-   d'authentification, puis saisir le code affiché. Huit codes de secours sont remis, une
-   seule fois : les noter.
-3. **Se reconnecter**, désormais en deux temps.
-
-Sans second facteur, un rôle plateforme n'obtient aucun accès d'administration
-(`RG-ADM-04`) — mais l'enrôlement reste accessible, il n'y a donc pas d'impasse.
+Le mot de passe changé, le rôle suffit à ouvrir l'administration. L'`ADR 0007` a retiré
+la double authentification, et avec elle l'obligation `RG-ADM-04` : c'est précisément
+elle qui faisait de ce premier démarrage une impasse, le compte amorcé devant accéder à
+l'application pour activer un second facteur que l'application lui refusait.
 
 Le code de vérification d'adresse arrive dans Mailpit : http://localhost:8025
 

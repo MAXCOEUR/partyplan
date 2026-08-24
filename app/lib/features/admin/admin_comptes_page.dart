@@ -99,13 +99,16 @@ class _AdminComptesPageState extends ConsumerState<AdminComptesPage> {
         loading: () => const PpLoadingState(),
         // Un refus d'autorisation n'est pas une panne : l'annoncer comme telle envoie
         // vérifier un wifi qui marche, et le bouton « Réessayer » ne peut pas aboutir.
-        // Le seul refus possible ici est l'absence de double authentification
-        // (RG-ADM-04) : le jeton porte déjà le rôle, sans quoi l'entrée serait cachée.
+        //
+        // Le jeton porte déjà le rôle, sans quoi l'entrée serait cachée. Depuis
+        // l'ADR 0007, il ne reste donc que RG-ADM-10 — le mot de passe imposé au compte
+        // amorcé — et le rôle Support sur une action qui lui est fermée.
         error: (erreur, _) => erreur is ApiException && erreur.statusCode == 403
             ? const PpErrorState(
                 message:
-                    'L’administration exige la double authentification.\n'
-                    'Active-la dans Sécurité, puis reconnecte-toi.',
+                    'Action refusée. Si c’est la première connexion du compte '
+                    'administrateur, change son mot de passe : rien d’autre n’est '
+                    'permis avant.',
               )
             : PpErrorState(
                 message: PpL10n.of(context).erreurReseau,

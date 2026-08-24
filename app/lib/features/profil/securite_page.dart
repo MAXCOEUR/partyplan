@@ -267,7 +267,6 @@ class _LigneSession extends StatelessWidget {
   }
 }
 
-/// Entrée vers le réglage du second facteur, avec son état courant.
 /// Accès aux moyens de connexion (EF-AUTH-08).
 class _EntreeConnexions extends StatelessWidget {
   const _EntreeConnexions();

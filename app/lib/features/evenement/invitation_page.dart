@@ -90,8 +90,7 @@ class _Contenu extends ConsumerWidget {
           child: Column(
             children: [
               // Fond blanc imposé : le thème sombre ne le fournit pas, et sans lui le
-              // code n'est pas lisible par un téléphone. Même raisonnement qu'à
-              // l'enrôlement du second facteur.
+              // code n'est pas lisible par un téléphone.
               QrImageView(
                 data: invitation.lien,
                 size: 220,

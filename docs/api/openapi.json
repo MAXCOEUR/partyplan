@@ -5437,7 +5437,7 @@
             "format": "date-time"
           }
         },
-        "description": "Vue d'un compte pour l'administration. Volontairement limitée aux données techniques\nnécessaires au support (RG-RGPD-04) : ni contenu d'événement, ni empreinte de mot de\npasse, ni secret de double authentification."
+        "description": "Vue d'un compte pour l'administration. Volontairement limitée aux données techniques\nnécessaires au support (RG-RGPD-04) : ni contenu d'événement, ni empreinte de mot de\npasse."
       },
       "VerifyEmailRequest": {
         "required": [

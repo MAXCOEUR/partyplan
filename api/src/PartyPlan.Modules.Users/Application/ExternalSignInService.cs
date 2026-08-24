@@ -64,14 +64,7 @@ public sealed class ExternalSignInService(
         "external.would_lock_out",
         "C'est ton seul moyen de connexion : définis d'abord un mot de passe.");
 
-    /// <summary>
-    /// Connexion ou inscription par fournisseur tiers.
-    /// <para>
-    /// La double authentification s'applique aussi à ce chemin : un compte qui l'a
-    /// activée reçoit un défi, sans quoi la connexion tierce serait une porte de
-    /// contournement.
-    /// </para>
-    /// </summary>
+    /// <summary>Connexion ou inscription par fournisseur tiers.</summary>
     public async Task<Result<SessionTokens>> SignInAsync(
         string provider,
         string idToken,

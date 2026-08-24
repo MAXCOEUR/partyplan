@@ -24,15 +24,24 @@ Future<void> _monter(WidgetTester tester, ApiException refus) async {
 void main() {
   group('Accès refusé au back-office', () {
     testWidgets('un refus d’autorisation dit ce qui manque', (tester) async {
-      // RG-ADM-04 : tout rôle plateforme exige la double authentification. Présenter
-      // ce refus comme une panne réseau envoie l'administrateur vérifier son wifi,
-      // et son bouton « Réessayer » ne pourra jamais aboutir.
+      // Présenter un refus d'autorisation comme une panne réseau envoie
+      // l'administrateur vérifier un wifi qui marche, et son bouton « Réessayer » ne
+      // pourra jamais aboutir. Le message doit donc nommer la cause.
+      //
+      // Depuis l'ADR 0007, cette cause n'est plus la double authentification : le
+      // jeton porte déjà le rôle, sans quoi l'entrée serait cachée. Reste RG-ADM-10,
+      // le mot de passe imposé au compte amorcé, et le rôle Support sur une action
+      // réservée.
       await _monter(
         tester,
         const ApiException(statusCode: 403, title: 'Accès refusé.'),
       );
 
-      expect(find.textContaining('double authentification'), findsOneWidget);
+      // Le message renvoie vers le mot de passe imposé, plus vers un second facteur
+      // qui n'existe plus — un écran qui envoie vers un réglage supprimé est un
+      // cul-de-sac.
+      expect(find.textContaining('mot de passe'), findsOneWidget);
+      expect(find.textContaining('double authentification'), findsNothing);
       expect(find.textContaining('Vérifie ta connexion'), findsNothing);
     });
 

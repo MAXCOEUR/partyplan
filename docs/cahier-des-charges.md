@@ -1504,7 +1504,7 @@ d'autant plus facilement qu'il est décidé maintenant.
 | HY-10 | Pas de Redis au démarrage | Aucun besoin mesuré en instance unique | Non, technique |
 | HY-11 | Le back-office n'est accessible qu'en version Web, sous `/admin/*` | Embarquer des écrans d'administration dans l'application mobile publiée sur les stores augmente la surface d'attaque sans usage réel | Oui |
 | HY-12 | Rôle `Support` distinct de `PlatformAdmin` | Permet de traiter une demande d'utilisateur sans détenir le droit de supprimer un compte | Oui |
-| HY-13 | Double authentification obligatoire pour les rôles plateforme, facultative pour les autres | Un compte capable de supprimer tous les utilisateurs ne peut pas être protégé par un seul facteur | Oui |
+| HY-13 | ~~Double authentification obligatoire pour les rôles plateforme~~ **Infirmée le 24/08/2026 — `ADR 0007`** : l'obligation rendait l'administration inatteignable à son seul administrateur, et un compte plateforme ne donne accès à aucun contenu d'événement (`RG-ADM-01`). Le mot de passe est l'unique facteur, contreparties énumérées dans l'ADR | Infirmée |
 
 **Questions restant ouvertes**
 

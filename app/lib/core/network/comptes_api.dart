@@ -32,8 +32,8 @@ class ComptesApi {
     'displayName': nomAffiche,
   });
 
-  /// Connexion. Il n'y a pas de seconde étape : la double authentification est
-  /// retirée du produit (ADR 0007).
+  /// Connexion. Une seule étape : la réponse porte directement les jetons de session
+  /// (ADR 0007).
   Future<void> connecter({required String email, required String motDePasse}) =>
       _ouvrirSession('/auth/login', {'email': email, 'password': motDePasse});
 

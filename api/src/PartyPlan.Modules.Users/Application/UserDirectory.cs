@@ -12,9 +12,9 @@ using PartyPlan.SharedKernel.Primitives;
 /// Implémentation du contrat public du module Users, consommé par l'administration.
 /// <para>
 /// La fiche renvoyée ne contient que des données techniques de compte : ni empreinte de
-/// mot de passe, ni secret de double authentification, ni contenu d'événement
-/// (RG-ADM-01, RG-RGPD-04). Le nombre d'événements est un simple décompte — savoir
-/// qu'une personne participe à quatre événements ne révèle rien de leur contenu.
+/// mot de passe, ni contenu d'événement (RG-ADM-01, RG-RGPD-04). Le nombre d'événements
+/// est un simple décompte — savoir qu'une personne participe à quatre événements ne
+/// révèle rien de leur contenu.
 /// </para>
 /// </summary>
 public sealed class UserDirectory(

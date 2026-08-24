@@ -71,14 +71,10 @@ public static class AuthenticationSetup
                 .RequireClaim(ClaimTypes.NameIdentifier)
                 .Build();
 
-            // Le rôle seul ouvre le back-office. La double authentification n'est
-            // plus exigée : décision produit du 21/08/2026, prise en connaissance du
-            // fait qu'un mot de passe devient l'unique protection d'un compte capable
-            // de réinitialiser et de supprimer tous les autres.
-            //
-            // Ce qui a emporté la décision : l'exigence rendait l'administration
-            // inatteignable. Le compte amorcé n'a pas de second facteur, l'activer
-            // demandait d'y accéder, et le back-office répondait « accès refusé » à son
+            // Le rôle seul ouvre le back-office : RG-ADM-04 est abrogée par l'ADR 0007,
+            // qui porte la décision et ce qu'elle coûte — un mot de passe devient
+            // l'unique protection d'un compte capable de réinitialiser et de supprimer
+            // tous les autres. L'exigence rendait l'administration inatteignable à son
             // seul administrateur.
             //
             // Le rôle est porté par le jeton, la garde s'évalue donc sans requête en

@@ -59,7 +59,7 @@ public sealed record UserPage(IReadOnlyList<UserRecord> Items, int Total, int Pa
 /// <summary>
 /// Vue d'un compte pour l'administration. Volontairement limitée aux données techniques
 /// nécessaires au support (RG-RGPD-04) : ni contenu d'événement, ni empreinte de mot de
-/// passe, ni secret de double authentification.
+/// passe.
 /// </summary>
 public sealed record UserRecord(
     Guid Id,
