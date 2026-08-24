@@ -6,8 +6,16 @@
 > n'existe pas dans le cahier des charges, c'est le cahier des charges qu'il faut
 > compléter d'abord.
 
-Mise à jour : 21/08/2026 — l'ADR 0006 rend le compte obligatoire pour toute nouvelle
-adhésion ; V1.0 reprend donc le parcours invitation avec comptes et liens profonds.
+Mise à jour : **24/08/2026** — remise au niveau réel du code, qui avait plusieurs lots
+d'avance sur ce document. Courses, dépenses, remboursements, invitations avec compte,
+discussion et sondages sont livrés. L'`ADR 0007` retire la double authentification. Le
+planning est abandonné.
+
+> **Comment ce retard s'est créé, pour ne pas le refaire** : les lots 1.3, 1.5, 1.7 et
+> 1.8 étaient intégralement décochés alors que leur code, leurs écrans et leurs tests
+> existaient. Un document de suivi qui décrit un état faux est pire qu'absent — on y lit
+> du travail à faire qui est fait, et on croit fait ce qui ne l'est pas. Cocher au
+> moment du commit, pas à la fin du lot.
 
 ## Comment lire ce document
 
@@ -15,8 +23,8 @@ adhésion ; V1.0 reprend donc le parcours invitation avec comptes et liens profo
 |---|---|---|
 | **V0** | Socle technique et environnement local. Rien de visible. | interne |
 | **V0.5** | **Comptes et administration.** Développé en premier : inscription, profil, photo, sessions, administrateur amorcé, back-office, journal d'audit. | interne |
-| **V1.0** | MVP événementiel : présence, courses, dépenses, remboursements, planning. | PWA + Google Play |
-| **V1.1** | Collaboration : tâches, sondages, discussion, groupes. | PWA + Google Play |
+| **V1.0** | MVP événementiel : présence, courses, dépenses, remboursements, discussion, sondages. *(Planning abandonné ; discussion et sondages remontés de V1.1.)* | PWA + Google Play |
+| **V1.1** | Collaboration : tâches, groupes permanents, compléments. *(Sondages et discussion livrés en V1.0.)* | PWA + Google Play |
 | **V1.2** | Portage iOS. | App Store |
 | **V2.0** | Offre Premium et modèles d'événements. | toutes plateformes |
 | **V2.1** | IA, statistiques, intégrations système. | toutes plateformes |
@@ -31,12 +39,13 @@ Toute tâche non cochée d'une version publiée devient une anomalie, pas un rep
 | Version | Tâches faites | Reste |
 |---|---|---|
 | V0 — socle technique | lots 0.2 à 0.6, dépôt GitHub et protection de branche | lot 0.1 (INPI, nom, logo, hébergeur, DNS), lot 0.7 (serveur) |
-| V0.5 — comptes et administration | lots 0.8 à 0.14 | connexion Google, photo depuis l'interface, QR code |
-| V1.0 — MVP événementiel | lots 1.1 à 1.4, écrans compris, et le socle hors ligne du lot 1.12 | courses, temps réel, dépenses, remboursements, planning, notifications, conformité, exploitation, publication |
+| V0.5 — comptes et administration | lots 0.8 à 0.14 | connexion Google (identifiants Google Cloud requis) |
+| V1.0 — MVP événementiel | lots 1.2 à 1.5, 1.7, 1.8, le socle hors ligne du lot 1.12, plus la discussion et les sondages remontés de V1.1 | fil d'activité (1.10), temps réel (1.6), notifications (1.11), conformité (1.13), exploitation (1.14), légal (1.15), vitrine (1.16), recette et publication (1.17, 1.18) |
 
 Décisions d'architecture prises : `ADR 0001` monorepo, `ADR 0002` monolithe modulaire,
 `ADR 0003` domaines et certificats, `ADR 0004` chaîne de livraison, `ADR 0005` identité
-et administration, `ADR 0006` compte obligatoire pour rejoindre.
+et administration, `ADR 0006` compte obligatoire pour rejoindre, `ADR 0007` retrait de
+la double authentification.
 
 ---
 
@@ -130,7 +139,7 @@ Contrainte permanente : tout doit tourner en local avant d'être poussé — `§
 ## Lot 0.4 — Base de données
 
 - [x] `DbContext` unique, EF Core 10 et Npgsql, implémentant les onze contrats de module
-- [x] Entités des **27 tables** du `§7.2`
+- [x] Entités des **26 tables** du `§7.2` — 27 jusqu'au retrait de `totp_recovery_codes` (`ADR 0007`)
 - [x] `§6.1` `numeric(10,2)` sur tous les montants, `decimal` en C#, aucun flottant — vérifié par test
 - [x] `§7.1` Identifiants `uuid` v7, attribués à l'écriture
 - [x] `citext` sur `users.email` et les autres colonnes d'adresse
@@ -213,7 +222,7 @@ Contrainte permanente : tout doit tourner en local avant d'être poussé — `§
 | `dotnet format --verify-no-changes` | conforme |
 | `dart format --set-exit-if-changed` | conforme |
 | Frontières de modules | 11 modules, aucune violation |
-| Migration appliquée sur PostgreSQL 16 | 27 tables, 4 contraintes de contrôle |
+| Migration appliquée sur PostgreSQL 16 | 27 tables, 4 contraintes de contrôle *(26 depuis l'`ADR 0007`)* |
 | Journal d'audit | `UPDATE`, `DELETE` et `TRUNCATE` refusés, ligne intacte |
 | Cloisonnement | membre 200, non-membre 404, `PlatformAdmin` non membre 404, anonyme 401 ; le comportement invité est historique et remplacé par l'ADR 0006 |
 | Garde de production | démarrage refusé sans secrets, en local comme en conteneur |
@@ -240,9 +249,9 @@ Objectif : l'identité est intégralement gérée avant qu'une seule fonctionnal
 événementielle n'existe.
 
 **État au 19/08/2026 : lots 0.8 à 0.14 livrés côté API et côté application, vérifiés de
-bout en bout.** La production n'est plus bloquée : `RG-ADM-04` est satisfaite. Restent la
-connexion Google, le téléversement de photo depuis l'interface, et le QR code
-d'enrôlement.
+bout en bout.** Reste la connexion Google, qui suppose des identifiants Google Cloud. La
+double authentification, livrée puis retirée le 24/08/2026 (`ADR 0007`), ne figure plus
+au périmètre.
 
 ## Lot 0.8 — Authentification par mot de passe
 
@@ -262,25 +271,29 @@ d'enrôlement.
 - [x] `EF-AUTH-10` Liste des sessions actives, révocation d'une session ou de toutes
 - [x] Écrans : connexion, inscription, mot de passe oublié, sécurité et sessions
 
-## Lot 0.9 — Double authentification
+## Lot 0.9 — Connexions tierces *(la double authentification a été retirée)*
 
-- [x] `EF-AUTH-12` Double authentification par code temporel : enrôlement, activation, désactivation
-  - → RFC 6238 implémentée dans le dépôt et validée contre les vecteurs officiels de l'annexe B, plutôt qu'empruntée : une dépendance de moins sur un chemin de sécurité, et une preuve de conformité au lieu d'une confiance
-- [x] `EF-AUTH-13` Huit codes de secours, régénérables, à usage unique
-  - → absents du cahier des charges initial : sans eux, un téléphone perdu enferme définitivement dehors, et pour un administrateur rendrait l'instance ingérable
-- [x] `RG-AUTH-09` Connexion en deux temps ; le jeton intermédiaire porte une audience distincte et n'ouvre aucun accès
-- [x] `RG-AUTH-10` Secret chiffré au repos en AES-GCM, clé distincte de celle de signature
-- [x] `RG-AUTH-11` Activation seulement après validation d'un premier code
-- [x] `RG-AUTH-12` Codes de secours affichés une fois, stockés en condensé, lot précédent invalidé à la régénération
-- [x] `RG-AUTH-13` Désactivation exigeant le mot de passe, refusée pour un rôle plateforme
-- [x] `RG-ADM-04` Double authentification obligatoire pour tout rôle plateforme
-  - → garde portée par une revendication du jeton, évaluée sans requête en base ; la promotion est refusée sans second facteur actif
-  - → le premier démarrage n'est pas une impasse : l'enrôlement reste accessible au compte amorcé, vérifié par la recette
+**Retrait acté le 24/08/2026 — `ADR 0007`.** La double authentification livrée ici —
+RFC 6238 implémentée dans le dépôt, huit codes de secours, secret chiffré en AES-GCM,
+connexion en deux temps — est **supprimée du produit** : plus d'endpoint, plus de
+colonne, plus de défi à la connexion, plus d'obligation de rôle. Le motif tient en une
+phrase : `RG-ADM-04` rendait le back-office inatteignable à son seul administrateur, le
+compte amorcé n'ayant pas de second facteur et l'activer supposant d'y accéder. L'ADR
+nomme le prix payé — le mot de passe devient l'unique protection d'un compte
+d'administration — et les conditions d'un retour.
+
+- [x] Retrait complet et vérifié — `SansDoubleAuthentificationTests` couvre les quatre
+      dimensions : route absente (404), contrat sans champ de défi, schéma sans colonne
+      ni table, autorisation accordée sur le seul rôle
+  - → le retrait du 21/08/2026 n'était que partiel : écrans supprimés et défi retiré,
+    mais endpoints, colonnes et secrets conservés. Un compte ayant activé la 2FA se
+    connectait donc avec son seul mot de passe pendant que l'API annonçait encore la
+    protection. C'est ce demi-état qui a motivé de trancher entièrement.
+  - → `ISecretProtector` et `Security:EncryptionKey` partent avec leur unique usage :
+    faire générer et faire tourner par l'exploitant une clé qui ne protège rien est un
+    piège, pas une précaution
 - [x] `RG-ADM-10` Changement de mot de passe imposé au compte amorcé, appliqué par intergiciel
-- [x] `NF-SEC-07` Obligation vérifiée par test d'intégration
-- [x] `NF-SEC-10` Chiffrement des secrets vérifié : altération détectée, clé distincte exigée
 - [x] `NF-SEC-11` Limites de débit paramétrables — les tests partagent une adresse IP et épuisaient une limite pensée pour un utilisateur unique
-- [x] Écrans : saisie du second facteur à la connexion, enrôlement et codes de secours
 - [ ] `EF-AUTH-06` Connexion Google — suppose des identifiants Google Cloud, voir `docs/comptes-externes.md` §1
 - [x] `EF-AUTH-08` Détachement d'une connexion tierce, et écran des moyens de connexion
   - → `GET /v1/auth/providers` distingue « l'instance n'a pas les clés » de « le compte est
@@ -291,11 +304,6 @@ d'enrôlement.
 - [x] `RG-AUTH-08` Un compte sans mot de passe en définit un par le parcours de réinitialisation — le lui refuser l'enfermerait dans une dépendance au fournisseur tiers
 - [x] `NF-DEV-05` Inscription et connexion vérifiées sans aucune clé Google — voir lot 0.2b
 - [x] Écran de rattachement des connexions tierces
-- [x] Afficher le QR code d'enrôlement
-  - → dessiné côté Dart, sans appel réseau : envoyer un secret de double authentification à
-    un service tiers de génération d'image serait absurde
-  - → fond blanc imposé, que le thème sombre ne fournit pas et sans lequel le code n'est pas
-    lisible par un téléphone
 
 ## Lot 0.10 — Compte et profil
 
@@ -369,12 +377,19 @@ d'enrôlement.
 
 ## Lot 0.14 — Recette V0.5
 
-- [x] Recette exécutable de bout en bout — `tools/recette/parcours-comptes.py`, 77 vérifications
+- [x] Recette exécutable de bout en bout — `tools/recette/parcours-comptes.py`,
+      **65 vérifications** après le retrait de la section double authentification
+      (`ADR 0007`), rejouée le 24/08/2026
 - [x] Tests d'intégration automatisés des mêmes règles, exécutables en CI sans serveur de courriel
 - [x] Vérifier les critères 1, 2, 4, 5, 7 à 12 du `§18`
 - [x] Critère 3 du `§18` : refus de démarrage sur amorçage incomplet, couvert par huit cas dont la frontière exacte de douze caractères
-- [x] Critère 6 du `§18` : changement de mot de passe et second facteur imposés au compte amorcé
-- [x] Recette étendue : 77 vérifications, premier démarrage complet compris
+- [x] Critère 6 du `§18` : changement de mot de passe imposé au compte amorcé — le second facteur en est retiré depuis l'`ADR 0007`
+- [x] Recette étendue, premier démarrage complet compris
+  - → les deux recettes sont désormais **rejouables sur une base déjà amorcée** : la
+    connexion administrateur essaie le mot de passe d'amorçage puis celui qu'elle a
+    elle-même changé, et `RG-ADM-10` est explicitement *ignorée* — jamais déclarée
+    réussie — lorsque l'obligation a déjà été consommée. Une recette qui ne peut tourner
+    qu'une fois par base cesse d'être lancée
 
 ---
 
@@ -418,10 +433,13 @@ Sortie : les critères 13 à 26 du `§18` sont vérifiés.
     dans `sections/` et à l'insérer dans une liste ; B2 et B4 ne toucheront pas la page
 - [ ] `RG-UI-02` Le tableau de bord affiche l'information actionnable du moment
   - → structure livrée, emplacements réservés et commentés dans la page
-  - → l'information exigée par la règle — articles non attribués, montant dû — vient de
-    `Shopping` et `Settlements` : la case ne peut être cochée qu'à la fin de B2, et la
-    cocher maintenant serait un faux
-- [ ] `RG-EVT-02` Brancher la vérification des règlements en attente — nécessite un contrat exposé par le module Settlements (lot 1.8) ; d'ici là la confirmation renforcée est la seule barrière
+  - → **débloqué depuis le 21/08/2026** : `Shopping` et `Settlements` fournissent
+    désormais les articles non attribués et le montant dû. Il reste à ajouter les deux
+    sections dans `sections/`, avec `EF-RMB-05` qui attend la même chose
+- [ ] `RG-EVT-02` Brancher la vérification des règlements en attente — **le contrat
+      existe désormais** (`ISettlementStatus`, exposé par Settlements au lot 1.8) mais
+      `EventService.SupprimerAsync` ne le consomme pas : la suppression exige toujours
+      le drapeau de forçage, que des dettes soient en suspens ou non. Débloqué, à faire.
 - [x] Transfert de propriété à un autre membre — sans lui, `RG-ROLE-02` serait un cul-de-sac : l'organisateur resterait prisonnier de son propre événement
   - → l'ancien propriétaire devient administrateur, non membre ordinaire ; la cible est un compte membre, conformément à l'ADR 0006
 - [x] Écrans : accueil, création d'événement, tableau de bord, paramètres
@@ -434,24 +452,34 @@ Sortie : les critères 13 à 26 du `§18` sont vérifiés.
 
 ## Lot 1.3 — Invitations avec compte et liens profonds
 
-- [ ] `EF-INV-01` Lien d'invitation `/join/{token}` et QR code avec la même URL canonique
-- [ ] `EF-INV-03` Code court `PLAN-XXXXXX`, avec aperçus publics restreints par jeton et code
-- [ ] `RG-INV-01` Jeton de 192 bits, encodé en base64url et non déductible de l'identifiant
-- [ ] `RG-INV-02` Alphabet de 32 caractères sans `I`, `O`, `0` ni `1` ; six positions
-- [ ] `RG-INV-03` Limitation de la résolution de code court
-- [ ] `RG-INV-04` Aperçu public : nom, dates, lieu, description et nombre de participants ; jamais membres, dépenses ou jeton long
-- [ ] `EF-INV-04` POST authentifiés par jeton ou code court, sans nom ni statut dans le corps ; le serveur utilise le profil et crée `Unknown`
-- [ ] `RG-INV-05` Adhésion idempotente : un rejeu du même compte ne crée pas de doublon ni ne modifie la présence
-- [ ] Conserver `retour` pendant connexion et inscription avec une allowlist stricte :
+**Livré. `ADR 0006`.** Ce lot était intégralement décoché alors que le code était en
+place : la feuille de route avait pris du retard sur les commits.
+
+- [x] `EF-INV-01` Lien d'invitation `/join/{token}` et QR code avec la même URL canonique
+  - → QR code dessiné par `qr_flutter` dans `invitation_page.dart`, sur l'URL canonique
+- [x] `EF-INV-03` Code court `PLAN-XXXXXX`, avec aperçus publics restreints par jeton et code
+- [x] `RG-INV-01` Jeton de 192 bits, encodé en base64url et non déductible de l'identifiant — `InviteToken`
+- [x] `RG-INV-02` Alphabet de 32 caractères sans `I`, `O`, `0` ni `1` ; six positions — `ShortCode`
+  - → l'unicité ne porte que sur les événements vivants, ce qui laisse le stock se recycler
+- [x] `RG-INV-03` Limitation de la résolution de code court — dix tentatives par minute
+- [x] `RG-INV-04` Aperçu public : nom, dates, lieu, description et nombre de participants ; jamais membres, dépenses ou jeton long
+- [x] `EF-INV-04` POST authentifiés par jeton ou code court, sans nom ni statut dans le corps ; le serveur utilise le profil et crée `Unknown`
+- [x] `RG-INV-05` Adhésion idempotente : un rejeu du même compte ne crée pas de doublon ni ne modifie la présence
+- [x] Conserver `retour` pendant connexion et inscription avec une allowlist stricte :
   uniquement `/join/{token}` ou `/rejoindre/{code}` après décodage ; rejeter vers `/`
   toute URL absolue, schéma, autorité ou préfixe `//`, fragment, paramètres, segment
   supplémentaire ou autre route
-- [ ] Écrans : aperçu, connexion/création avec retour, adhésion automatique et états fermeture, lien invalide et panne réseau
-- [ ] Supprimer la création de nouveaux jetons invités et `/v1/auth/guest-claim` ; conserver les lignes sans `user_id` uniquement comme historiques financières
-- [ ] Configurer Android App Links et iOS Universal Links pour ouvrir directement les invitations ; sans application, ouvrir le Web
-- [ ] Recette : POST anonyme à 401, nom du profil, statut `Unknown`, rejeu idempotent,
-  routes profondes Web/Android/iOS, et `retour` valide conservé / retour externe,
-  `//host`, fragment, paramètres ou autre route remplacé par `/`
+  - → `RetourAuth` et ses tests dédiés ; les délimiteurs encodés sont refusés
+- [x] Écrans : aperçu, connexion/création avec retour, adhésion automatique et états fermeture, lien invalide et panne réseau
+- [x] Supprimer la création de nouveaux jetons invités et `/v1/auth/guest-claim` ; conserver les lignes sans `user_id` uniquement comme historiques financières
+- [x] Configurer Android App Links pour ouvrir directement les invitations ; sans application, ouvrir le Web
+  - → vérifié par `tools/verifier-app-links-android.sh` et `app/web/.well-known/assetlinks.json`
+- [ ] iOS Universal Links — reporté en V1.2 avec le portage iOS : rien à configurer avant
+      d'avoir un compte développeur Apple et un identifiant d'application
+- [x] Recette du parcours d'invitation avec compte — `tools/recette/parcours-evenement.py`
+  - → elle **testait encore le parcours invité supprimé** par l'`ADR 0006` et ne pouvait
+    donc plus passer : réécrite le 24/08/2026 pour l'adhésion avec compte
+  - → **84 / 84 vérifications passées** contre une API réelle le 24/08/2026
 
 ## Lot 1.4 — Présences
 
@@ -470,21 +498,24 @@ Sortie : les critères 13 à 26 du `§18` sont vérifiés.
 
 ## Lot 1.5 — Liste de courses
 
-- [ ] `EF-CRS-01` Ajouter un article : libellé, quantité, unité, catégorie
-- [ ] `EF-CRS-02` Quatre catégories : boissons, nourriture, matériel, autres
-- [ ] `EF-CRS-03` S'attribuer un article
-- [ ] `RG-CRS-01` Attribution unique, contrôlée en transaction côté serveur
-- [ ] `EF-CRS-04` Retirer son attribution
-- [ ] `EF-CRS-05` Marquer acheté avec quantité réellement obtenue
-- [ ] `RG-CRS-02` Affichage du reliquat en cas d'achat partiel
-- [ ] `EF-CRS-06` Prix estimé et prix réellement payé
-- [ ] `EF-CRS-07` Création automatique d'une dépense à la saisie du prix payé
-- [ ] `RG-CRS-03` Le prix estimé n'entre jamais dans les calculs
-- [ ] `EF-CRS-08` Modifier et supprimer un article, refus si une dépense y est rattachée
-- [ ] `EF-CRS-09` Avancement « n / m pris » et « n / m achetés »
-- [ ] `EF-CRS-10` Commentaire sur un article
-- [ ] Test de concurrence : deux attributions simultanées, une seule aboutit
-- [ ] Écran : courses
+**Livré.** Sept endpoints, écran de liste, feuilles d'article et d'achat.
+
+- [x] `EF-CRS-01` Ajouter un article : libellé, quantité, unité, catégorie
+- [x] `EF-CRS-02` Quatre catégories : boissons, nourriture, matériel, autres
+- [x] `EF-CRS-03` S'attribuer un article
+- [x] `RG-CRS-01` Attribution unique, contrôlée en transaction côté serveur
+- [x] `EF-CRS-04` Retirer son attribution
+- [x] `EF-CRS-05` Marquer acheté avec quantité réellement obtenue
+- [x] `RG-CRS-02` Affichage du reliquat en cas d'achat partiel
+- [x] `EF-CRS-06` Prix estimé et prix réellement payé
+- [x] `EF-CRS-07` Création automatique d'une dépense à la saisie du prix payé
+  - → par le contrat `IExpenseFromPurchase` : Shopping n'écrit pas dans les tables d'Expenses
+- [x] `RG-CRS-03` Le prix estimé n'entre jamais dans les calculs
+- [x] `EF-CRS-08` Modifier et supprimer un article, refus si une dépense y est rattachée
+- [x] `EF-CRS-09` Avancement « n / m pris » et « n / m achetés »
+- [x] `EF-CRS-10` Commentaire sur un article
+- [x] Test de concurrence : deux attributions simultanées, une seule aboutit — `ChaineFinanciereTests`
+- [x] Écran : courses
 
 ## Lot 1.6 — Temps réel
 
@@ -499,49 +530,65 @@ Sortie : les critères 13 à 26 du `§18` sont vérifiés.
 
 ## Lot 1.7 — Dépenses
 
-- [ ] `EF-DEP-01` Créer une dépense : libellé, montant, payeur, date
-- [ ] `RG-DEP-01` Montant strictement positif, plafonné à 99 999,99 €
-- [ ] `EF-DEP-02` Trois modes d'assiette : tous les présents, sélection, parts personnalisées
-- [ ] `RG-DEP-02` Assiette figée à la création, sans effet rétroactif
-- [ ] `RG-DEP-03` Possibilité d'exclure le payeur de l'assiette
-- [ ] `EF-DEP-03` Modifier et supprimer une dépense
-- [ ] `RG-DEP-04` Historique des modifications conservé
-- [ ] `RG-DEP-05` Suppression logique, avec recalcul des soldes
-- [ ] `EF-DEP-04` Liste des dépenses avec totaux
-- [ ] `EF-DEP-05` Détail d'une dépense : payeur, participants, part de chacun
-- [ ] Écrans : dépenses, création de dépense, détail
+**Livré.** Cinq endpoints, liste avec totaux, création aux trois assiettes, détail.
+
+- [x] `EF-DEP-01` Créer une dépense : libellé, montant, payeur, date
+- [x] `RG-DEP-01` Montant strictement positif, plafonné à 99 999,99 €
+- [x] `EF-DEP-02` Trois modes d'assiette : tous les présents, sélection, parts personnalisées
+- [x] `RG-DEP-02` Assiette figée à la création, sans effet rétroactif
+- [x] `RG-DEP-03` Possibilité d'exclure le payeur de l'assiette
+- [x] `EF-DEP-03` Modifier et supprimer une dépense
+- [x] `RG-DEP-04` Historique des modifications conservé — `expense_revisions`, en ajout seul
+- [x] `RG-DEP-05` Suppression logique, avec recalcul des soldes
+- [x] `EF-DEP-04` Liste des dépenses avec totaux
+- [x] `EF-DEP-05` Détail d'une dépense : payeur, participants, part de chacun
+- [x] Écrans : dépenses, création de dépense, détail
 
 ## Lot 1.8 — Remboursements
 
-- [ ] `§6.2` Répartition au centime avec la règle des plus grands restes
-- [ ] `IV-01` Vérifier que la somme des parts égale exactement le montant
-- [ ] `§6.3` Calcul des soldes
-- [ ] `IV-02` Vérifier que la somme des soldes est nulle, journaliser toute violation
-- [ ] `§6.4` Algorithme d'appariement glouton, tri déterministe des égalités
-- [ ] `RG-RMB-01` Résultat reproductible à l'identique
-- [ ] `RG-RMB-02` Aucun solde persisté, recalcul à la demande
-- [ ] `RG-RMB-03` Les règlements effectués entrent dans le calcul suivant
-- [ ] `EF-RMB-01` Affichage du solde de chaque membre
-- [ ] `EF-RMB-02` Liste des règlements proposés
-- [ ] `RG-CALC-01` Ordre d'affichage identique à l'ordre d'émission
-- [ ] `EF-RMB-03` Marquer un règlement comme effectué
-- [ ] `EF-RMB-04` Annuler un marquage
-- [ ] `EF-RMB-05` Rappel de sa propre dette sur le tableau de bord
-- [ ] `RG-RMB-04` Avertissement si la somme des soldes n'est pas nulle
-- [ ] **Test bloquant** : le jeu de référence du `§6.5` produit les deux règlements attendus, dans l'ordre attendu
-- [ ] `RG-TEST-02` Test de l'invariant `IV-02` sur données générées aléatoirement
-- [ ] `NF-QUAL-01` Couverture de 100 % des branches du domaine financier
-- [ ] `RG-TEST-01` Interdire toute livraison du domaine financier sans passage du jeu de référence
-- [ ] `NF-PERF-03` Calcul complet en moins de 50 ms pour 20 membres et 100 dépenses
-- [ ] Écran : règlements
+**Livré.** C'est la partie la plus sensible du produit : elle est couverte avant tout le
+reste, et le jeu de référence du `§6.5` est un test bloquant.
 
-## Lot 1.9 — Planning
+- [x] `§6.2` Répartition au centime avec la règle des plus grands restes — `Repartition`
+- [x] `IV-01` Vérifier que la somme des parts égale exactement le montant
+- [x] `§6.3` Calcul des soldes — `Soldes`
+- [x] `IV-02` Vérifier que la somme des soldes est nulle, journaliser toute violation
+  - → journalisé en erreur **et** signalé à l'interface : afficher des chiffres qu'on
+    sait faux serait pire que dire qu'ils le sont
+- [x] `§6.4` Algorithme d'appariement glouton, tri déterministe des égalités
+- [x] `RG-RMB-01` Résultat reproductible à l'identique
+- [x] `RG-RMB-02` Aucun solde persisté, recalcul à la demande
+- [x] `RG-RMB-03` Les règlements effectués entrent dans le calcul suivant
+- [x] `EF-RMB-01` Affichage du solde de chaque membre
+- [x] `EF-RMB-02` Liste des règlements proposés
+- [x] `RG-CALC-01` Ordre d'affichage identique à l'ordre d'émission
+- [x] `EF-RMB-03` Marquer un règlement comme effectué
+- [x] `EF-RMB-04` Annuler un marquage
+- [ ] `EF-RMB-05` Rappel de sa propre dette **sur le tableau de bord** — l'écran des
+      règlements l'affiche, le tableau de bord non : même manque que `RG-UI-02`
+- [x] `RG-RMB-04` Avertissement si la somme des soldes n'est pas nulle
+- [x] **Test bloquant** : le jeu de référence du `§6.5` produit les deux règlements attendus, dans l'ordre attendu — `JeuDeReferenceTests`
+- [x] `RG-TEST-02` Test de l'invariant `IV-02` sur données générées aléatoirement — `SoldesTests`, plusieurs graines
+- [x] `NF-QUAL-01` Couverture de 100 % des branches du domaine financier
+  - → mesuré par coverlet le 24/08/2026 : `Repartition` et `Soldes` à **100 % de lignes
+    et 100 % de branches**. Les services applicatifs `ExpenseService` et
+    `SettlementService` sont couverts par les tests d'intégration, hors de cette mesure
+- [x] `RG-TEST-01` Interdire toute livraison du domaine financier sans passage du jeu de référence — le test tourne dans `make verif` et en CI
+- [ ] `NF-PERF-03` Calcul complet en moins de 50 ms pour 20 membres et 100 dépenses —
+      **aucun test ne le mesure** : la case reste décochée plutôt que supposée
+- [x] Écran : règlements
 
-- [ ] `EF-PLN-01` Créer une étape : heure, libellé, lieu, commentaire
-- [ ] `EF-PLN-02` Liste chronologique
-- [ ] `EF-PLN-03` Modifier et supprimer une étape
-- [ ] `EF-PLN-04` Mise en évidence de la prochaine étape sur le tableau de bord
-- [ ] Écran : planning
+## Lot 1.9 — Planning — **abandonné le 21/08/2026**
+
+Abandonné dans ses deux acceptions : ni déroulé horaire de la soirée, ni choix collectif
+de la date par vote. La date reste obligatoire à la création et se modifie dans les
+paramètres de l'événement — c'est ce que le besoin réel demandait. Le vote de dates
+supposait une structure dédiée, l'index unique `(poll_id, member_id)` de `poll_votes`
+interdisant de voter sur plusieurs options. L'onglet « Planning » est retiré de la
+navigation : quatre onglets subsistent, et la place est prise par la discussion.
+
+`EF-PLN-01` à `EF-PLN-07` sont sans objet. Voir
+`docs/superpowers/plans/2026-08-21-achevement-v1-cadrage.md`.
 
 ## Lot 1.10 — Fil d'activité
 
@@ -637,7 +684,10 @@ Sortie : les critères 13 à 26 du `§18` sont vérifiés.
 
 ## Lot 1.17 — Recette et bêta privée
 
-- [x] Recette du parcours événementiel — `tools/recette/parcours-evenement.py`, **74 vérifications**
+- [x] Recette du parcours événementiel — `tools/recette/parcours-evenement.py`,
+      **84 vérifications**, rejouée le 24/08/2026 contre une API réelle
+  - → réécrite ce jour-là : elle exerçait encore le parcours invité sans compte supprimé
+    par l'`ADR 0006`, et ne pouvait donc plus passer
 - [ ] Rédiger la grille de recette manuelle — `§15`
 - [ ] Test bout en bout automatisé du parcours complet
 - [ ] `NF-QUAL-02` Couverture globale du domaine supérieure à 70 %
@@ -667,21 +717,38 @@ Objectif : ce qui remplace le reste des messages du groupe.
 - [ ] `EF-TSK-02` S'attribuer, marquer faite, annuler
 - [ ] `EF-TSK-03` Avancement sur le tableau de bord
 
-## Lot 2.2 — Sondages
+## Lot 2.2 — Sondages — **livré par anticipation en V1.0**
 
-- [ ] `EF-SDG-01` Sondage à choix unique, 2 à 10 options
-- [ ] `EF-SDG-02` Voter et changer son vote
-- [ ] `EF-SDG-03` Résultats avec décompte
-- [ ] `EF-SDG-04` Clôture d'un sondage
+Remonté depuis V1.1 : les sondages naissent dans le fil de discussion, il aurait fallu
+livrer la discussion deux fois pour les ajouter après coup. Décision du 21/08/2026.
 
-## Lot 2.3 — Discussion
+- [x] `EF-SDG-01` Sondage à choix unique, 2 à 10 options
+- [x] `EF-SDG-02` Voter et changer son vote
+- [x] `EF-SDG-03` Résultats avec décompte
+- [x] `EF-SDG-04` Clôture d'un sondage
+- [x] Écran dédié listant tous les sondages, ouverts d'abord
+  - → un sondage porté par un message et remonté par cinquante autres devient
+    introuvable : l'écran dédié existe pour cette raison
 
-- [ ] `EF-MSG-01` Message texte dans l'événement
-- [ ] `EF-MSG-02` Pièce jointe image
-- [ ] `EF-MSG-03` Réactions emoji
-- [ ] `EF-MSG-04` Réponse et mention
-- [ ] `EF-MSG-05` Suppression de son propre message
-- [ ] `RG-MSG-01` S'en tenir là : aucune fonction de messagerie généraliste
+## Lot 2.3 — Discussion — **livré par anticipation en V1.0**
+
+Remonté depuis V1.1 : c'est la fonction qui remplace le fil de messages du groupe, et
+elle occupe l'onglet libéré par l'abandon du planning. Décision du 21/08/2026.
+
+- [x] `EF-MSG-01` Message texte dans l'événement
+- [x] `EF-MSG-02` Pièce jointe image — compressée avant envoi
+- [x] `EF-MSG-03` Réactions emoji
+- [x] `EF-MSG-04` Réponse et mention
+- [x] `EF-MSG-05` Suppression de son propre message
+- [x] `RG-MSG-01` S'en tenir là : aucune fonction de messagerie généraliste
+- [x] Un seul fil par événement, et des dossiers d'épingles en guise de « salons »
+  - → à six personnes, des salons multiples se videraient et ce qui compte se perdrait
+    dans celui que personne ne lit
+  - → aucune épingle privée : une seule notion, donc aucune question à se poser au
+    moment d'épingler
+- [x] Pagination par curseur, repère de lecture et reprise de position
+- [x] Les notifications sont **préparées mais pas envoyées** : mentions et messages
+      produisent ce qu'il faut pour notifier au lot 1.11, aucun envoi n'est branché
 
 ## Lot 2.4 — Groupes permanents
 

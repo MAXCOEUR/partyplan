@@ -1,19 +1,24 @@
 #!/usr/bin/env python3
-"""Recette du parcours événementiel (V1.0, lots 1.1 à 1.4).
+"""Recette du parcours événementiel (V1.0, lots 1.2 à 1.4).
 
 Déroule « créer une soirée → inviter → répondre » de bout en bout contre une API locale.
+
+Le parcours invité sans compte n'existe plus : l'ADR 0006 exige un compte pour toute
+nouvelle adhésion. Le nom du membre vient du profil, jamais du corps de la requête, et
+son statut initial est « Unknown » — jamais présumé présent (RG-PRES-01).
 
     make api            # dans un autre terminal
     python3 tools/recette/parcours-evenement.py
 """
 
 import json
+import os
 import sys
 import urllib.error
 import urllib.request
 import uuid
 
-API = "http://127.0.0.1:5080/v1"
+API = os.environ.get("API_URL", "http://127.0.0.1:5080") + "/v1"
 
 resultats: list[tuple[bool, str]] = []
 
@@ -42,13 +47,32 @@ def verifier(libelle, condition, detail=""):
 
 
 def compte(nom):
+    """Crée un compte et renvoie son jeton d'accès. Le nom affiché vient du profil.
+
+    Ce scénario ouvre une quinzaine de comptes : la limitation de débit de RG-AUTH-05
+    peut être épuisée si une autre recette vient de tourner sur la même API. Mieux vaut
+    le dire que laisser une trace Python illisible dix vérifications plus loin.
+    """
     suffixe = uuid.uuid4().hex[:8]
     statut, session = appel("POST", "/auth/register", {
         "email": f"{nom.lower()}-{suffixe}@partyplan.local",
         "password": "Trombone-Nuage-42x",
         "displayName": nom,
     })
-    return session["accessToken"] if statut == 200 else None
+    if statut == 429:
+        print(f"\nArrêt : limitation de débit atteinte à la création du compte « {nom} ».")
+        print("Redémarrer l'API, ou attendre la fenêtre de RG-AUTH-05, puis relancer.")
+        sys.exit(2)
+    if statut != 200:
+        print(f"\nArrêt : impossible de créer le compte « {nom} » ({statut}).")
+        sys.exit(2)
+    return session["accessToken"]
+
+
+def rejoindre(cible, jeton, cle=None):
+    """Rejoint par lien ou par code court. Aucun corps : ni nom, ni statut (EF-INV-04)."""
+    return appel("POST", cible, jeton=jeton,
+                 cle_idempotence=cle or uuid.uuid4().hex)
 
 
 print("\n--- Création d'un événement (EF-EVT-01, EF-EVT-02) ---")
@@ -131,32 +155,43 @@ verifier("le code court se résout en minuscules et sans préfixe", statut == 20
 statut, _ = appel("GET", "/join/code/PLAN-ZZZZZZ")
 verifier("un code inexistant renvoie 404", statut == 404, f"{statut}")
 
-print("\n--- Participation sans compte (EF-INV-04, RG-INV-05) ---")
-jetons_invites = {}
-for nom, presence in [("Lucas", "Going"), ("Emma", "Maybe"), ("Rémi", "Late"),
-                      ("Thomas", "NotGoing")]:
-    statut, adhesion = appel("POST", f"/join/{jeton_lien}",
-                             {"displayName": nom, "status": presence},
-                             cle_idempotence=uuid.uuid4().hex)
-    verifier(f"{nom} rejoint sans compte, statut « {presence} »", statut == 200, f"{statut}")
-    if statut == 200 and adhesion.get("guestToken"):
-        jetons_invites[nom] = adhesion["guestToken"]
+print("\n--- Participation avec compte (EF-INV-04, RG-INV-05, ADR 0006) ---")
+statut, _ = rejoindre(f"/join/{jeton_lien}", None)
+verifier("une adhésion anonyme est refusée (ADR 0006)", statut == 401, f"{statut}")
 
-verifier("un jeton d'invité est remis à chacun", len(jetons_invites) == 4,
-         str(len(jetons_invites)))
+jetons = {}
+for nom in ("Lucas", "Emma", "Rémi", "Thomas"):
+    jetons[nom] = compte(nom)
+    statut, adhesion = rejoindre(f"/join/{jeton_lien}", jetons[nom])
+    verifier(f"{nom} rejoint avec son compte", statut == 200, f"{statut}")
+    verifier(f"l'adhésion de {nom} renvoie son identifiant de membre",
+             statut == 200 and adhesion.get("memberId"), str(adhesion))
 
-statut, _ = appel("POST", f"/join/{jeton_lien}", {"displayName": "", "status": "Going"},
-                  cle_idempotence=uuid.uuid4().hex)
-verifier("un prénom vide est refusé", statut == 400, f"{statut}")
+statut, membres = appel("GET", f"/events/{evenement_id}/members", jeton=organisateur)
+noms = {m["displayName"] for m in membres}
+verifier("le nom du membre vient du profil, non du corps de la requête",
+         {"Lucas", "Emma", "Rémi", "Thomas"} <= noms, str(noms))
+verifier("tous les membres ont un compte (ADR 0006)",
+         all(m["hasAccount"] for m in membres))
 
-if jetons_invites:
-    jeton_lucas = jetons_invites["Lucas"]
-    statut, _ = appel("GET", f"/events/{evenement_id}", jeton=jeton_lucas)
-    verifier("un invité voit l'événement qu'il a rejoint", statut == 200, f"{statut}")
+arrivants = [m for m in membres if m["displayName"] in ("Lucas", "Emma", "Rémi", "Thomas")]
+verifier("le statut initial est « Unknown », jamais présumé présent (RG-PRES-01)",
+         all(m["status"] == "Unknown" for m in arrivants),
+         str({m["displayName"]: m["status"] for m in arrivants}))
 
-    statut, autre = creer({"name": "Autre", "startsAt": "2026-09-01T18:00:00Z"}, organisateur)
-    statut, _ = appel("GET", f"/events/{autre['id']}", jeton=jeton_lucas)
-    verifier("un invité ne voit aucun autre événement (EF-INV-04)", statut == 404, f"{statut}")
+# Chacun déclare ensuite sa présence : c'est son geste, pas celui de l'organisateur.
+for nom, presence in (("Lucas", "Going"), ("Emma", "Maybe"),
+                      ("Rémi", "Late"), ("Thomas", "NotGoing")):
+    statut, _ = appel("PATCH", f"/events/{evenement_id}/members/me",
+                      {"status": presence}, jeton=jetons[nom])
+    verifier(f"{nom} déclare « {presence} »", statut == 200, f"{statut}")
+
+statut, _ = appel("GET", f"/events/{evenement_id}", jeton=jetons["Lucas"])
+verifier("un membre voit l'événement qu'il a rejoint", statut == 200, f"{statut}")
+
+statut, autre = creer({"name": "Autre", "startsAt": "2026-09-01T18:00:00Z"}, organisateur)
+statut, _ = appel("GET", f"/events/{autre['id']}", jeton=jetons["Lucas"])
+verifier("un membre ne voit aucun autre événement (cloisonnement)", statut == 404, f"{statut}")
 
 print("\n--- Présences (EF-PRES-01 à EF-PRES-06, RG-PRES-02, RG-PRES-03) ---")
 statut, evenement = appel("GET", f"/events/{evenement_id}", jeton=organisateur)
@@ -169,8 +204,8 @@ verifier("tous les invités sont dénombrés",
 
 statut, membres = appel("GET", f"/events/{evenement_id}/members", jeton=organisateur)
 verifier("la liste nominative est visible d'un membre", statut == 200, f"{statut}")
-verifier("les invités sans compte y figurent",
-         sum(1 for m in membres if not m["hasAccount"]) == 4)
+verifier("chaque ligne porte un rôle et un statut",
+         all("role" in m and "status" in m for m in membres))
 
 statut, moi = appel("PATCH", f"/events/{evenement_id}/members/me",
                     {"status": "Late", "arrivalTime": "22:00:00", "extraGuests": 2},
@@ -190,9 +225,8 @@ verifier("le nombre d'accompagnants est plafonné",
          statut == 400 and corps.get("code") == "attendance.too_many_guests", f"{statut}")
 
 print("\n--- Rôles (RG-ROLE-01 à RG-ROLE-03) ---")
-participant = compte("Lucas")
-appel("POST", f"/join/{jeton_lien}", {"displayName": "Lucas (compte)", "status": "Going"},
-      jeton=participant, cle_idempotence=uuid.uuid4().hex)
+participant = compte("Nino")
+rejoindre(f"/join/{jeton_lien}", participant)
 
 statut, corps = appel("PATCH", f"/events/{evenement_id}", {"name": "Détourné"}, jeton=participant)
 verifier("un membre ordinaire ne modifie pas l'événement",
@@ -210,8 +244,7 @@ verifier("un membre ordinaire peut quitter", statut == 204, f"{statut}")
 
 print("\n--- Transfert de propriété (RG-ROLE-02) ---")
 repreneur = compte("Lucie")
-appel("POST", f"/join/{jeton_lien}", {"displayName": "Lucie", "status": "Going"},
-      jeton=repreneur, cle_idempotence=uuid.uuid4().hex)
+rejoindre(f"/join/{jeton_lien}", repreneur)
 
 statut, membres = appel("GET", f"/events/{evenement_id}/members", jeton=organisateur)
 cible = next((m for m in membres if m["displayName"] == "Lucie"), None)
@@ -223,15 +256,9 @@ if cible:
     verifier("un membre ordinaire ne transfère pas la propriété",
              statut == 403 and corps.get("code") == "event.only_owner_transfers", f"{statut}")
 
-    invite_sans_compte = next((m for m in membres if not m["hasAccount"]), None)
-    if invite_sans_compte:
-        statut, corps = appel(
-            "POST",
-            f"/events/{evenement_id}/members/{invite_sans_compte['id']}/transfer-ownership",
-            jeton=organisateur, cle_idempotence=uuid.uuid4().hex)
-        verifier("un invité sans compte ne peut pas devenir propriétaire",
-                 statut == 422 and corps.get("code") == "event.transfer_needs_account",
-                 f"{statut}")
+    # La garde « event.transfer_needs_account » n'est plus atteignable par la recette :
+    # depuis l'ADR 0006 aucune ligne sans compte ne peut être créée. Elle protège les
+    # lignes historiques et reste couverte par OwnershipTransferTests.
 
     statut, _ = appel("POST", f"/events/{evenement_id}/members/{cible['id']}/transfer-ownership",
                       jeton=organisateur, cle_idempotence=uuid.uuid4().hex)
@@ -255,8 +282,8 @@ statut, _ = appel("PATCH", f"/events/{evenement_id}/join-enabled", {"joinEnabled
                   jeton=organisateur)
 verifier("les arrivées se ferment", statut == 204, f"{statut}")
 
-statut, corps = appel("POST", f"/join/{jeton_lien}", {"displayName": "Trop tard", "status": "Going"},
-                      cle_idempotence=uuid.uuid4().hex)
+retardataire = compte("Tardif")
+statut, corps = rejoindre(f"/join/{jeton_lien}", retardataire)
 verifier("un événement fermé refuse les arrivées",
          statut == 422 and corps.get("code") == "invitation.closed", f"{statut}")
 
@@ -293,89 +320,85 @@ id2 = soiree2["id"]
 statut, inv2 = appel("GET", f"/events/{id2}/invitation", jeton=evt2)
 jeton2, code2 = inv2["token"], inv2["shortCode"]
 
-statut, _ = appel("POST", f"/join/{jeton2}",
-                  {"displayName": "Sans clé", "status": "Going"})
+rejoueuse = compte("Rejouee")
+statut, _ = appel("POST", f"/join/{jeton2}", jeton=rejoueuse)
 verifier("la clé d'idempotence est obligatoire sur l'adhésion",
          statut == 400, f"{statut}")
 
 cle_adhesion = uuid.uuid4().hex
-appel("POST", f"/join/{jeton2}", {"displayName": "Rejouée", "status": "Going"},
-      cle_idempotence=cle_adhesion)
-statut, _ = appel("POST", f"/join/{jeton2}", {"displayName": "Rejouée", "status": "Going"},
-                  cle_idempotence=cle_adhesion)
+rejoindre(f"/join/{jeton2}", rejoueuse, cle=cle_adhesion)
+statut, _ = rejoindre(f"/join/{jeton2}", rejoueuse, cle=cle_adhesion)
 verifier("une adhésion rejouée est acceptée", statut == 200, f"{statut}")
 
+# RG-INV-05 : le rejeu ne doit ni créer un doublon, ni toucher à la présence déjà posée.
+statut, _ = appel("PATCH", f"/events/{id2}/members/me", {"status": "Going"}, jeton=rejoueuse)
+statut, _ = rejoindre(f"/join/{jeton2}", rejoueuse)
 statut, membres2 = appel("GET", f"/events/{id2}/members", jeton=evt2)
-verifier("une adhésion rejouée ne crée pas un second membre",
-         len([m for m in membres2 if m["displayName"] == "Rejouée"]) == 1)
+lignes = [m for m in membres2 if m["displayName"] == "Rejouee"]
+verifier("une adhésion rejouée ne crée pas un second membre", len(lignes) == 1,
+         str(len(lignes)))
+verifier("une adhésion rejouée ne remet pas la présence à zéro (RG-INV-05)",
+         bool(lignes) and lignes[0]["status"] == "Going",
+         str(lignes[0]["status"]) if lignes else "aucune ligne")
 
 print("\n--- Rejoindre par code court (EF-INV-03) ---")
 # Le code court doit permettre de rejoindre, pas seulement de regarder : l'aperçu ne
 # contient aucun jeton (RG-INV-04), et sans cet endpoint il serait une impasse.
-statut, adhesion_code = appel(
-    "POST", f"/join/code/{code2[5:].lower()}",
-    {"displayName": "Par le code", "status": "Going"},
-    cle_idempotence=uuid.uuid4().hex)
+par_le_code = compte("Camille")
+statut, adhesion_code = rejoindre(f"/join/code/{code2[5:].lower()}", par_le_code)
 verifier("le code court permet de rejoindre", statut == 200, f"{statut}")
-verifier("un jeton d'invité est remis",
-         statut == 200 and bool(adhesion_code.get("guestToken")))
+verifier("l'adhésion par code renvoie l'événement et le membre",
+         statut == 200 and adhesion_code.get("eventId") == id2, str(adhesion_code))
 
-statut, _ = appel("POST", "/join/code/ZZZZZZ",
-                  {"displayName": "Intrus", "status": "Going"},
-                  cle_idempotence=uuid.uuid4().hex)
+statut, _ = rejoindre("/join/code/ZZZZZZ", par_le_code)
 verifier("un code court inconnu ne laisse pas rejoindre", statut == 404, f"{statut}")
 
-print("\n--- Conversion d'un invité en compte (EF-AUTH-11) ---")
-statut, adhesion_conv = appel(
-    "POST", f"/join/{jeton2}", {"displayName": "Léa", "status": "Going"},
-    cle_idempotence=uuid.uuid4().hex)
-jeton_invite = adhesion_conv.get("guestToken") if statut == 200 else None
-verifier("l'invitée sans compte reçoit un jeton", jeton_invite is not None)
+statut, _ = rejoindre(f"/join/code/{code2[5:].lower()}", None)
+verifier("le code court n'ouvre rien sans compte (ADR 0006)", statut == 401, f"{statut}")
 
-nouveau = compte("Lea")
-statut, resultat = appel("POST", "/auth/guest-claim",
-                         {"guestToken": jeton_invite}, jeton=nouveau)
-verifier("le rattachement aboutit", statut == 200, f"{statut}")
-verifier("une participation est rattachée",
-         statut == 200 and resultat.get("linked") == 1, f"{resultat}")
+print("\n--- Le parcours invité a disparu (ADR 0006) ---")
+# La conversion d'invité en compte (ancien EF-AUTH-11, /auth/guest-claim) est supprimée :
+# il n'y a plus d'invité à convertir. Ce qui doit rester vrai, c'est qu'aucune porte
+# dérobée ne subsiste.
+statut, _ = appel("POST", "/auth/guest-claim", {"guestToken": "inconnu"})
+verifier("l'endpoint de conversion d'invité n'existe plus", statut == 404, f"{statut}")
 
-statut, siens = appel("GET", "/events", jeton=nouveau)
-verifier("l'événement rejoint sans compte apparaît dans la liste du compte",
-         statut == 200 and any(e["id"] == id2 for e in siens))
+statut, _ = appel("POST", f"/join/{jeton2}", cle_idempotence=uuid.uuid4().hex)
+verifier("rejoindre sans session est refusé", statut == 401, f"{statut}")
 
-statut, membres_conv = appel("GET", f"/events/{id2}/members", jeton=evt2)
-verifier("aucun doublon de membre après conversion",
-         len([m for m in membres_conv if m["displayName"] == "Léa"]) == 1)
-
-statut, _ = appel("POST", "/auth/guest-claim", {"guestToken": "inconnu"}, jeton=nouveau)
-verifier("un jeton d'invité inconnu ne produit pas d'erreur", statut == 200, f"{statut}")
-
-statut, _ = appel("POST", "/auth/guest-claim", {"guestToken": jeton_invite})
-verifier("le rattachement exige une session", statut == 401, f"{statut}")
-
-print("\n--- Parcours en trois interactions (EF-INV-04) ---")
+print("\n--- Parcours d'invitation de bout en bout (EF-INV-04, EF-AUTH-11) ---")
 evt3 = compte("Zoe")
 statut, soiree3 = creer(
     {"name": "Trois gestes", "startsAt": "2026-09-25T20:00:00Z"}, evt3)
 id3 = soiree3["id"]
 statut, inv3 = appel("GET", f"/events/{id3}/invitation", jeton=evt3)
 
-# 1. Ouverture du lien : l'aperçu, sans session ni adresse.
+# 1. Ouverture du lien : l'aperçu, sans session.
 statut, apercu3 = appel("GET", f"/join/{inv3['token']}")
 verifier("l'aperçu s'ouvre sans session", statut == 200, f"{statut}")
 verifier("RG-INV-04 : l'aperçu ne liste pas les membres", "members" not in apercu3)
 verifier("RG-INV-04 : l'aperçu ne révèle aucun jeton", "token" not in apercu3)
+verifier("l'aperçu annonce le nombre de participants",
+         "participantCount" in apercu3 or "memberCount" in apercu3, str(set(apercu3)))
 
-# 2. et 3. Prénom puis statut, en un seul appel : deux écrans, aucune adresse saisie.
-statut, adhesion3 = appel("POST", f"/join/{inv3['token']}",
-                          {"displayName": "Zoé", "status": "Going"},
-                          cle_idempotence=uuid.uuid4().hex)
-verifier("l'adhésion aboutit sans adresse e-mail", statut == 200, f"{statut}")
+# 2. Création du compte depuis l'aperçu — c'est ce que porte le retour d'invitation.
+invitee = compte("Zoé")
+verifier("un compte se crée depuis l'aperçu", invitee is not None)
 
-statut, tableau3 = appel("GET", f"/events/{id3}",
-                         jeton=adhesion3.get("guestToken") if statut == 200 else None)
-verifier("le tableau de bord est atteint avec le seul jeton d'invité",
+# 3. Adhésion avec le compte : ni nom ni statut transmis.
+statut, adhesion3 = rejoindre(f"/join/{inv3['token']}", invitee)
+verifier("l'adhésion aboutit avec le compte", statut == 200, f"{statut}")
+
+statut, tableau3 = appel("GET", f"/events/{id3}", jeton=invitee)
+verifier("le tableau de bord est atteint aussitôt",
          statut == 200 and tableau3.get("name") == "Trois gestes", f"{statut}")
+
+statut, membres3 = appel("GET", f"/events/{id3}/members", jeton=invitee)
+ligne = next((m for m in membres3 if m["displayName"] == "Zoé"), None)
+verifier("le nom affiché est celui du profil", ligne is not None)
+verifier("la présence reste à déclarer (RG-PRES-01)",
+         ligne is not None and ligne["status"] == "Unknown",
+         str(ligne["status"]) if ligne else "aucune ligne")
 
 echecs = [libelle for ok, libelle in resultats if not ok]
 print(f"\n{len(resultats) - len(echecs)} / {len(resultats)} vérifications passées")
