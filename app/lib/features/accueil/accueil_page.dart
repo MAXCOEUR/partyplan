@@ -57,19 +57,12 @@ class AccueilPage extends ConsumerWidget {
           ),
         ],
       ),
-      // Le bouton suit le rail : collé à l'angle de l'écran, il se retrouverait loin
-      // de la liste sur laquelle il agit.
-      floatingActionButtonLocation: const PpFabDansLeRail(),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => context.push(PpRoutes.creationEvenement),
-        icon: const Icon(Icons.add_rounded),
-        label: Text(l10n.creerUnEvenement),
-      ),
       body: Column(
         children: [
           PpBandeauHorsLigne(
             onReessayer: () => ref.invalidate(mesEvenementsProvider),
           ),
+          const _ActionsAccueil(),
           Expanded(
             // Le rail borne la largeur : étirée sur un écran de bureau, une carte
             // d'événement place son titre à gauche et son état de présence à l'autre
@@ -98,19 +91,48 @@ class AccueilPage extends ConsumerWidget {
     return PpEmptyState(
       titre: l10n.accueilVideTitre,
       explication: l10n.accueilVideExplication,
-      action: Column(
-        children: [
-          FilledButton.icon(
-            onPressed: () => context.push(PpRoutes.creationEvenement),
-            icon: const Icon(Icons.add_rounded),
-            label: Text(l10n.creerUnEvenement),
-          ),
-          const SizedBox(height: PpSpacing.sm),
-          TextButton(
-            onPressed: () => context.push(PpRoutes.rejoindreParCode),
-            child: Text(l10n.rejoindreUnEvenement),
-          ),
-        ],
+    );
+  }
+}
+
+/// Les deux façons d'ajouter une soirée restent ensemble et toujours visibles.
+///
+/// Elles ne dépendent pas du chargement ni du contenu de la liste : posséder déjà une
+/// soirée n'empêche ni d'en organiser une autre, ni de rejoindre celle d'un proche.
+class _ActionsAccueil extends StatelessWidget {
+  const _ActionsAccueil();
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = PpL10n.of(context);
+
+    return PpRail(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(
+          PpSpacing.lg,
+          PpSpacing.sm,
+          PpSpacing.lg,
+          PpSpacing.md,
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: FilledButton.icon(
+                onPressed: () => context.push(PpRoutes.creationEvenement),
+                icon: const Icon(Icons.add_rounded),
+                label: Text(l10n.creerUnEvenement),
+              ),
+            ),
+            const SizedBox(width: PpSpacing.sm),
+            Expanded(
+              child: OutlinedButton.icon(
+                onPressed: () => context.push(PpRoutes.rejoindreParCode),
+                icon: const Icon(Icons.vpn_key_outlined),
+                label: Text(l10n.rejoindreUnEvenement),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

@@ -5,6 +5,7 @@ import 'package:intl/date_symbol_data_local.dart';
 import 'package:intl/intl.dart';
 
 import 'app/app.dart';
+import 'core/network/reprise.dart';
 
 void main() {
   // Sans cet appel, `DateFormat` avec la locale « fr_FR » lève à la première mise en
@@ -13,5 +14,7 @@ void main() {
   Intl.defaultLocale = 'fr_FR';
   usePathUrlStrategy();
 
-  runApp(const ProviderScope(child: PartyPlanApp()));
+  // La politique de reprise est posée ici, pour toute l'application : celle de
+  // Riverpod retente n'importe quel échec, y compris ceux qui ne changeront pas.
+  runApp(ProviderScope(retry: repriseApres, child: const PartyPlanApp()));
 }

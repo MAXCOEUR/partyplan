@@ -244,9 +244,9 @@ class _CreationEvenementPageState extends ConsumerState<CreationEvenementPage> {
       ref.invalidate(mesEvenementsProvider);
 
       if (mounted) {
-        // `go` et non `push` : un retour arrière ne doit pas ramener sur l'assistant
-        // d'un événement déjà créé.
-        context.go(PpRoutes.versEvenement(resume.id));
+        // Remplace seulement l'assistant : revenir mène à l'accueil qui l'a ouvert,
+        // sans rouvrir le formulaire d'un événement déjà créé.
+        context.replace(PpRoutes.versEvenement(resume.id));
       }
     } on Exception {
       if (mounted) {

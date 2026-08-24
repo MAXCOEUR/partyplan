@@ -69,4 +69,52 @@ void main() {
       expect(PpBreakpoints.railContenu, lessThan(PpBreakpoints.large));
     });
   });
+
+  group('PpFabDansLeRail', () {
+    testWidgets('reste au-dessus de la barre de navigation mobile', (
+      tester,
+    ) async {
+      // Le FAB personnalisé ne doit pas ignorer l'espace réservé par le Scaffold à la
+      // barre basse : il masquerait alors son onglet actif et son libellé.
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: Scaffold(
+            floatingActionButtonLocation: PpFabDansLeRail(),
+            floatingActionButton: FloatingActionButton(
+              key: Key('fab'),
+              onPressed: null,
+            ),
+            bottomNavigationBar: SizedBox(key: Key('barre-basse'), height: 80),
+          ),
+        ),
+      );
+
+      final fab = tester.getRect(find.byKey(const Key('fab')));
+      final barre = tester.getRect(find.byKey(const Key('barre-basse')));
+
+      expect(fab.bottom, lessThanOrEqualTo(barre.top - PpSpacing.lg));
+    });
+
+    testWidgets('reste en bas quand la navigation est latérale', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: Scaffold(
+            floatingActionButtonLocation: PpFabDansLeRail(),
+            floatingActionButton: FloatingActionButton(
+              key: Key('fab'),
+              onPressed: null,
+            ),
+          ),
+        ),
+      );
+
+      final fab = tester.getRect(find.byKey(const Key('fab')));
+      final hauteur =
+          tester.view.physicalSize.height / tester.view.devicePixelRatio;
+
+      expect(hauteur - fab.bottom, PpSpacing.lg);
+    });
+  });
 }

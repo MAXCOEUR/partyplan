@@ -5,8 +5,10 @@ import 'package:partyplan/app/app.dart';
 import 'package:partyplan/app/router.dart';
 import 'package:partyplan/core/models/article_course.dart';
 import 'package:partyplan/core/models/depense.dart';
+import 'package:partyplan/core/models/evenement.dart';
 import 'package:partyplan/core/models/message.dart';
 import 'package:partyplan/core/models/sondage.dart';
+import 'package:partyplan/core/network/evenements_api.dart';
 import 'package:partyplan/core/providers.dart';
 
 import '../aide/fabriques.dart';
@@ -15,12 +17,28 @@ import '../doubles/session_store_double.dart';
 
 const _evenement = 'ev-1';
 
+class _ApiCreationReussie implements EvenementsApi {
+  @override
+  Future<ResumeEvenement> creer({
+    required String nom,
+    required DateTime debut,
+    DateTime? fin,
+    String? adresse,
+    String? description,
+    required String cleIdempotence,
+  }) async => resume(id: _evenement, nom: nom, debut: debut);
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => throw UnimplementedError();
+}
+
 ProviderContainer _conteneur() {
   final conteneur = ProviderContainer(
     overrides: [
       sessionStoreProvider.overrideWithValue(
         SessionStoreDouble(jetonAcces: 'jeton', jetonRafraichissement: 'r'),
       ),
+      evenementsApiProvider.overrideWithValue(_ApiCreationReussie()),
       mesEvenementsProvider.overrideWith(
         (ref) async => [itemListe(id: _evenement, nom: 'Soirée test')],
       ),
@@ -210,6 +228,41 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(routeur.state.uri.toString(), PpRoutes.versEvenement(_evenement));
+    });
+
+    testWidgets('après une création, revenir ramène à la liste', (
+      tester,
+    ) async {
+      // L'assistant doit disparaître de la pile, mais pas l'accueil qui l'a ouvert.
+      // Remplacer toute la pile par la soirée rendrait ce retour impossible.
+      final conteneur = _conteneur();
+      final routeur = conteneur.read(routeurProvider);
+
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: conteneur,
+          child: const PartyPlanApp(),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Créer un événement'));
+      await tester.pumpAndSettle();
+      await tester.enterText(
+        find.byType(TextFormField).first,
+        'Nouvelle soirée',
+      );
+      await tester.tap(find.text('Suite'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Créer l’événement'));
+      await tester.pumpAndSettle();
+
+      expect(routeur.state.uri.toString(), PpRoutes.versEvenement(_evenement));
+
+      await tester.tap(find.byType(BackButton));
+      await tester.pumpAndSettle();
+
+      expect(routeur.state.uri.toString(), PpRoutes.accueil);
     });
   });
 }

@@ -48,17 +48,16 @@ class PpFabDansLeRail extends FloatingActionButtonLocation {
         ? PpBreakpoints.railContenu
         : largeurEcran;
     final bordDroitDuRail = (largeurEcran + largeurRail) / 2;
+    final positionStandard = FloatingActionButtonLocation.endFloat.getOffset(
+      geometry,
+    );
 
     final x =
         bordDroitDuRail - geometry.floatingActionButtonSize.width - _marge;
 
-    final y =
-        geometry.scaffoldSize.height -
-        geometry.floatingActionButtonSize.height -
-        geometry.minInsets.bottom -
-        _marge;
-
-    return Offset(x, y);
+    // Flutter tient déjà compte ici de la barre basse, du clavier, des SnackBars et
+    // des feuilles. Seul l'alignement horizontal est spécifique au rail PartyPlan.
+    return Offset(x, positionStandard.dy);
   }
 
   @override

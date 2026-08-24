@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:partyplan/core/models/evenement.dart';
@@ -100,6 +101,29 @@ void main() {
       ]);
 
       expect(find.text('ORGANISATEUR'), findsOneWidget);
+    });
+
+    testWidgets('rejoindre avec un code reste accessible avec des soirées', (
+      tester,
+    ) async {
+      // Le bouton n'existait que sur l'écran vide : dès la première soirée créée, plus
+      // aucun moyen d'en rejoindre une autre par son code. Or on garde ses propres
+      // soirées et on continue d'être invité à celles des autres.
+      await _monter(tester, [itemListe(id: 'a', nom: 'Crémaillère')]);
+
+      expect(find.text('Rejoindre avec un code'), findsOneWidget);
+    });
+
+    testWidgets('garde créer et rejoindre ensemble sans bouton flottant', (
+      tester,
+    ) async {
+      // Séparer « Créer » dans un FAB et « Rejoindre » au bout de la liste oblige à
+      // chercher deux actions de même nature à deux endroits différents.
+      await _monter(tester, [itemListe(id: 'a', nom: 'Crémaillère')]);
+
+      expect(find.text('Créer un événement'), findsOneWidget);
+      expect(find.text('Rejoindre avec un code'), findsOneWidget);
+      expect(find.byType(FloatingActionButton), findsNothing);
     });
 
     testWidgets('offre une reprise après une erreur de chargement', (

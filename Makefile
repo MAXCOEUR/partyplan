@@ -74,8 +74,12 @@ api: ## Lance l'API en rechargement à chaud (base et courriel en conteneur)
 	@# `env` est indispensable ici : le shell analyse les affectations de variables
 	@# avant les substitutions de commande, si bien qu'un $$(...) placé en préfixe
 	@# serait interprété comme un nom de commande et non comme une affectation.
+	@# Le SDK .NET 10.0.400 mélange `obj\\Debug` et `obj/Debug` sous Linux dans la
+	@# gestion spéciale des fichiers statiques de dotnet-watch. L'API n'en sert pas :
+	@# la désactiver supprime ce faux échec sans toucher au hot reload du code C#.
 	ASPNETCORE_ENVIRONMENT=Development ASPNETCORE_URLS=$(API_URLS) \
-	  env App__PublicBaseUrl=http://localhost:$(WEB_DEV_PORT) \
+	  env DOTNET_WATCH_SUPPRESS_STATIC_FILE_HANDLING=1 \
+	  App__PublicBaseUrl=http://localhost:$(WEB_DEV_PORT) \
 	  $$(./tools/verifier-inotify.sh --env) \
 	  dotnet watch --project $(API_PROJ) run
 
