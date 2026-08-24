@@ -41,7 +41,7 @@ et non ignorée :
 | Fuite de la base | Argon2id — `RG-AUTH-02` |
 | Force brute | Ralentissement croissant après dix échecs, sans verrouillage définitif — `RG-AUTH-05` |
 | Énumération de comptes | Réponse identique que l'adresse existe ou non — `RG-AUTH-04` |
-| Compromission d'un compte administrateur | Double authentification obligatoire pour tout rôle plateforme — `RG-ADM-04` |
+| Compromission d'un compte administrateur | ~~Double authentification obligatoire — `RG-ADM-04`~~ — **révisé par l'`ADR 0007`** : `RG-AUTH-01`, `RG-AUTH-05` et le cloisonnement `RG-ADM-01`, qui interdit à un rôle plateforme de lire le contenu d'un événement |
 | Identifiant par défaut laissé en production | Refus de démarrage si l'amorçage est incomplet ou le mot de passe faible — `RG-ADM-11` |
 
 ## Règles structurantes

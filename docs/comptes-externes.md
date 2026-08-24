@@ -221,14 +221,12 @@ tiennent sur la même machine à ce volume.
 **Ce qu'il faut, une fois le serveur pris**
 
 ```bash
-SECURITY_ENCRYPTION_KEY=$(openssl rand -base64 32)
 JWT_SIGNING_KEY=$(openssl rand -base64 48)
 POSTGRES_PASSWORD=$(openssl rand -base64 32)
 ```
 
-Ces trois valeurs se génèrent sur le serveur, ne se notent nulle part ailleurs que dans
-un gestionnaire de mots de passe, et `SECURITY_ENCRYPTION_KEY` **doit différer** de
-`JWT_SIGNING_KEY` — le démarrage est refusé sinon (`RG-AUTH-10`).
+Ces deux valeurs se génèrent sur le serveur et ne se notent nulle part ailleurs que dans
+un gestionnaire de mots de passe.
 
 ---
 

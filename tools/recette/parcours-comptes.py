@@ -10,16 +10,18 @@ l'API sait faire.
 """
 
 import json
+import os
 import re
 import sys
 import urllib.error
 import urllib.request
 import uuid
 
-API = "http://127.0.0.1:5080/v1"
+API = os.environ.get("API_URL", "http://127.0.0.1:5080") + "/v1"
 MAILPIT = "http://127.0.0.1:8025/api/v1"
 
 resultats: list[tuple[bool, str]] = []
+ignores: list[str] = []
 
 
 def appel(methode, chemin, corps=None, jeton=None, base=API):
@@ -41,6 +43,16 @@ def verifier(libelle, condition, detail=""):
     resultats.append((bool(condition), libelle))
     marque = "OK " if condition else "NON"
     print(f"  {marque} {libelle}{f'  [{detail}]' if detail and not condition else ''}")
+
+
+def ignorer(libelle, motif):
+    """Vérification non exécutable dans l'état courant de l'instance.
+
+    Ni réussie ni échouée : la compter comme réussie mentirait, la compter comme
+    échouée rendrait la recette rouge en permanence et on cesserait de la lancer.
+    """
+    ignores.append(f"{libelle} — {motif}")
+    print(f"  -   {libelle}  [{motif}]")
 
 
 def dernier_code_recu(destinataire):
@@ -189,128 +201,84 @@ statut, corps = appel("POST", "/auth/register",
 verifier("l'adresse est libérée : la réinscription est possible (RG-USR-06)",
          statut == 200, f"{statut} {corps}")
 
-print("\n--- Double authentification (EF-AUTH-12) ---")
-adresse_mfa = f"mfa-{suffixe}@partyplan.local"
+print("\n--- Retrait de la double authentification (ADR 0007) ---")
+adresse_sans2fa = f"sans2fa-{suffixe}@partyplan.local"
 statut, session = appel("POST", "/auth/register",
-                        {"email": adresse_mfa, "password": mdp, "displayName": "MFA"})
-jeton_mfa = session["accessToken"]
+                        {"email": adresse_sans2fa, "password": mdp, "displayName": "Sans 2FA"})
+verifier("un compte de contrôle est créé", statut == 200, f"{statut} {session}")
+jeton_sans2fa = (session or {}).get("accessToken")
 
-statut, enrolement = appel("POST", "/auth/totp/setup", jeton=jeton_mfa)
-verifier("l'enrôlement remet un secret et une URI otpauth",
-         statut == 200 and enrolement["otpAuthUri"].startswith("otpauth://totp/"), f"{statut}")
+statut, profil_sans2fa = appel("GET", "/me", jeton=jeton_sans2fa)
+verifier("le profil ne déclare plus de double authentification",
+         statut == 200 and "totpEnabled" not in profil_sans2fa, f"{statut}")
 
-secret = enrolement["secret"]
+for methode, chemin in (("POST", "/auth/totp/setup"),
+                        ("POST", "/auth/totp/activate"),
+                        ("DELETE", "/auth/totp"),
+                        ("POST", "/auth/totp/recovery-codes"),
+                        ("POST", "/auth/mfa/verify")):
+    statut, _ = appel(methode, chemin, {"code": "000000", "password": mdp}, jeton=jeton_sans2fa)
+    verifier(f"{methode} {chemin} n'existe plus", statut == 404, f"{statut}")
 
-statut, profil = appel("GET", "/me", jeton=jeton_mfa)
-verifier("l'enrôlement seul n'active rien", profil["totpEnabled"] is False)
-
-statut, corps = appel("POST", "/auth/totp/activate", {"code": "000000"}, jeton=jeton_mfa)
-verifier("un code erroné n'active pas la double authentification",
-         statut == 400 and corps.get("code") == "totp.invalid_code", f"{statut}")
-
-
-def code_totp(secret_base32, decalage=0):
-    """Calcule le code temporel courant à partir du secret base32."""
-    import base64
-    import hmac
-    import hashlib
-    import struct
-    import time
-
-    rembourrage = "=" * (-len(secret_base32) % 8)
-    cle = base64.b32decode(secret_base32 + rembourrage)
-    pas = int(time.time()) // 30 + decalage
-    empreinte = hmac.new(cle, struct.pack(">Q", pas), hashlib.sha1).digest()
-    offset = empreinte[-1] & 0x0F
-    binaire = struct.unpack(">I", empreinte[offset:offset + 4])[0] & 0x7FFFFFFF
-    return f"{binaire % 1000000:06d}"
-
-
-statut, activation = appel("POST", "/auth/totp/activate",
-                           {"code": code_totp(secret)}, jeton=jeton_mfa)
-verifier("l'activation aboutit avec un code valide", statut == 200, f"{statut}")
-verifier("huit codes de secours sont remis",
-         statut == 200 and len(activation.get("recoveryCodes", [])) == 8)
-
-codes_secours = activation["recoveryCodes"] if statut == 200 else []
-
-statut, connexion = appel("POST", "/auth/login", {"email": adresse_mfa, "password": mdp})
-verifier("la connexion demande désormais un second facteur",
-         statut == 200 and connexion.get("requiresSecondFactor") is True, f"{statut}")
-verifier("aucun jeton d'accès n'est remis à la première étape",
-         connexion.get("accessToken") is None)
-
-defi = connexion.get("challengeToken")
-
-statut, _ = appel("GET", "/me", jeton=defi)
-verifier("le jeton de défi n'ouvre pas l'API", statut == 401, f"{statut}")
-
-statut, corps = appel("POST", "/auth/mfa/verify", {"challengeToken": defi, "code": "000000"})
-verifier("un code erroné ne franchit pas la seconde étape", statut == 400, f"{statut}")
-
-statut, session = appel("POST", "/auth/mfa/verify",
-                        {"challengeToken": defi, "code": code_totp(secret)})
-verifier("le bon code ouvre la session", statut == 200, f"{statut}")
-
-if codes_secours:
-    statut, connexion = appel("POST", "/auth/login", {"email": adresse_mfa, "password": mdp})
-    statut, _ = appel("POST", "/auth/mfa/verify",
-                      {"challengeToken": connexion["challengeToken"], "code": codes_secours[0]})
-    verifier("un code de secours remplace le code temporel", statut == 200, f"{statut}")
-
-    statut, connexion = appel("POST", "/auth/login", {"email": adresse_mfa, "password": mdp})
-    statut, _ = appel("POST", "/auth/mfa/verify",
-                      {"challengeToken": connexion["challengeToken"], "code": codes_secours[0]})
-    verifier("un code de secours ne sert qu'une fois", statut == 400, f"{statut}")
+statut, connexion = appel("POST", "/auth/login",
+                          {"email": adresse_sans2fa, "password": mdp})
+verifier("la connexion ouvre directement une session",
+         statut == 200 and connexion.get("accessToken"), f"{statut}")
+verifier("aucun défi de second facteur n'est annoncé",
+         "requiresSecondFactor" not in connexion and "challengeToken" not in connexion)
 
 print("\n--- Administration (EF-ADM-01 à EF-ADM-09, RG-ADM-05) ---")
-statut, session = appel("POST", "/auth/login",
-                        {"email": "admin@partyplan.local", "password": "MotDePasseDeDeveloppement"})
+# Cette recette change elle-même le mot de passe imposé (RG-ADM-10). Au second passage
+# sur la même base, c'est donc le mot de passe changé qui vaut : les deux sont essayés,
+# sans quoi la recette ne serait jouable qu'une fois par base.
+MDP_ADMIN_AMORCE = "MotDePasseDeDeveloppement"
+MDP_ADMIN_CHANGE = "Girouette-Safran-88"
+
+for mdp_admin in (MDP_ADMIN_AMORCE, MDP_ADMIN_CHANGE):
+    statut, session = appel("POST", "/auth/login",
+                            {"email": "admin@partyplan.local", "password": mdp_admin})
+    if statut == 200:
+        break
 verifier("l'administrateur amorcé peut se connecter", statut == 200, f"{statut}")
 
-if statut == 200 and not session.get("requiresSecondFactor"):
+if statut == 200:
     jeton_amorce = session["accessToken"]
     statut, profil_amorce = appel("GET", "/me", jeton=jeton_amorce)
-    verifier("le compte amorcé doit changer son mot de passe (RG-ADM-10)",
-             profil_amorce.get("mustChangePassword") is True, str(profil_amorce.get("mustChangePassword")))
 
-    statut, corps = appel("GET", "/admin/users?pageSize=1", jeton=jeton_amorce)
-    verifier("tant que le mot de passe n'est pas changé, aucune action n'est permise",
-             statut == 403 and corps.get("code") in ("auth.must_change_password", None),
-             f"{statut} {corps}")
+    # RG-ADM-10 ne s'observe que sur une instance jamais amorcée : une fois le mot de
+    # passe changé, l'obligation ne revient pas. Sur une base de développement déjà
+    # utilisée, ces deux points sont donc ignorés plutôt que déclarés faux.
+    # `AdminDeDeveloppementTests` les couvre en repartant d'une base vierge.
+    if profil_amorce.get("mustChangePassword") is True:
+        verifier("le compte amorcé doit changer son mot de passe (RG-ADM-10)", True)
 
-    statut, _ = appel("POST", "/auth/password/change",
-                      {"currentPassword": "MotDePasseDeDeveloppement",
-                       "newPassword": "Girouette-Safran-88"}, jeton=jeton_amorce)
-    verifier("le changement de mot de passe imposé aboutit", statut == 204, f"{statut}")
+        statut, corps = appel("GET", "/admin/users?pageSize=1", jeton=jeton_amorce)
+        verifier("tant que le mot de passe n'est pas changé, aucune action n'est permise",
+                 statut == 403 and corps.get("code") in ("auth.must_change_password", None),
+                 f"{statut} {corps}")
 
-    statut, session = appel("POST", "/auth/login",
-                            {"email": "admin@partyplan.local", "password": "Girouette-Safran-88"})
-    verifier("la reconnexion avec le nouveau mot de passe fonctionne", statut == 200, f"{statut}")
+        statut, _ = appel("POST", "/auth/password/change",
+                          {"currentPassword": MDP_ADMIN_AMORCE,
+                           "newPassword": MDP_ADMIN_CHANGE}, jeton=jeton_amorce)
+        verifier("le changement de mot de passe imposé aboutit", statut == 204, f"{statut}")
 
-    # RG-ADM-04 : un rôle plateforme exige la double authentification. Le premier
-    # démarrage doit donc franchir l'enrôlement — et ne pas être une impasse.
+        statut, session = appel("POST", "/auth/login",
+                                {"email": "admin@partyplan.local",
+                                 "password": MDP_ADMIN_CHANGE})
+        verifier("la reconnexion avec le nouveau mot de passe fonctionne",
+                 statut == 200, f"{statut}")
+    else:
+        ignorer("RG-ADM-10, changement de mot de passe imposé",
+                "mot de passe déjà changé sur cette instance ; relancer après make reset-db")
+
+    # ADR 0007 : le mot de passe changé, l'administration s'ouvre. Aucun enrôlement à
+    # franchir — c'est cette exigence qui rendait le back-office inatteignable à son
+    # seul administrateur.
     jeton_amorce = session["accessToken"]
 
-    statut, corps = appel("GET", "/admin/users?pageSize=1", jeton=jeton_amorce)
-    verifier("sans second facteur, l'administration reste fermée (RG-ADM-04)",
-             statut == 403, f"{statut}")
-
-    statut, enrolement_admin = appel("POST", "/auth/totp/setup", jeton=jeton_amorce)
-    verifier("l'enrôlement du second facteur reste accessible : pas d'impasse",
+    statut, _ = appel("GET", "/admin/users?pageSize=1", jeton=jeton_amorce)
+    verifier("le mot de passe changé, l'administration s'ouvre sans second facteur",
              statut == 200, f"{statut}")
-
-    secret_admin = enrolement_admin["secret"]
-    statut, _ = appel("POST", "/auth/totp/activate",
-                      {"code": code_totp(secret_admin)}, jeton=jeton_amorce)
-    verifier("l'activation du second facteur aboutit", statut == 204 or statut == 200, f"{statut}")
-
-    statut, connexion = appel("POST", "/auth/login",
-                              {"email": "admin@partyplan.local", "password": "Girouette-Safran-88"})
-    statut, session = appel("POST", "/auth/mfa/verify",
-                            {"challengeToken": connexion["challengeToken"],
-                             "code": code_totp(secret_admin)})
-    verifier("la connexion en deux temps de l'administrateur aboutit", statut == 200, f"{statut}")
 
 if statut != 200:
     print("\nArrêt : sans session d'administration, la suite est intestable.")
@@ -319,7 +287,6 @@ else:
 
     statut, profil = appel("GET", "/me", jeton=jeton_admin)
     verifier("il porte le rôle PlatformAdmin", profil["platformRole"] == "PlatformAdmin")
-    verifier("son second facteur est actif", profil["totpEnabled"] is True)
 
     statut, page = appel("GET", "/admin/users?pageSize=5", jeton=jeton_admin)
     verifier("la liste des comptes est accessible", statut == 200 and "items" in (page or {}),
@@ -329,8 +296,8 @@ else:
     verifier("la recherche par nom fonctionne", statut == 200 and page["total"] >= 1, f"{statut}")
 
     cible = next(u for u in page["items"] if u["email"] == adresse)
-    verifier("la fiche ne contient ni empreinte ni secret",
-             "passwordHash" not in cible and "totpSecret" not in cible)
+    verifier("la fiche ne contient aucune empreinte de mot de passe",
+             "passwordHash" not in cible)
 
     statut, _ = appel("POST", f"/admin/users/{cible['id']}/password-reset", jeton=jeton_admin)
     verifier("l'administrateur peut déclencher une réinitialisation", statut == 202, f"{statut}")
@@ -371,23 +338,17 @@ else:
     verifier("un rôle inconnu est refusé",
              statut == 400 and corps.get("code") == "admin.unknown_role", f"{statut}")
 
-    statut, corps = appel("PATCH", f"/admin/users/{cible['id']}/role", {"role": "Support"},
-                          jeton=jeton_admin)
-    verifier("la promotion est refusée sans double authentification (RG-ADM-04)",
-             statut == 422 and corps.get("code") == "admin.totp_required", f"{statut} {corps}")
+    # ADR 0007 : la promotion n'exige plus de second facteur.
+    statut, page_sans2fa = appel("GET", f"/admin/users?search=sans2fa-{suffixe}",
+                                 jeton=jeton_admin)
+    cible_sans2fa = page_sans2fa["items"][0]
 
-    # Le compte MFA, lui, a un second facteur actif : il peut être promu.
-    statut, page_mfa = appel("GET", f"/admin/users?search=mfa-{suffixe}", jeton=jeton_admin)
-    cible_mfa = page_mfa["items"][0]
-
-    statut, _ = appel("PATCH", f"/admin/users/{cible_mfa['id']}/role", {"role": "Support"},
+    statut, _ = appel("PATCH", f"/admin/users/{cible_sans2fa['id']}/role", {"role": "Support"},
                       jeton=jeton_admin)
-    verifier("la promotion aboutit lorsque le second facteur est actif", statut == 204, f"{statut}")
+    verifier("la promotion aboutit sans second facteur (ADR 0007)", statut == 204, f"{statut}")
 
-    statut, connexion = appel("POST", "/auth/login", {"email": adresse_mfa, "password": mdp})
-    statut, session_support = appel("POST", "/auth/mfa/verify",
-                                    {"challengeToken": connexion["challengeToken"],
-                                     "code": code_totp(secret)})
+    statut, session_support = appel("POST", "/auth/login",
+                                    {"email": adresse_sans2fa, "password": mdp})
     jeton_support = session_support["accessToken"]
 
     statut, _ = appel("GET", "/admin/users?pageSize=1", jeton=jeton_support)
@@ -416,7 +377,10 @@ else:
              statut == 200 and indicateurs["totalUsers"] > 0, f"{statut}")
 
 echecs = [libelle for ok, libelle in resultats if not ok]
-print(f"\n{len(resultats) - len(echecs)} / {len(resultats)} vérifications passées")
+print(f"\n{len(resultats) - len(echecs)} / {len(resultats)} vérifications passées"
+      + (f", {len(ignores)} ignorée(s)" if ignores else ""))
+for libelle in ignores:
+    print("  ignorée :", libelle)
 if echecs:
     print("\nÉchecs :")
     for libelle in echecs:

@@ -201,8 +201,8 @@ Cette section couvre l'identité : elle est développée avant toute fonctionnal
 | EF-AUTH-09 | P0 | Session conservée 90 jours sans reconnexion, prolongée à chaque usage. |
 | EF-AUTH-10 | P0 | Lister ses sessions actives et en révoquer une, ou toutes. |
 | EF-AUTH-11 | P0 | Après connexion ou inscription depuis un aperçu d'invitation, conserver le chemin d'invitation afin que le compte rejoigne l'événement. |
-| EF-AUTH-12 | P0 | Activer une double authentification par code temporel (TOTP). Obligatoire pour les rôles plateforme. |
-| EF-AUTH-13 | P0 | Recevoir huit codes de secours à l'activation, régénérables, chacun à usage unique. |
+| ~~EF-AUTH-12~~ | — | ~~Activer une double authentification par code temporel (TOTP).~~ **Abrogé le 24/08/2026 — ADR 0007.** |
+| ~~EF-AUTH-13~~ | — | ~~Recevoir huit codes de secours à l'activation.~~ **Abrogé le 24/08/2026 — ADR 0007.** |
 
 **RG-AUTH-01** — Le mot de passe comporte 12 caractères au minimum, sans autre règle de
 composition, et est refusé s'il figure dans une liste de mots de passe compromis. Aucune
@@ -242,30 +242,12 @@ adhésion.
 **RG-AUTH-08** — Un compte créé par connexion tierce sans mot de passe peut en définir un
 à tout moment, par le parcours de réinitialisation.
 
-**RG-AUTH-09** — La connexion d'un compte protégé par un second facteur se fait en deux
-temps. La première étape ne remet aucun jeton d'accès, seulement un jeton intermédiaire
-valable cinq minutes, émis sur une audience distincte : présenté comme jeton d'accès, il
-est rejeté. Sans cette séparation, la vérification du seul mot de passe suffirait à
-accéder à l'API.
-
-**RG-AUTH-10** — Le secret de double authentification est chiffré au repos par AES-GCM,
-avec une clé distincte de celle de signature des jetons. Il ne peut pas être haché : sa
-vérification exige de le relire en clair. Une clé unique ferait qu'une compromission
-donnerait à la fois la capacité de forger des sessions et celle de lire les seconds
-facteurs.
-
-**RG-AUTH-11** — L'activation n'a lieu qu'après validation d'un premier code. Enregistrer
-l'activation avant preuve de fonctionnement enfermerait dehors un utilisateur dont
-l'application aurait mal lu le secret.
-
-**RG-AUTH-12** — Huit codes de secours sont remis à l'activation, affichés une seule fois,
-stockés sous forme de condensé, chacun à usage unique. Sans eux, un téléphone perdu
-enferme définitivement son titulaire hors de son compte, et pour un administrateur de
-plateforme rendrait l'instance ingérable. La régénération invalide le lot précédent.
-
-**RG-AUTH-13** — La désactivation du second facteur exige le mot de passe : sans cela, un
-jeton volé suffirait à retirer la protection qu'il est censé compléter. Elle est refusée
-tant que le compte porte un rôle plateforme (`RG-ADM-04`).
+**RG-AUTH-09 à RG-AUTH-13** — *Abrogées le 24/08/2026 — `ADR 0007`.* Elles décrivaient
+la connexion en deux temps, le chiffrement AES-GCM du secret, l'activation après
+validation d'un premier code, les huit codes de secours et la désactivation par mot de
+passe. La double authentification est retirée du produit : la connexion n'a plus qu'une
+étape, et le mot de passe est l'unique facteur, y compris pour un rôle plateforme.
+L'ADR nomme ce que cette décision coûte et à quelles conditions elle serait revue.
 
 *Critères d'acceptation EF-AUTH-11* : depuis un aperçu d'invitation, après connexion ou
 inscription, le retour conserve le chemin ; le compte rejoint l'événement une fois avec
@@ -351,15 +333,13 @@ enregistrée.
 **RG-ADM-03** — Un administrateur ne peut ni se supprimer, ni se révoquer lui-même, ni
 supprimer le dernier `PlatformAdmin` existant.
 
-**RG-ADM-04** — La double authentification (`EF-AUTH-12`) est obligatoire pour tout
-compte `Support` ou `PlatformAdmin`. La promotion d'un compte qui ne l'a pas activée est
-refusée, et un rôle plateforme dépourvu de second facteur n'obtient aucun accès
-d'administration — la garde porte sur une revendication du jeton, évaluée sans requête en
-base.
-
-Le premier démarrage n'est pas pour autant une impasse : l'enrôlement du second facteur
-reste accessible au compte amorcé, qui franchit donc l'ordre imposé — changement de mot
-de passe, puis activation, puis administration.
+**RG-ADM-04** — *Abrogée le 24/08/2026 — `ADR 0007`.* Elle exigeait la double
+authentification de tout compte `Support` ou `PlatformAdmin`. C'est cette exigence qui
+rendait l'administration inatteignable : le compte amorcé n'a pas de second facteur,
+l'activer supposait d'accéder à l'application, et le back-office refusait l'accès à son
+seul administrateur. Le rôle seul ouvre désormais l'administration. Les contreparties
+qui rendent ce choix tenable sont énumérées dans l'ADR, `RG-ADM-01` en tête : un rôle
+plateforme ne lit jamais le contenu d'un événement.
 
 **RG-ADM-05** — Le rôle `Support` dispose des seules actions `EF-ADM-02`, `EF-ADM-03`,
 `EF-ADM-04`, `EF-ADM-05` et `EF-ADM-11`. La suppression, la suspension et la gestion des
@@ -384,7 +364,7 @@ si un `PlatformAdmin` existe déjà, rien n'est fait, et le mot de passe d'amor�
 jamais réappliqué.
 
 **RG-ADM-10** — Le compte amorcé porte l'obligation de changer son mot de passe à la
-première connexion, et d'activer sa double authentification avant toute autre action.
+première connexion, avant toute autre action.
 L'obligation est portée par une revendication du jeton : tant qu'elle est présente, seules
 la lecture de son profil, le changement de mot de passe et la déconnexion sont permis.
 Le mot de passe d'amorçage figure dans un fichier de configuration, donc lisible par
@@ -835,8 +815,6 @@ au lieu des six d'un règlement bilatéral naïf.
 | password_hash | text | null (compte créé par connexion tierce) |
 | password_changed_at | timestamptz | null |
 | must_change_password | boolean | défaut faux |
-| totp_secret_encrypted | text | null |
-| totp_enabled_at | timestamptz | null |
 | platform_role | text | `User`\|`Support`\|`PlatformAdmin`, défaut `User` |
 | display_name | text | non null |
 | avatar_url | text | null |
@@ -996,9 +974,6 @@ un seul `role = 'Owner'` par événement.
 `notification_preferences`, `event_mute_settings`, `push_devices`, `groups`,
 `group_members`, `sessions`, `expense_revisions`.
 
-**totp_recovery_codes** — codes de secours de la double authentification (`RG-AUTH-12`).
-Seul le condensé est stocké ; l'usage est marqué par `used_at`.
-
 **Tables techniques** : `idempotency_keys` (support de l'en-tête `Idempotency-Key` du
 `§8.1` : sans elle, un double appui sur « enregistrer la dépense » créerait deux
 dépenses et fausserait tous les soldes).
@@ -1049,11 +1024,6 @@ POST   /v1/auth/email/verify               consommation du jeton
 POST   /v1/auth/password/forgot            réponse identique si l'adresse est inconnue
 POST   /v1/auth/password/reset             consommation du jeton
 POST   /v1/auth/password/change            avec l'ancien mot de passe
-POST   /v1/auth/mfa/verify                 seconde étape : code temporel ou de secours
-POST   /v1/auth/totp/setup                 secret + URI otpauth d'enrôlement
-POST   /v1/auth/totp/activate              remet les codes de secours
-POST   /v1/auth/totp/recovery-codes        régénère le lot
-DELETE /v1/auth/totp                       exige le mot de passe
 POST   /v1/auth/google
 POST   /v1/auth/apple
 POST   /v1/auth/providers/{provider}/link
@@ -1243,10 +1213,10 @@ en aucun cas applicatif d'entreprise.
 | NF-SEC-04 | Limitation de débit | par IP et par session sur les endpoints d'authentification et de résolution de code |
 | NF-SEC-05 | Dépendances | analyse de vulnérabilités en intégration continue, blocage sur criticité haute |
 | NF-SEC-06 | Mots de passe | Argon2id, 12 caractères minimum, refus des mots de passe compromis — `RG-AUTH-01`, `RG-AUTH-02` |
-| NF-SEC-07 | Rôles plateforme | double authentification obligatoire — `RG-ADM-04` |
+| ~~NF-SEC-07~~ | ~~Rôles plateforme~~ | ~~double authentification obligatoire~~ — **sans objet depuis l'`ADR 0007`** |
 | NF-SEC-08 | Journal d'audit | ajout seul, sans droit `UPDATE` ni `DELETE` pour le rôle applicatif — `RG-ADM-06` |
 | NF-SEC-09 | Téléversements | type MIME vérifié par le contenu, métadonnées EXIF supprimées, taille plafonnée — `RG-USR-01` |
-| NF-SEC-10 | Secrets stockés | AES-GCM, clé distincte de la signature des jetons, altération détectée — `RG-AUTH-10` |
+| ~~NF-SEC-10~~ | ~~Secrets stockés~~ | ~~AES-GCM, clé distincte de la signature des jetons~~ — **sans objet depuis l'`ADR 0007`** : plus aucun secret réversible n'est stocké |
 | NF-SEC-11 | Limitation de débit | limites paramétrables, désactivables en test uniquement — la valeur juste dépend du trafic réel |
 | NF-QUAL-01 | Couverture de tests du domaine financier | 100 % des branches |
 | NF-QUAL-02 | Couverture globale du domaine | > 70 % |
@@ -1425,7 +1395,7 @@ aléatoirement (dépenses, parts et suppressions tirées au hasard).
 |---|---|---|
 | J1 | Squelette technique : dépôt, API, Flutter, PostgreSQL, migrations, CI | Application vide déployée sur les trois domaines |
 | J2 | **Comptes** : inscription, connexion, vérification d'adresse, réinitialisation, profil, photo, sessions, export, suppression | Un utilisateur gère intégralement son compte sans intervention |
-| J2b | **Administration** : amorçage du compte administrateur, back-office, journal d'audit, double authentification | Un administrateur gère les comptes sans jamais accéder au contenu d'un événement |
+| J2b | **Administration** : amorçage du compte administrateur, back-office, journal d'audit | Un administrateur gère les comptes sans jamais accéder au contenu d'un événement |
 | J3 | Événements et invitations | Création, lien, QR, code court, aperçu public et adhésion avec compte |
 | J4 | Présences | Statuts, horaires, synthèse |
 | J5 | Liste de courses et temps réel | Attribution concurrente sûre, propagation en moins d'une seconde |
@@ -1474,8 +1444,9 @@ l'environnement de production.
    réapplique pas un mot de passe changé entre-temps.
 5. L'API refuse de démarrer en production si `ADMIN_PASSWORD` est absent alors qu'aucun
    administrateur n'existe, ou s'il ne satisfait pas `RG-AUTH-01`.
-6. Le compte amorcé doit changer son mot de passe et activer sa double authentification
-   avant toute autre action.
+6. Le compte amorcé doit changer son mot de passe avant toute autre action. *(Révisé le
+   24/08/2026 — `ADR 0007` : l'activation d'une double authentification n'est plus
+   exigée.)*
 7. Un administrateur liste les comptes, déclenche une réinitialisation, révoque des
    sessions, suspend puis supprime un compte ; chaque action figure au journal d'audit
    avec son auteur, sa cible et son motif.
@@ -1521,7 +1492,7 @@ d'autant plus facilement qu'il est décidé maintenant.
 
 | Réf | Hypothèse retenue | Motif | À confirmer |
 |---|---|---|---|
-| HY-01 | ~~Pas de mot de passe~~ **Révisé le 19/08/2026** : mot de passe + Google, réinitialisation par lien | Décision du commanditaire. Un back-office capable de déclencher une réinitialisation suppose un mot de passe. Contrepartie assumée : hachage Argon2id, refus des mots de passe compromis, limitation des tentatives, double authentification obligatoire pour les rôles plateforme | Tranché |
+| HY-01 | ~~Pas de mot de passe~~ **Révisé le 19/08/2026** : mot de passe + Google, réinitialisation par lien | Décision du commanditaire. Un back-office capable de déclencher une réinitialisation suppose un mot de passe. Contrepartie assumée : hachage Argon2id, refus des mots de passe compromis, limitation des tentatives. La double authentification obligatoire pour les rôles plateforme, d'abord retenue, a été retirée le 24/08/2026 (`ADR 0007`) | Tranché |
 | HY-02 | Code court sur 6 caractères et non 4 | 4 caractères, soit environ un million de combinaisons, exposent à l'énumération | Oui |
 | HY-03 | SignalR sur le domaine de l'API, pas de sous-domaine `ws` | Une origine, un certificat, un mécanisme d'authentification ; repli SSE possible | Oui |
 | HY-04 | Assiette de répartition figée à la création de la dépense | Une assiette rétroactive modifierait des soldes déjà réglés | Oui |

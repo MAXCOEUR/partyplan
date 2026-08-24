@@ -2593,7 +2593,7 @@
         "tags": [
           "Auth"
         ],
-        "summary": "Ouvre une session, ou renvoie un défi de second facteur.",
+        "summary": "Ouvre une session.",
         "operationId": "Login",
         "requestBody": {
           "content": {
@@ -2611,7 +2611,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/LoginResponse"
+                  "$ref": "#/components/schemas/TokenResponse"
                 }
               }
             }
@@ -2622,37 +2622,6 @@
               "application/problem+json": {
                 "schema": {
                   "$ref": "#/components/schemas/HttpValidationProblemDetails"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/v1/auth/mfa/verify": {
-      "post": {
-        "tags": [
-          "Auth"
-        ],
-        "summary": "Achève la connexion avec un code temporel ou un code de secours.",
-        "operationId": "VerifySecondFactor",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/MfaVerifyRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/TokenResponse"
                 }
               }
             }
@@ -2683,7 +2652,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/LoginResponse"
+                  "$ref": "#/components/schemas/TokenResponse"
                 }
               }
             }
@@ -2776,123 +2745,6 @@
         "responses": {
           "200": {
             "description": "OK"
-          }
-        },
-        "security": [
-          {
-            "Bearer": []
-          }
-        ]
-      }
-    },
-    "/v1/auth/totp/setup": {
-      "post": {
-        "tags": [
-          "Auth"
-        ],
-        "summary": "Génère un secret et l'URI otpauth. N'active rien.",
-        "operationId": "SetupTotp",
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/TotpEnrollment"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "Bearer": []
-          }
-        ]
-      }
-    },
-    "/v1/auth/totp/activate": {
-      "post": {
-        "tags": [
-          "Auth"
-        ],
-        "summary": "Active la double authentification et remet les codes de secours.",
-        "operationId": "ActivateTotp",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/TotpActivateRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/TotpActivation"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "Bearer": []
-          }
-        ]
-      }
-    },
-    "/v1/auth/totp": {
-      "delete": {
-        "tags": [
-          "Auth"
-        ],
-        "summary": "Désactive la double authentification. Exige le mot de passe.",
-        "operationId": "DisableTotp",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/TotpDisableRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "OK"
-          }
-        },
-        "security": [
-          {
-            "Bearer": []
-          }
-        ]
-      }
-    },
-    "/v1/auth/totp/recovery-codes": {
-      "post": {
-        "tags": [
-          "Auth"
-        ],
-        "summary": "Régénère les codes de secours. Les précédents deviennent inutilisables.",
-        "operationId": "RegenerateRecoveryCodes",
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/TotpActivation"
-                }
-              }
-            }
           }
         },
         "security": [
@@ -4179,63 +4031,6 @@
           }
         }
       },
-      "LoginResponse": {
-        "required": [
-          "requiresSecondFactor",
-          "accessToken",
-          "accessTokenExpiresAt",
-          "refreshToken",
-          "refreshTokenExpiresAt",
-          "challengeToken",
-          "challengeExpiresAt"
-        ],
-        "type": "object",
-        "properties": {
-          "requiresSecondFactor": {
-            "type": "boolean"
-          },
-          "accessToken": {
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "accessTokenExpiresAt": {
-            "type": [
-              "null",
-              "string"
-            ],
-            "format": "date-time"
-          },
-          "refreshToken": {
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "refreshTokenExpiresAt": {
-            "type": [
-              "null",
-              "string"
-            ],
-            "format": "date-time"
-          },
-          "challengeToken": {
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "challengeExpiresAt": {
-            "type": [
-              "null",
-              "string"
-            ],
-            "format": "date-time"
-          }
-        },
-        "description": "Réponse de connexion. Soit les jetons de session, soit un défi de second facteur —\njamais les deux."
-      },
       "MarkSettlementBody": {
         "required": [
           "fromMemberId",
@@ -4516,21 +4311,6 @@
         },
         "description": "Message du fil, tel que l'interface l'affiche."
       },
-      "MfaVerifyRequest": {
-        "required": [
-          "challengeToken",
-          "code"
-        ],
-        "type": "object",
-        "properties": {
-          "challengeToken": {
-            "type": "string"
-          },
-          "code": {
-            "type": "string"
-          }
-        }
-      },
       "MyProfile": {
         "required": [
           "id",
@@ -4542,7 +4322,6 @@
           "timezone",
           "platformRole",
           "hasPassword",
-          "totpEnabled",
           "mustChangePassword",
           "premiumUntil",
           "createdAt"
@@ -4581,9 +4360,6 @@
             "type": "string"
           },
           "hasPassword": {
-            "type": "boolean"
-          },
-          "totpEnabled": {
             "type": "boolean"
           },
           "mustChangePassword": {
@@ -5449,59 +5225,6 @@
         },
         "description": "Jetons remis au client."
       },
-      "TotpActivateRequest": {
-        "required": [
-          "code"
-        ],
-        "type": "object",
-        "properties": {
-          "code": {
-            "type": "string"
-          }
-        }
-      },
-      "TotpActivation": {
-        "required": [
-          "recoveryCodes"
-        ],
-        "type": "object",
-        "properties": {
-          "recoveryCodes": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          }
-        },
-        "description": "Résultat d'une activation : les codes de secours, affichés une seule fois."
-      },
-      "TotpDisableRequest": {
-        "required": [
-          "password"
-        ],
-        "type": "object",
-        "properties": {
-          "password": {
-            "type": "string"
-          }
-        }
-      },
-      "TotpEnrollment": {
-        "required": [
-          "secret",
-          "otpAuthUri"
-        ],
-        "type": "object",
-        "properties": {
-          "secret": {
-            "type": "string"
-          },
-          "otpAuthUri": {
-            "type": "string"
-          }
-        },
-        "description": "Éléments d'enrôlement remis au client (EF-AUTH-12)."
-      },
       "UpdateEventBody": {
         "required": [
           "name",
@@ -5624,7 +5347,6 @@
           "platformRole",
           "emailVerified",
           "hasPassword",
-          "totpEnabled",
           "googleLinked",
           "appleLinked",
           "isSuspended",
@@ -5663,9 +5385,6 @@
             "type": "boolean"
           },
           "hasPassword": {
-            "type": "boolean"
-          },
-          "totpEnabled": {
             "type": "boolean"
           },
           "googleLinked": {
