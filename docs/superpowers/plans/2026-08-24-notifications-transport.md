@@ -2638,10 +2638,12 @@ git commit -m "feat(notifications): ouvrir le lien profond porté par une notifi
 
 ---
 
-### Tâche 8 : le Web — **bloquée jusqu'à la clé VAPID**
+### Tâche 8 : le Web
 
-Ne pas commencer sans la clé VAPID en main. Sans elle, `getToken` échoue sur le Web et rien
-n'est vérifiable.
+**Débloquée le 24/08/2026** : la clé VAPID est engendrée, et vérifiée conforme — 87
+caractères, 65 octets décodés, préfixe `0x04`, soit une clé publique P-256 non compressée.
+Sa valeur figure au tableau de l'étape 3. Elle n'est pas secrète : elle est publique dans
+toute application web livrée.
 
 **Fichiers :**
 - Créer : `app/web/firebase-messaging-sw.js.template`
@@ -2736,7 +2738,7 @@ Valeurs à poser dans les *variables* du dépôt (pas les secrets : elles sont p
 | `FIREBASE_SENDER_ID` | `146275272251` |
 | `FIREBASE_API_KEY` | `AIzaSyB2xKkcJzbRmCaXy6nmJ5BwEWPpGlSbiwo` |
 | `FIREBASE_APP_ID` | `1:146275272251:web:a79c8ea920420da96afe1e` |
-| `FIREBASE_VAPID_KEY` | *à engendrer en console* |
+| `FIREBASE_VAPID_KEY` | `BFzPW6BjyMHmeN620Kb3EwtozHI9sEW-OwUH1Cs86JEw2meseAwl72KgqpuB9D596p16v-39XVqFtea7pBj8qZQ` |
 
 - [ ] **Étape 4 : servir le service worker sans cache**
 
@@ -2804,7 +2806,7 @@ docker build -t pp-web-avec \
   --build-arg FIREBASE_PROJECT_ID=partyplan-99106 \
   --build-arg FIREBASE_SENDER_ID=146275272251 \
   --build-arg FIREBASE_APP_ID=1:146275272251:web:a79c8ea920420da96afe1e \
-  --build-arg FIREBASE_VAPID_KEY=<la clé> .
+  --build-arg FIREBASE_VAPID_KEY=BFzPW6BjyMHmeN620Kb3EwtozHI9sEW-OwUH1Cs86JEw2meseAwl72KgqpuB9D596p16v-39XVqFtea7pBj8qZQ .
 docker run --rm pp-web-avec ls /usr/share/nginx/html/firebase-messaging-sw.js
 docker run --rm pp-web-sans ls /usr/share/nginx/html/ | grep -c firebase-messaging || true
 ```

@@ -38,10 +38,10 @@ catégories. Aucune migration n'est attendue.
 - Projet Firebase `partyplan-99106`, avec l'application Android
   `fr.maxencecoeur.partyplan` et une application Web enregistrées le 24/08/2026.
 - Clé de compte de service créée le 24/08/2026, hors dépôt, mode 600.
-- **Prérequis non satisfait** : la clé VAPID du push web reste à engendrer dans la console
-  Firebase (Cloud Messaging → *Web Push certificates*), le CLI ne l'expose pas. Sans elle,
-  Android fonctionne et le Web n'enregistre aucun appareil. Le plan doit donc pouvoir livrer
-  Android sans attendre.
+- Clé VAPID du push web engendrée le 24/08/2026, vérifiée conforme. Elle n'était pas
+  obtenable par le CLI : aucune API ne l'expose, seule la console la produit. Le plan reste
+  néanmoins ordonné pour livrer Android d'abord — c'est la bonne façon de séquencer un
+  transport dont une moitié dépend d'un tiers.
 
 ## Architecture
 
