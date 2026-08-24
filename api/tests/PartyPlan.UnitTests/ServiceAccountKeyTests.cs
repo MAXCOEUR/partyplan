@@ -124,6 +124,39 @@ public sealed class ServiceAccountKeyTests
     }
 
     [Fact]
+    public void Une_cle_privee_bien_balisee_mais_corrompue_est_signalee()
+    {
+        // Le cas qui manquait : les marqueurs PEM sont là, le base64 est valide, mais le
+        // DER ne veut rien dire. ImportFromPem lève alors CryptographicException et non
+        // ArgumentException — c'est le scénario d'une clé tronquée à la copie, ou coupée
+        // dans une variable d'environnement.
+        var chemin = Path.GetTempFileName();
+        var corrompu = "-----BEGIN PRIVATE KEY-----\nQUJDRA==\n-----END PRIVATE KEY-----";
+
+        File.WriteAllText(
+            chemin,
+            System.Text.Json.JsonSerializer.Serialize(new
+            {
+                type = "service_account",
+                project_id = "p",
+                client_email = "r@p.iam.gserviceaccount.com",
+                private_key = corrompu,
+            }));
+
+        try
+        {
+            var cle = ServiceAccountKey.Lire(chemin, out var probleme);
+
+            cle.ShouldBeNull();
+            probleme.ShouldNotBeNullOrWhiteSpace();
+        }
+        finally
+        {
+            File.Delete(chemin);
+        }
+    }
+
+    [Fact]
     public void Une_cle_illisible_avertit_sans_lever()
     {
         var chemin = Path.GetTempFileName();
@@ -154,6 +187,9 @@ public sealed class ServiceAccountKeyTests
         PushSenderFactory.CleUtilisable(null, journal).ShouldBeNull();
 
         journal.Avertissements.ShouldBeEmpty();
+        // Le cas normal se dit, il ne se tait pas : c'est ce qui distingue « pas de clé »
+        // de « clé cassée » dans le journal de démarrage.
+        journal.Informations.ShouldNotBeEmpty();
     }
 
     // ------------------------------------------------------------------ aides ----
@@ -180,10 +216,12 @@ public sealed class ServiceAccountKeyTests
     }
 }
 
-/// <summary>Journal qui retient les avertissements, pour les affirmer.</summary>
+/// <summary>Journal qui retient les avertissements et les informations, pour les affirmer.</summary>
 internal sealed class JournalDeTest : Microsoft.Extensions.Logging.ILogger
 {
     internal List<string> Avertissements { get; } = [];
+
+    internal List<string> Informations { get; } = [];
 
     public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
 
@@ -196,9 +234,17 @@ internal sealed class JournalDeTest : Microsoft.Extensions.Logging.ILogger
         Exception? exception,
         Func<TState, Exception?, string> formatter)
     {
+        // Les deux niveaux sont retenus séparément : un test qui ne peut constater que
+        // l'absence d'avertissement passerait aussi si l'information disparaissait.
+        var message = formatter(state, exception);
+
         if (logLevel >= Microsoft.Extensions.Logging.LogLevel.Warning)
         {
-            Avertissements.Add(formatter(state, exception));
+            Avertissements.Add(message);
+        }
+        else if (logLevel == Microsoft.Extensions.Logging.LogLevel.Information)
+        {
+            Informations.Add(message);
         }
     }
 }

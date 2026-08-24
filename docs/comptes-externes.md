@@ -94,8 +94,8 @@ elle qui ramène l'utilisateur dans l'application, donc le principal levier de r
 **Où mettre les valeurs**
 
 ```bash
-# .env  — le JSON du compte de service, sur une seule ligne
-FIREBASE_SERVICE_ACCOUNT_JSON={"type":"service_account","project_id":"…"}
+# .env  — le chemin du fichier de clé de compte de service
+FIREBASE_SERVICE_ACCOUNT_PATH=/chemin/vers/serviceAccountKey.json
 ```
 
 **Attention** : `app/android/app/google-services.json` contient des identifiants de

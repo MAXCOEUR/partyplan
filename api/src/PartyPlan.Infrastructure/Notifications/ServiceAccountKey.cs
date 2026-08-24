@@ -76,7 +76,8 @@ public sealed record ServiceAccountKey(
                 using var rsa = RSA.Create();
                 rsa.ImportFromPem(privee);
             }
-            catch (ArgumentException erreur)
+            catch (Exception erreur) when (erreur is ArgumentException
+                                               or CryptographicException)
             {
                 probleme = $"La clé privée de « {chemin} » n'est pas un PEM valide : {erreur.Message}";
                 return null;
