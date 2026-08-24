@@ -1,7 +1,6 @@
 namespace PartyPlan.Infrastructure.Notifications;
 
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 using PartyPlan.SharedKernel.Contracts;
 
 public sealed class PushOptions
@@ -9,10 +8,16 @@ public sealed class PushOptions
     public const string SectionName = "Push";
 
     /// <summary>
-    /// Contenu JSON du compte de service Firebase, sur une seule ligne. Vide en
-    /// développement : les notifications sont alors journalisées (NF-DEV-04).
+    /// Chemin du fichier de clé de compte de service Firebase. Vide en développement :
+    /// les notifications sont alors journalisées (NF-DEV-04).
+    /// <para>
+    /// Un chemin et non le contenu JSON : le déploiement se fait sur un NAS sans fichier
+    /// « .env », en remplaçant les valeurs dans le compose. Y coller 2 300 caractères
+    /// contenant une clé privée PEM est fonctionnel mais piégeux — une virgule mal
+    /// échappée et le conteneur ne démarre plus, sans que rien ne l'explique.
+    /// </para>
     /// </summary>
-    public string? FirebaseServiceAccountJson { get; set; }
+    public string? FirebaseServiceAccountPath { get; set; }
 }
 
 /// <summary>
@@ -28,26 +33,17 @@ public sealed class PushOptions
 /// </para>
 /// </summary>
 public sealed class ConsolePushSender(
-    IOptions<PushOptions> options,
     ILogger<ConsolePushSender> logger) : IPushSender
 {
-    public bool IsConfigured => !string.IsNullOrWhiteSpace(options.Value.FirebaseServiceAccountJson);
+    /// <summary>
+    /// Toujours faux : cet émetteur n'envoie rien, par construction. Une clé configurée
+    /// donne <c>FirebasePushSender</c>, choisi au démarrage.
+    /// </summary>
+    public bool IsConfigured => false;
 
     public Task SendAsync(PushMessage message, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(message);
-
-        if (IsConfigured)
-        {
-            // Une clé est présente mais aucune implémentation ne la consomme encore :
-            // le signaler plutôt que de laisser croire à un envoi.
-            logger.LogWarning(
-                "Une clé Firebase est configurée mais l'émetteur réel arrive au lot 1.11. "
-                + "Notification non envoyée : {Titre}",
-                message.Title);
-
-            return Task.CompletedTask;
-        }
 
         logger.LogInformation(
             "Notification poussée (non envoyée, aucune clé configurée) — "

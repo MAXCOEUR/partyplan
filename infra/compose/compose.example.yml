@@ -99,7 +99,7 @@ services:
       Smtp__Password: ${SMTP_PASSWORD}
       Smtp__From: ${SMTP_FROM}
       # Notifications poussées
-      Push__FirebaseServiceAccountJson: ${FIREBASE_SERVICE_ACCOUNT_JSON}
+      Push__FirebaseServiceAccountPath: ${FIREBASE_SERVICE_ACCOUNT_PATH}
     volumes:
       # Pièces jointes et images de couverture, servies ensuite par le proxy sur le CDN.
       - media:/var/lib/partyplan/media

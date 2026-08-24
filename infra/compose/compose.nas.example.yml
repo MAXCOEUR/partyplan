@@ -191,7 +191,7 @@ services:
       Google__ClientId: ""
       Google__AndroidClientId: ""
       Google__IosClientId: ""
-      Push__FirebaseServiceAccountJson: ""
+      Push__FirebaseServiceAccountPath: ""
     volumes:
       - media:/var/lib/partyplan/media
     networks:
