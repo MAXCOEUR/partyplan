@@ -78,3 +78,13 @@ app/packages/partyplan_api/
 # site vitrine — vivent auprès de ce qu'elles illustrent, pas à la racine du dépôt.
 /*.png
 /*.jpg
+
+# ---------- Secrets Firebase ----------
+# Clé de compte de service : elle permet d'envoyer une notification à n'importe quel
+# appareil enregistré. Elle se dépose, jamais elle ne se versionne (NF-SEC-02).
+# `google-services.json` et la configuration web restent hors dépôt eux aussi : la
+# compilation les rend facultatifs, un clone sans compte Firebase reste utilisable
+# (règle 5).
+infra/compose/secrets/
+app/android/app/google-services.json
+app/web/firebase-config.js
