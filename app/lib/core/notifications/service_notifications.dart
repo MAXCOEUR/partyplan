@@ -3,6 +3,7 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 
 import '../network/appareils_api.dart';
+import 'lien_notification.dart';
 
 /// Où en est le consentement de cette personne.
 enum EtatNotifications {
@@ -158,8 +159,26 @@ class ServiceNotificationsFirebase implements ServiceNotifications {
   Future<void> ecouterOuvertures(
     void Function(String destination) aller,
   ) async {
-    // Implémentée à la tâche 7, avec la validation du lien. Déclarée vide ici pour que
-    // l'interface soit complète et les doublures de test stables.
+    if (!await _initialiser()) {
+      return;
+    }
+
+    // Deux chemins, et le second est celui qu'on oublie : l'application déjà lancée reçoit
+    // par onMessageOpenedApp ; l'application démarrée *par* la notification ne reçoit rien
+    // et doit interroger getInitialMessage. C'est pourtant le cas d'un rappel reçu la
+    // veille, donc le plus fréquent.
+    FirebaseMessaging.onMessageOpenedApp.listen((message) {
+      final destination = LienNotification.destination(message.data);
+      if (destination != null) {
+        aller(destination);
+      }
+    });
+
+    final initial = await FirebaseMessaging.instance.getInitialMessage();
+    final destination = LienNotification.destination(initial?.data);
+    if (destination != null) {
+      aller(destination);
+    }
   }
 
   static String get _plateforme => kIsWeb ? 'web' : 'android';

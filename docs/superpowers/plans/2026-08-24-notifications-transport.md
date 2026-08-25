@@ -2489,7 +2489,7 @@ git commit -m "feat(notifications): demander le consentement à l'entrée d'une 
 - Consomme : `PpRoutes`, le routeur `go_router`
 - Produit : `LienNotification.destination(Map<String, dynamic>? donnees) → String?`
 
-- [ ] **Étape 1 : écrire le test qui échoue**
+- [x] **Étape 1 : écrire le test qui échoue**
 
 `app/test/core/lien_notification_test.dart`
 
@@ -2535,12 +2535,12 @@ void main() {
 }
 ```
 
-- [ ] **Étape 2 : lancer le test, vérifier qu'il échoue**
+- [x] **Étape 2 : lancer le test, vérifier qu'il échoue**
 
 Commande : `cd app && flutter test test/core/lien_notification_test.dart`
 Attendu : ÉCHEC, `lien_notification.dart` introuvable.
 
-- [ ] **Étape 3 : écrire la validation**
+- [x] **Étape 3 : écrire la validation**
 
 `app/lib/core/notifications/lien_notification.dart`
 
@@ -2568,12 +2568,12 @@ abstract final class LienNotification {
 }
 ```
 
-- [ ] **Étape 4 : lancer le test, vérifier qu'il passe**
+- [x] **Étape 4 : lancer le test, vérifier qu'il passe**
 
 Commande : `cd app && flutter test test/core/lien_notification_test.dart`
 Attendu : 5 tests réussis.
 
-- [ ] **Étape 5 : implémenter l'écoute dans le service**
+- [x] **Étape 5 : implémenter l'écoute dans le service**
 
 Firebase n'est jamais appelé depuis un écran : sinon les tests d'application exigeraient une
 plateforme réelle et un projet configuré. Tout passe par le service, déjà substituable.
@@ -2608,7 +2608,7 @@ Remplacer le corps vide de `ecouterOuvertures` dans `ServiceNotificationsFirebas
 
 Ajouter l'import `import 'lien_notification.dart';`.
 
-- [ ] **Étape 6 : brancher au routeur**
+- [x] **Étape 6 : brancher au routeur**
 
 Lire d'abord le point de montage : `sed -n '1,60p' app/lib/app/app.dart`.
 
@@ -2628,7 +2628,7 @@ rappelé à chaque reconstruction et empilerait les abonnements.
 c'est voulu, l'application ne doit pas retarder son premier affichage pour cela. Ajouter
 `// ignore: discarded_futures` si `flutter analyze` le réclame.
 
-- [ ] **Étape 7 : `make verif` puis commit**
+- [x] **Étape 7 : `make verif` puis commit**
 
 ```bash
 make verif
