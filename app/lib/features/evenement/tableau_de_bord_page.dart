@@ -9,6 +9,7 @@ import '../../l10n/generated/pp_localisations.dart';
 import 'sections/section_compte_a_rebours.dart';
 import 'sections/section_identite.dart';
 import 'sections/section_ma_presence.dart';
+import 'sections/section_notifications.dart';
 import 'sections/section_partage.dart';
 import 'sections/section_sans_reponse.dart';
 import 'sections/section_synthese_presences.dart';
@@ -60,6 +61,7 @@ class TableauDeBordPage extends ConsumerWidget {
           children: [
             const PpBandeauHorsLigne(),
             SectionIdentite(resume: resume),
+            const SectionNotifications(),
             SectionCompteARebours(resume: resume),
             SectionMaPresence(evenementId: evenementId),
             SectionSynthesePresences(evenementId: evenementId, resume: resume),

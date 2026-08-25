@@ -2064,7 +2064,7 @@ git commit -m "feat(notifications): client d'enregistrement d'appareil et greffo
   `ServiceNotifications.retirerAppareilCourant()`, `serviceNotificationsProvider`,
   `SectionNotifications`
 
-- [ ] **Étape 1 : écrire le test qui échoue**
+- [x] **Étape 1 : écrire le test qui échoue**
 
 `app/test/features/consentement_notifications_test.dart`
 
@@ -2161,12 +2161,12 @@ class _ServiceDouble implements ServiceNotifications {
 }
 ```
 
-- [ ] **Étape 2 : lancer le test, vérifier qu'il échoue**
+- [x] **Étape 2 : lancer le test, vérifier qu'il échoue**
 
 Commande : `cd app && flutter test test/features/consentement_notifications_test.dart`
 Attendu : ÉCHEC, `service_notifications.dart` introuvable.
 
-- [ ] **Étape 3 : écrire le service**
+- [x] **Étape 3 : écrire le service**
 
 `app/lib/core/notifications/service_notifications.dart`
 
@@ -2333,7 +2333,7 @@ class ServiceNotificationsFirebase implements ServiceNotifications {
 }
 ```
 
-- [ ] **Étape 4 : écrire la section**
+- [x] **Étape 4 : écrire la section**
 
 `app/lib/features/evenement/sections/section_notifications.dart`
 
@@ -2422,7 +2422,7 @@ class _SectionNotificationsState extends ConsumerState<SectionNotifications> {
 Vérifier le nom réel du composant carte : `ls app/lib/design/components/ | grep card`, et
 adapter l'import et l'usage.
 
-- [ ] **Étape 5 : brancher le provider et la section**
+- [x] **Étape 5 : brancher le provider et la section**
 
 Dans `app/lib/core/providers.dart`, après `appareilsApiProvider` :
 
@@ -2443,7 +2443,7 @@ Dans `app/lib/features/evenement/tableau_de_bord_page.dart`, ajouter l'import
             const SectionNotifications(),
 ```
 
-- [ ] **Étape 6 : retirer le jeton à la déconnexion**
+- [x] **Étape 6 : retirer le jeton à la déconnexion**
 
 Dans `app/lib/core/providers.dart`, méthode `deconnecter()` de `SessionCourante`, **avant**
 l'appel à `comptesApi.deconnecter()` :
@@ -2454,7 +2454,7 @@ l'appel à `comptesApi.deconnecter()` :
     await ref.read(serviceNotificationsProvider).retirerAppareilCourant();
 ```
 
-- [ ] **Étape 7 : lancer les tests, vérifier qu'ils passent**
+- [x] **Étape 7 : lancer les tests, vérifier qu'ils passent**
 
 Commande : `cd app && flutter test test/features/consentement_notifications_test.dart`
 Attendu : 4 tests réussis.
@@ -2468,7 +2468,7 @@ Si `deconnexion_test.dart` échoue faute de `serviceNotificationsProvider`, y aj
 doublon inerte de `_ServiceDouble` plutôt que de retirer l'appel : la déconnexion doit bien
 retirer le jeton, c'est le test qui doit le savoir.
 
-- [ ] **Étape 8 : `make verif` puis commit**
+- [x] **Étape 8 : `make verif` puis commit**
 
 ```bash
 make verif

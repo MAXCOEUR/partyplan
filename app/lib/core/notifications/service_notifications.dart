@@ -1,0 +1,166 @@
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:flutter/foundation.dart';
+
+import '../network/appareils_api.dart';
+
+/// Où en est le consentement de cette personne.
+enum EtatNotifications {
+  /// Rien n'a été demandé : c'est le seul cas où l'on propose quelque chose.
+  aDemander,
+
+  accorde,
+
+  /// Refusé au niveau système. L'application ne peut pas redemander : reproposer le
+  /// geste donnerait un bouton sans effet.
+  refuse,
+
+  /// Firebase n'est pas configuré sur cette compilation. Aucune notification n'est
+  /// possible, et il n'y a rien à proposer (règle 5).
+  indisponible,
+}
+
+/// Notifications poussées, côté application.
+///
+/// Une interface plutôt qu'une classe concrète : les écrans se testent sans Firebase,
+/// qui exige une plateforme réelle et une configuration de projet.
+abstract interface class ServiceNotifications {
+  Future<EtatNotifications> etatCourant();
+
+  /// Demande la permission puis enregistre le jeton. Sans effet si déjà refusé.
+  Future<void> demanderEtEnregistrer();
+
+  /// Retire l'appareil courant. À appeler **avant** de purger la session, sinon l'appel
+  /// n'est plus authentifié.
+  Future<void> retirerAppareilCourant();
+
+  /// Réenregistre le jeton à chaque rotation. FCM en change sans prévenir, et un jeton
+  /// périmé est une personne qui ne reçoit plus rien, sans erreur visible.
+  Future<void> ecouterRafraichissements();
+
+  /// Ouvre la destination portée par une notification tapée.
+  ///
+  /// Déclarée ici dès maintenant, implémentée à la tâche 7 : c'est l'interface que les
+  /// écrans voient, et la compléter plus tard casserait toutes les doublures de test.
+  Future<void> ecouterOuvertures(void Function(String destination) aller);
+}
+
+/// Implémentation Firebase.
+///
+/// Toute opération est sans effet si l'initialisation a échoué : c'est le cas d'un clone
+/// sans `google-services.json`, qui doit rester utilisable (règle 5).
+class ServiceNotificationsFirebase implements ServiceNotifications {
+  ServiceNotificationsFirebase(this._api);
+
+  final AppareilsApi _api;
+
+  bool? _disponible;
+
+  Future<bool> _initialiser() async {
+    if (_disponible != null) {
+      return _disponible!;
+    }
+
+    try {
+      if (Firebase.apps.isEmpty) {
+        await Firebase.initializeApp();
+      }
+      _disponible = true;
+    } catch (_) {
+      // Aucune configuration Firebase dans cette compilation. Ce n'est pas une erreur.
+      //
+      // Capture large et non « on Exception » : sans liaison de plateforme, l'appel lève
+      // une Error et non une Exception. C'est le cas d'un clone sans google-services.json
+      // et celui des tests, où une déconnexion échouait faute d'être attrapée ici.
+      _disponible = false;
+    }
+
+    return _disponible!;
+  }
+
+  @override
+  Future<EtatNotifications> etatCourant() async {
+    if (!await _initialiser()) {
+      return EtatNotifications.indisponible;
+    }
+
+    final reglages = await FirebaseMessaging.instance.getNotificationSettings();
+
+    return switch (reglages.authorizationStatus) {
+      AuthorizationStatus.authorized ||
+      AuthorizationStatus.provisional => EtatNotifications.accorde,
+      AuthorizationStatus.denied => EtatNotifications.refuse,
+      _ => EtatNotifications.aDemander,
+    };
+  }
+
+  @override
+  Future<void> demanderEtEnregistrer() async {
+    if (!await _initialiser()) {
+      return;
+    }
+
+    final reglages = await FirebaseMessaging.instance.requestPermission();
+
+    if (reglages.authorizationStatus != AuthorizationStatus.authorized &&
+        reglages.authorizationStatus != AuthorizationStatus.provisional) {
+      return;
+    }
+
+    await _envoyerJeton();
+  }
+
+  @override
+  Future<void> ecouterRafraichissements() async {
+    if (!await _initialiser()) {
+      return;
+    }
+
+    FirebaseMessaging.instance.onTokenRefresh.listen((jeton) async {
+      try {
+        await _api.enregistrer(jeton, plateforme: _plateforme);
+      } on Exception {
+        // Le jeton repartira au prochain lancement : échouer ici ne doit rien
+        // interrompre.
+      }
+    });
+  }
+
+  @override
+  Future<void> retirerAppareilCourant() async {
+    if (!await _initialiser()) {
+      return;
+    }
+
+    try {
+      final jeton = await FirebaseMessaging.instance.getToken();
+      if (jeton != null) {
+        await _api.retirer(jeton);
+      }
+    } on Exception {
+      // Une déconnexion ne doit jamais échouer à cause d'une notification.
+    }
+  }
+
+  Future<void> _envoyerJeton() async {
+    try {
+      final jeton = await FirebaseMessaging.instance.getToken();
+      if (jeton != null) {
+        await _api.enregistrer(jeton, plateforme: _plateforme);
+      }
+    } on Exception {
+      // Sans effet visible : la personne a accordé la permission, le jeton repartira au
+      // prochain lancement.
+    }
+  }
+
+  @override
+  Future<void> ecouterOuvertures(
+    void Function(String destination) aller,
+  ) async {
+    // Implémentée à la tâche 7, avec la validation du lien. Déclarée vide ici pour que
+    // l'interface soit complète et les doublures de test stables.
+  }
+
+  static String get _plateforme => kIsWeb ? 'web' : 'android';
+}

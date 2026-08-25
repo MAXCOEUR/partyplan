@@ -21,6 +21,7 @@ import 'network/reglements_api.dart';
 import 'network/sondages_api.dart';
 import 'network/appareils_api.dart';
 import 'network/evenements_api.dart';
+import 'notifications/service_notifications.dart';
 import 'offline/cache_lecture.dart';
 import 'offline/etat_reseau.dart';
 import 'offline/file_ecritures.dart';
@@ -166,6 +167,10 @@ class SessionCourante extends AsyncNotifier<EtatSession> {
   }
 
   Future<void> deconnecter() async {
+    // Avant de purger la session : l'appel exige encore d'être authentifié. Un téléphone
+    // rendu ou prêté ne doit plus recevoir les notifications de son ancien titulaire.
+    await ref.read(serviceNotificationsProvider).retirerAppareilCourant();
+
     await ref.read(comptesApiProvider).deconnecter();
 
     // Le cache contient le contenu d'événements privés. Le laisser en place après une
@@ -481,4 +486,8 @@ final apercuInvitationProvider =
 
 final appareilsApiProvider = Provider<AppareilsApi>(
   (ref) => AppareilsApi(ref.watch(apiClientProvider)),
+);
+
+final serviceNotificationsProvider = Provider<ServiceNotifications>(
+  (ref) => ServiceNotificationsFirebase(ref.watch(appareilsApiProvider)),
 );
