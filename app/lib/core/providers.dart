@@ -20,9 +20,11 @@ import 'network/discussion_api.dart';
 import 'network/reglements_api.dart';
 import 'network/sondages_api.dart';
 import 'auth/service_google.dart';
+import 'config/app_config.dart';
 import 'network/appareils_api.dart';
 import 'network/evenements_api.dart';
 import 'notifications/service_notifications.dart';
+import 'temps_reel/service_temps_reel.dart';
 import 'offline/cache_lecture.dart';
 import 'offline/etat_reseau.dart';
 import 'offline/file_ecritures.dart';
@@ -524,3 +526,14 @@ final fournisseursDisponiblesProvider = FutureProvider<Set<String>>((
     return const <String>{};
   }
 });
+
+// ---------------------------------------------------------------- temps réel ----
+
+/// Connexion temps réel. Une seule pour toute l'application : on ne consulte qu'une
+/// soirée à la fois, et deux connexions simultanées doubleraient les messages.
+final serviceTempsReelProvider = Provider<ServiceTempsReel>(
+  (ref) => ServiceTempsReelSignalR(
+    baseUrl: AppConfig.apiBaseUrl,
+    sessions: ref.watch(sessionStoreProvider),
+  ),
+);

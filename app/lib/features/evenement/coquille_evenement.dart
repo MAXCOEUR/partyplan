@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/providers.dart';
+import '../../core/temps_reel/ecoute_evenement.dart';
+import '../../core/temps_reel/service_temps_reel.dart';
 
 import '../../app/router.dart';
 import '../../design/components/pp_barre_app.dart';
@@ -38,9 +40,25 @@ class CoquilleEvenement extends ConsumerStatefulWidget {
 class _CoquilleEvenementState extends ConsumerState<CoquilleEvenement> {
   int _onglet = 0;
 
+  EcouteEvenement? _ecoute;
+
+  /// Le service est retenu dans un champ, et non relu dans dispose : Riverpod interdit
+  /// d'utiliser `ref` sur un widget démonté, parce qu'il s'appuie sur le BuildContext.
+  ServiceTempsReel? _tempsReel;
+
   @override
   void initState() {
     super.initState();
+
+    // Le temps réel est branché ici et nulle part ailleurs : c'est l'écran qui borne la
+    // durée de vie de la connexion, et une soirée qu'on quitte doit la fermer.
+    final tempsReel = ref.read(serviceTempsReelProvider);
+    _tempsReel = tempsReel;
+
+    // ignore: discarded_futures
+    tempsReel.connecter(widget.eventId);
+
+    _ecoute = EcouteEvenement(invalider: _relire)..demarrer(tempsReel);
     // Relire à chaque ouverture. Riverpod ne rejette pas un FutureProvider.family
     // quand plus personne ne l'écoute : sans cette invalidation, ressortir d'une
     // soirée puis y revenir réaffiche les données de la première visite,
@@ -50,6 +68,15 @@ class _CoquilleEvenementState extends ConsumerState<CoquilleEvenement> {
     // Posée dans initState et non dans build, qui est rappelé à chaque changement
     // d'onglet et rechargerait tout à chaque geste.
     WidgetsBinding.instance.addPostFrameCallback((_) => _relire());
+  }
+
+  @override
+  void dispose() {
+    // ignore: discarded_futures
+    _ecoute?.arreter();
+    // ignore: discarded_futures
+    _tempsReel?.deconnecter();
+    super.dispose();
   }
 
   /// Redemande au serveur tout ce que cet écran affiche.

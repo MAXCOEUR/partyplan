@@ -21,6 +21,10 @@ dependencies:
   # Appels HTTP
   dio: ^5.9.0
 
+  # Temps réel (§9). Client SignalR en Dart pur : la négociation, la reconnexion et le
+  # protocole de trame de SignalR ne se réécrivent pas à la main.
+  signalr_netcore: ^1.4.4
+
   # Connexion Google (EF-AUTH-06). Sans identifiant client injecté à la
   # compilation, le paquet est présent mais inerte : le bouton n'apparaît pas et
   # l'inscription par mot de passe suffit (NF-DEV-05, règle 5).
