@@ -8,6 +8,10 @@ WORKDIR /src
 # statiques, la valeur ne peut pas être lue à l'exécution.
 ARG API_BASE_URL=https://api.partyplan.maxencecoeur.fr
 
+# Identifiant client Google, vide par défaut : sans lui le bouton « Continuer avec
+# Google » n'apparaît pas et l'inscription par mot de passe suffit (NF-DEV-05).
+ARG GOOGLE_CLIENT_ID=
+
 COPY pubspec.yaml pubspec.lock ./
 RUN flutter pub get
 
@@ -19,7 +23,8 @@ RUN flutter gen-l10n
 
 RUN flutter build web \
       --release \
-      --dart-define=API_BASE_URL=${API_BASE_URL}
+      --dart-define=API_BASE_URL=${API_BASE_URL} \
+      --dart-define=GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
 
 # ---------- Image d'exécution ----------
 FROM nginx:1.27-alpine AS runtime

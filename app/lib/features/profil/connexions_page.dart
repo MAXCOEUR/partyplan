@@ -18,14 +18,6 @@ import '../../l10n/generated/pp_localisations.dart';
 class ConnexionsPage extends ConsumerStatefulWidget {
   const ConnexionsPage({super.key});
 
-  /// Services pour lesquels l'application embarque un client de connexion.
-  ///
-  /// Vide aujourd'hui : le serveur sait vérifier un jeton Google (EF-AUTH-06), mais
-  /// l'obtenir demande un identifiant client Google Cloud que l'application n'a pas
-  /// encore — voir `docs/comptes-externes.md` §1. Le détachement, lui, fonctionne sans
-  /// aucune clé.
-  static const clientsEmbarques = <String>{};
-
   @override
   ConsumerState<ConnexionsPage> createState() => _ConnexionsPageState();
 }
@@ -89,10 +81,57 @@ class _ConnexionsPageState extends ConsumerState<ConnexionsPage> {
     }
   }
 
+  /// Rattache un service tiers au compte courant.
+  ///
+  /// Une annulation ne produit rien : c'est un geste ordinaire, et l'écran resterait
+  /// dans le même état de toute façon.
+  Future<void> _rattacher(MoyenTiers fournisseur) async {
+    setState(() => _enCours = true);
+
+    try {
+      final jeton = await ref
+          .read(serviceGoogleProvider)
+          .obtenirJetonIdentite();
+
+      if (jeton == null) {
+        return;
+      }
+
+      await ref
+          .read(comptesApiProvider)
+          .rattacherFournisseur(
+            identifiant: fournisseur.identifiant,
+            jetonIdentite: jeton,
+          );
+
+      ref.invalidate(moyensConnexionProvider);
+      ref.invalidate(profilProvider);
+    } on ApiException catch (erreur) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(erreur.title)));
+      }
+    } on Exception {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(PpL10n.of(context).erreurReseau)),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _enCours = false);
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final moyens = ref.watch(moyensConnexionProvider);
+    // Décidé à l'exécution : l'identifiant client est injecté à la compilation de
+    // l'image, une constante du code ne pourrait pas le savoir.
+    final clientEmbarque = ref.watch(serviceGoogleProvider).disponible;
 
     return Scaffold(
       appBar: AppBar(title: const Text('Connexions')),
@@ -145,8 +184,10 @@ class _ConnexionsPageState extends ConsumerState<ConnexionsPage> {
                 detachable: value.peutDetacher(fournisseur),
                 dernierMoyen:
                     fournisseur.rattache && !value.peutDetacher(fournisseur),
+                clientEmbarque: clientEmbarque,
                 enCours: _enCours,
                 onDetacher: () => _detacher(fournisseur),
+                onRattacher: () => _rattacher(fournisseur),
               ),
               const SizedBox(height: PpSpacing.md),
             ],
@@ -163,22 +204,23 @@ class _CarteFournisseur extends StatelessWidget {
     required this.fournisseur,
     required this.detachable,
     required this.dernierMoyen,
+    required this.clientEmbarque,
     required this.enCours,
     required this.onDetacher,
+    required this.onRattacher,
   });
 
   final MoyenTiers fournisseur;
   final bool detachable;
   final bool dernierMoyen;
+  final bool clientEmbarque;
   final bool enCours;
   final VoidCallback onDetacher;
+  final VoidCallback onRattacher;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final clientEmbarque = ConnexionsPage.clientsEmbarques.contains(
-      fournisseur.identifiant,
-    );
 
     return PpCard(
       child: Column(
@@ -205,14 +247,22 @@ class _CarteFournisseur extends StatelessWidget {
               '${fournisseur.libelle} n’est pas disponible sur cette instance.',
               style: theme.textTheme.bodySmall,
             )
-          else
+          else if (clientEmbarque) ...[
             Text(
-              clientEmbarque
-                  ? 'Utilise le bouton ${fournisseur.libelle} de l’écran de '
-                        'connexion pour rattacher ce service.'
-                  : 'Le serveur accepte ${fournisseur.libelle}, mais le '
-                        'rattachement depuis l’application n’est pas encore '
-                        'possible.',
+              'Ajoute ${fournisseur.libelle} pour te connecter d’un geste.',
+              style: theme.textTheme.bodySmall,
+            ),
+            const SizedBox(height: PpSpacing.md),
+            OutlinedButton.icon(
+              key: Key('rattacher-${fournisseur.identifiant}'),
+              onPressed: enCours ? null : onRattacher,
+              icon: const Icon(Icons.link_rounded, size: 18),
+              label: const Text('Rattacher'),
+            ),
+          ] else
+            Text(
+              'Le serveur accepte ${fournisseur.libelle}, mais cette version de '
+              'l’application ne sait pas obtenir de jeton.',
               style: theme.textTheme.bodySmall,
             ),
         ],

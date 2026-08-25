@@ -211,6 +211,10 @@ services:
   # compilation de l'image (app/Dockerfile, ARG API_BASE_URL). Elle vaut
   # https://api.partyplan.maxencecoeur.fr. Changer de domaine impose de
   # reconstruire et republier l'image, pas de modifier ce fichier.
+  #
+  # Il en va de même de l'identifiant client Google (ARG GOOGLE_CLIENT_ID) : le
+  # renseigner ici serait sans effet. Il se pose en variable de dépôt GitHub,
+  # puis l'image se reconstruit — voir docs/comptes-externes.md §1.
   web:
     image: ghcr.io/maxcoeur/partyplan-web:latest
     restart: unless-stopped

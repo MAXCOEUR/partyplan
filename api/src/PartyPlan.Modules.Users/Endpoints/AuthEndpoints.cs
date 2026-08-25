@@ -86,6 +86,14 @@ internal static class AuthEndpoints
             .RequireRateLimiting(AuthAttemptPolicy)
             .Produces<TokenResponse>();
 
+        // Anonyme, et volontairement : l'écran de connexion doit savoir avant toute
+        // session s'il peut proposer un bouton Google. Ne révèle rien d'un compte.
+        groupe.MapGet("/providers/available", (ExternalSignInService service) =>
+                Results.Ok(service.GetAvailableProviders()))
+            .WithName("ListAvailableProviders")
+            .WithSummary("Fournisseurs tiers dont l'instance possède les clés.")
+            .Produces<AvailableProviders>();
+
         groupe.MapGet("/providers", async (
                 ExternalSignInService service,
                 HttpContext http,

@@ -37,6 +37,13 @@ class ComptesApi {
   Future<void> connecter({required String email, required String motDePasse}) =>
       _ouvrirSession('/auth/login', {'email': email, 'password': motDePasse});
 
+  /// Connexion par jeton d'identité Google (EF-AUTH-06).
+  ///
+  /// Le jeton est présenté tel quel : c'est le serveur qui en vérifie la signature, et
+  /// lui seul peut le faire. L'application ne le lit jamais.
+  Future<void> connecterAvecGoogle(String jetonIdentite) =>
+      _ouvrirSession('/auth/google', {'idToken': jetonIdentite});
+
   Future<void> deconnecter() async {
     try {
       await _client.post<void>('/auth/logout', analyser: (_) {});
@@ -148,6 +155,22 @@ class ComptesApi {
   Future<void> supprimerPhoto() => _client.delete('/me/avatar');
 
   // ------------------------------------------------------ connexions tierces ----
+
+  /// Fournisseurs dont l'instance possède les clés, lisible sans session.
+  ///
+  /// Les non configurés sont écartés ici plutôt que chez l'appelant : le seul usage de
+  /// cette liste est de décider quels boutons afficher, et un fournisseur sans clé
+  /// donnerait un bouton condamné à échouer.
+  Future<Set<String>> fournisseursDisponibles() => _client.get<Set<String>>(
+    '/auth/providers/available',
+    analyser: (corps) =>
+        ((corps! as Map<String, dynamic>)['providers'] as List<dynamic>? ??
+                const [])
+            .cast<Map<String, dynamic>>()
+            .where((f) => f['configured'] as bool? ?? false)
+            .map((f) => f['provider'] as String)
+            .toSet(),
+  );
 
   Future<MoyensConnexion> moyensConnexion() => _client.get<MoyensConnexion>(
     '/auth/providers',

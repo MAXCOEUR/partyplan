@@ -32,6 +32,15 @@ public sealed record ProviderState(string Provider, bool Configured, bool Linked
 public sealed record SignInMethods(bool HasPassword, IReadOnlyList<ProviderState> Providers);
 
 /// <summary>
+/// Ce que l'instance sait faire, indépendamment de tout compte. Distinct de
+/// <see cref="ProviderState"/>, qui porte en plus l'état de rattachement : le mélanger
+/// ici en ferait une réponse divulguant un compte à un appelant anonyme.
+/// </summary>
+public sealed record AvailableProvider(string Provider, bool Configured);
+
+public sealed record AvailableProviders(IReadOnlyList<AvailableProvider> Providers);
+
+/// <summary>
 /// Connexion par fournisseur tiers (EF-AUTH-06, EF-AUTH-07, EF-AUTH-08).
 /// <para>
 /// Le rattachement se fait sur le sujet du fournisseur, jamais sur l'adresse : une
@@ -245,6 +254,26 @@ public sealed class ExternalSignInService(
 
         return Result.Success();
     }
+
+    /// <summary>
+    /// Fournisseurs dont l'instance possède les clés, sans aucune session.
+    /// <para>
+    /// L'écran de connexion en a besoin avant qu'un compte existe : sans cela il
+    /// proposerait « Continuer avec Google » sur une instance sans clé Google, donc un
+    /// bouton condamné. Rien de ce que renvoie cette méthode ne concerne un compte —
+    /// c'est ce qui la rend anonyme sans rien divulguer.
+    /// </para>
+    /// </summary>
+    public AvailableProviders GetAvailableProviders() =>
+        new(
+        [
+            new AvailableProvider(
+                ExternalProviders.Google,
+                verifier.IsConfigured(ExternalProviders.Google)),
+            new AvailableProvider(
+                ExternalProviders.Apple,
+                verifier.IsConfigured(ExternalProviders.Apple)),
+        ]);
 
     /// <summary>
     /// Moyens de connexion du compte, pour l'écran de rattachement (EF-AUTH-08).

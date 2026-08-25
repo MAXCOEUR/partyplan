@@ -19,6 +19,7 @@ import 'network/depenses_api.dart';
 import 'network/discussion_api.dart';
 import 'network/reglements_api.dart';
 import 'network/sondages_api.dart';
+import 'auth/service_google.dart';
 import 'network/appareils_api.dart';
 import 'network/evenements_api.dart';
 import 'notifications/service_notifications.dart';
@@ -145,6 +146,13 @@ class SessionCourante extends AsyncNotifier<EtatSession> {
     state = const AsyncData(EtatSession.connecte);
   }
 
+  /// Connexion par jeton d'identité Google (EF-AUTH-06).
+  Future<void> connecterAvecGoogle(String jetonIdentite) async {
+    await ref.read(comptesApiProvider).connecterAvecGoogle(jetonIdentite);
+
+    state = const AsyncData(EtatSession.connecte);
+  }
+
   Future<void> inscrire({
     required String email,
     required String motDePasse,
@@ -170,6 +178,10 @@ class SessionCourante extends AsyncNotifier<EtatSession> {
     // Avant de purger la session : l'appel exige encore d'être authentifié. Un téléphone
     // rendu ou prêté ne doit plus recevoir les notifications de son ancien titulaire.
     await ref.read(serviceNotificationsProvider).retirerAppareilCourant();
+
+    // Sans cela le sélecteur de compte Google ne réapparaîtrait pas, et un appareil
+    // partagé reconnecterait le compte précédent d'un seul geste.
+    await ref.read(serviceGoogleProvider).oublier();
 
     await ref.read(comptesApiProvider).deconnecter();
 
@@ -491,3 +503,24 @@ final appareilsApiProvider = Provider<AppareilsApi>(
 final serviceNotificationsProvider = Provider<ServiceNotifications>(
   (ref) => ServiceNotificationsFirebase(ref.watch(appareilsApiProvider)),
 );
+
+// ------------------------------------------------------------ connexion Google ----
+
+final serviceGoogleProvider = Provider<ServiceGoogle>(
+  (ref) => ServiceGoogleClient(),
+);
+
+/// Fournisseurs tiers dont l'instance possède les clés.
+///
+/// Lu sans session : l'écran de connexion en a besoin avant qu'un compte existe. Un
+/// échec réseau ne doit pas empêcher de se connecter par mot de passe, d'où l'ensemble
+/// vide en cas d'erreur plutôt qu'une exception remontée à l'écran.
+final fournisseursDisponiblesProvider = FutureProvider<Set<String>>((
+  ref,
+) async {
+  try {
+    return await ref.watch(comptesApiProvider).fournisseursDisponibles();
+  } on Exception {
+    return const <String>{};
+  }
+});

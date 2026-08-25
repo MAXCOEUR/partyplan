@@ -138,10 +138,14 @@ void main() {
           ),
         );
 
-        // Le serveur sait vérifier un jeton Google, mais l'application ne sait pas encore
-        // en obtenir un : le dire est plus utile qu'un bouton mort.
+        // Le serveur sait vérifier un jeton Google, mais cette compilation n'embarque
+        // aucun identifiant client (GOOGLE_CLIENT_ID vide) : le dire est plus utile
+        // qu'un bouton mort.
         expect(find.text('Rattacher'), findsNothing);
-        expect(find.textContaining('depuis l’application'), findsOneWidget);
+        expect(
+          find.textContaining('ne sait pas obtenir de jeton'),
+          findsOneWidget,
+        );
       },
     );
 

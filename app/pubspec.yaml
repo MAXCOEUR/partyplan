@@ -21,6 +21,11 @@ dependencies:
   # Appels HTTP
   dio: ^5.9.0
 
+  # Connexion Google (EF-AUTH-06). Sans identifiant client injecté à la
+  # compilation, le paquet est présent mais inerte : le bouton n'apparaît pas et
+  # l'inscription par mot de passe suffit (NF-DEV-05, règle 5).
+  google_sign_in: ^7.2.0
+
   # Notifications poussées. Sans google-services.json ni configuration web, ces paquets
   # sont présents mais inertes : l'initialisation échoue proprement et l'application
   # fonctionne sans notifications (règle 5).

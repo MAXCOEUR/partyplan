@@ -66,6 +66,46 @@ class _ConnexionPageState extends ConsumerState<ConnexionPage> {
     }
   }
 
+  /// Connexion par Google. Une annulation ne produit rien : c'est un geste ordinaire,
+  /// pas un échec, et une erreur rouge pour cela serait une punition.
+  Future<void> _valierAvecGoogle() async {
+    setState(() {
+      _enCours = true;
+      _erreur = null;
+    });
+
+    try {
+      final jeton = await ref
+          .read(serviceGoogleProvider)
+          .obtenirJetonIdentite();
+
+      if (jeton == null) {
+        return;
+      }
+
+      await ref.read(sessionProvider.notifier).connecterAvecGoogle(jeton);
+
+      if (mounted) {
+        context.go(RetourAuth.destination(widget.retour));
+      }
+    } on ApiException catch (erreur) {
+      setState(() => _erreur = erreur.title);
+    } on Exception {
+      setState(() => _erreur = PpL10n.of(context).erreurReseau);
+    } finally {
+      if (mounted) {
+        setState(() => _enCours = false);
+      }
+    }
+  }
+
+  /// Vrai quand les deux conditions sont réunies : l'instance possède la clé, et
+  /// l'application embarque un client. L'une sans l'autre donnerait un bouton condamné.
+  bool get _googlePossible =>
+      ref.watch(serviceGoogleProvider).disponible &&
+      (ref.watch(fournisseursDisponiblesProvider).value ?? const <String>{})
+          .contains('google');
+
   @override
   Widget build(BuildContext context) => Scaffold(
     body: SafeArea(
@@ -126,6 +166,14 @@ class _ConnexionPageState extends ConsumerState<ConnexionPage> {
                       enCours: _enCours,
                       onPressed: _valider,
                     ),
+                    if (_googlePossible) ...[
+                      const SizedBox(height: PpSpacing.lg),
+                      OutlinedButton(
+                        key: const Key('connexion-google'),
+                        onPressed: _enCours ? null : _valierAvecGoogle,
+                        child: const Text('Continuer avec Google'),
+                      ),
+                    ],
                     const SizedBox(height: PpSpacing.xl),
                     // `Wrap` et non `Row` : sur un écran étroit, la ligne débordait
                     // de plus de cent pixels. Le repli est ici préférable à une

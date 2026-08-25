@@ -56,11 +56,36 @@ keytool -list -v -keystore ~/.android/debug.keystore -alias androiddebugkey \
 
 **Où mettre les valeurs**
 
+Deux endroits, et il faut les deux. L'API vérifie le jeton, l'application l'obtient :
+une seule des deux moitiés donne un bouton qui échoue ou pas de bouton du tout.
+
 ```bash
-# .env  (développement)
+# .env  (développement) — côté API, pour la vérification du jeton
 GOOGLE_CLIENT_ID=xxxxx.apps.googleusercontent.com
-GOOGLE_CLIENT_SECRET=GOCSPX-xxxxx
+GOOGLE_ANDROID_CLIENT_ID=yyyyy.apps.googleusercontent.com
+GOOGLE_IOS_CLIENT_ID=zzzzz.apps.googleusercontent.com
 ```
+
+Côté application, l'identifiant du client **Web** est injecté à la compilation, comme
+l'adresse de l'API — Flutter Web produit des fichiers statiques, la valeur ne peut pas
+être lue à l'exécution :
+
+```bash
+# Développement
+flutter run --dart-define=GOOGLE_CLIENT_ID=xxxxx.apps.googleusercontent.com
+
+# Image publiée : variable de dépôt GitHub « GOOGLE_CLIENT_ID », reprise par
+# .github/workflows/docker.yml et passée en ARG à app/Dockerfile.
+```
+
+Sur Android, le client Android n'a pas d'identifiant à inscrire dans le code : il est
+reconnu par le nom du paquet et l'empreinte SHA-1. C'est bien le client **Web** qui
+sert de `serverClientId`, sans quoi le jeton porterait une audience que l'API refuse.
+
+**Vérifier que ça marche** : sans aucune de ces valeurs, l'application ne doit afficher
+aucun bouton Google et l'inscription par mot de passe doit fonctionner (NF-DEV-05).
+`GET /v1/auth/providers/available` renvoie alors `configured: false` — c'est ce point,
+anonyme, que l'écran de connexion interroge pour décider d'afficher le bouton.
 
 **Point de vigilance** : dès que la connexion Google est proposée sur iOS, les règles
 d'Apple imposent d'offrir également « Sign in with Apple » (`R-05`). Une soumission qui

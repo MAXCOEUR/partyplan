@@ -294,7 +294,17 @@ d'administration — et les conditions d'un retour.
     piège, pas une précaution
 - [x] `RG-ADM-10` Changement de mot de passe imposé au compte amorcé, appliqué par intergiciel
 - [x] `NF-SEC-11` Limites de débit paramétrables — les tests partagent une adresse IP et épuisaient une limite pensée pour un utilisateur unique
-- [ ] `EF-AUTH-06` Connexion Google — suppose des identifiants Google Cloud, voir `docs/comptes-externes.md` §1
+- [x] `EF-AUTH-06` Connexion Google — parcours complet, Android et Web
+  - → `GET /v1/auth/providers/available`, anonyme : l'écran de connexion doit savoir avant
+    toute session s'il peut proposer le bouton. `GET /v1/auth/providers` exige une session
+    et répond sur le compte courant, il ne pouvait pas servir ici
+  - → le bouton exige **deux** conditions : l'instance possède la clé, et l'application
+    embarque un identifiant client (`--dart-define=GOOGLE_CLIENT_ID`). L'une sans l'autre
+    donnerait un bouton condamné
+  - → rattachement depuis l'écran des moyens de connexion, et oubli du compte Google à la
+    déconnexion — sans quoi un appareil partagé reconnecterait le titulaire précédent
+  - → reste à faire par l'exploitant : créer les trois clients Google Cloud, voir
+    `docs/comptes-externes.md` §1
 - [x] `EF-AUTH-08` Détachement d'une connexion tierce, et écran des moyens de connexion
   - → `GET /v1/auth/providers` distingue « l'instance n'a pas les clés » de « le compte est
     rattaché » : une clé retirée ne doit pas rendre un compte indétachable
