@@ -99,12 +99,12 @@ class PpPrimaryButton extends StatelessWidget {
     child: FilledButton(
       onPressed: enCours ? null : onPressed,
       child: enCours
-          ? const SizedBox(
+          ? SizedBox(
               height: 20,
               width: 20,
               child: CircularProgressIndicator(
                 strokeWidth: 2.5,
-                color: Colors.white,
+                color: Theme.of(context).colorScheme.onPrimary,
               ),
             )
           : Row(
@@ -192,9 +192,9 @@ class PpAuthHeader extends StatelessWidget {
             borderRadius: BorderRadius.circular(PpRadius.card),
           ),
           alignment: Alignment.center,
-          child: const Icon(
+          child: Icon(
             Icons.celebration_rounded,
-            color: Colors.white,
+            color: Theme.of(context).colorScheme.onPrimary,
             size: 28,
           ),
         ),

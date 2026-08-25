@@ -39,7 +39,7 @@ class PpClaimChip extends StatelessWidget {
     // À l'état libre, le libellé est du texte sur fond clair : il lui faut la variante
     // accessible. À l'état pris, c'est du blanc sur un aplat, d'où un rose assombri.
     final couleurTexte = _estPris
-        ? Colors.white
+        ? Theme.of(context).colorScheme.onSecondary
         : PpColors.texteSur(PpColors.rose, brightness);
 
     return Semantics(

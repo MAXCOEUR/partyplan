@@ -180,10 +180,7 @@ class PpCardSquelette extends StatelessWidget {
         border: sombre ? Border.all(color: theme.colorScheme.outline) : null,
         boxShadow: PpElevation.carte(sombre),
       ),
-      child: Padding(
-        padding: const EdgeInsets.all(PpSpacing.lg),
-        child: child,
-      ),
+      child: Padding(padding: const EdgeInsets.all(PpSpacing.lg), child: child),
     );
   }
 }

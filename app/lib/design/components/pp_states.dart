@@ -37,7 +37,11 @@ class PpEmptyState extends StatelessWidget {
                   gradient: PpColors.degradeMarque,
                   borderRadius: BorderRadius.circular(PpRadius.card),
                 ),
-                child: Icon(icone, color: Colors.white, size: 32),
+                child: Icon(
+                  icone,
+                  color: Theme.of(context).colorScheme.onPrimary,
+                  size: 32,
+                ),
               ),
               const SizedBox(height: PpSpacing.lg),
               Text(

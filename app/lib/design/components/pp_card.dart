@@ -44,9 +44,7 @@ class _PpCardState extends State<PpCard> {
             ? theme.colorScheme.surfaceContainer
             : theme.colorScheme.surfaceContainerLowest,
         borderRadius: BorderRadius.circular(PpRadius.card),
-        border: sombre
-            ? Border.all(color: theme.colorScheme.outline)
-            : null,
+        border: sombre ? Border.all(color: theme.colorScheme.outline) : null,
         boxShadow: PpElevation.carte(sombre),
       ),
       child: Material(

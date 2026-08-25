@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../app/router.dart';
 import '../../core/network/api_exception.dart';
 import '../../core/providers.dart';
+import '../../design/components/pp_auth_shell.dart';
 import '../../design/components/pp_form.dart';
 import '../../design/tokens.dart';
 import '../../l10n/generated/pp_localisations.dart';
@@ -87,66 +88,52 @@ class _MotDePasseAChangerPageState
   }
 
   @override
-  Widget build(BuildContext context) => Scaffold(
-    body: SafeArea(
-      child: Center(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(PpSpacing.xl),
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 420),
-            child: Form(
-              key: _formulaire,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  const PpAuthHeader(
-                    titre: 'Change ton mot de passe',
-                    sousTitre:
-                        'Ce compte a été créé avec un mot de passe connu. '
-                        'Choisis-en un nouveau pour continuer.',
-                  ),
-                  const SizedBox(height: PpSpacing.xxl),
-                  if (_erreur != null) ...[
-                    PpFormError(_erreur!),
-                    const SizedBox(height: PpSpacing.lg),
-                  ],
-                  PpField(
-                    label: 'Mot de passe actuel',
-                    controller: _actuel,
-                    obscure: true,
-                    enabled: !_enCours,
-                    validator: Validateurs.motDePasseExistant,
-                  ),
-                  const SizedBox(height: PpSpacing.lg),
-                  PpField(
-                    label: 'Nouveau mot de passe',
-                    controller: _nouveau,
-                    obscure: true,
-                    enabled: !_enCours,
-                    validator: Validateurs.motDePasse,
-                    aide:
-                        '${Validateurs.longueurMotDePasse} caractères minimum. '
-                        'Les mots de passe déjà divulgués sont refusés.',
-                  ),
-                  const SizedBox(height: PpSpacing.xl),
-                  PpPrimaryButton(
-                    label: 'Changer et continuer',
-                    enCours: _enCours,
-                    onPressed: _changer,
-                  ),
-                  const SizedBox(height: PpSpacing.md),
-                  // Une porte de sortie reste nécessaire : sans elle, un compte
-                  // partagé resterait bloqué sur cet écran sans pouvoir en changer.
-                  TextButton(
-                    onPressed: _enCours ? null : _deconnecter,
-                    child: const Text('Se déconnecter'),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
+  Widget build(BuildContext context) => PpAuthShell(
+    cleFormulaire: _formulaire,
+    autofill: false,
+    enfants: [
+      const PpAuthHeader(
+        titre: 'Change ton mot de passe',
+        sousTitre:
+            'Ce compte a été créé avec un mot de passe connu. '
+            'Choisis-en un nouveau pour continuer.',
       ),
-    ),
+      const SizedBox(height: PpSpacing.xxl),
+      if (_erreur != null) ...[
+        PpFormError(_erreur!),
+        const SizedBox(height: PpSpacing.lg),
+      ],
+      PpField(
+        label: 'Mot de passe actuel',
+        controller: _actuel,
+        obscure: true,
+        enabled: !_enCours,
+        validator: Validateurs.motDePasseExistant,
+      ),
+      const SizedBox(height: PpSpacing.lg),
+      PpField(
+        label: 'Nouveau mot de passe',
+        controller: _nouveau,
+        obscure: true,
+        enabled: !_enCours,
+        validator: Validateurs.motDePasse,
+        aide:
+            '${Validateurs.longueurMotDePasse} caractères minimum. '
+            'Les mots de passe déjà divulgués sont refusés.',
+      ),
+      const SizedBox(height: PpSpacing.xl),
+      PpPrimaryButton(
+        label: 'Changer et continuer',
+        enCours: _enCours,
+        onPressed: _changer,
+      ),
+      const SizedBox(height: PpSpacing.md),
+      // Une porte de sortie reste nécessaire : sans elle, un compte
+      // partagé resterait bloqué sur cet écran sans pouvoir en changer.
+      TextButton(
+        onPressed: _enCours ? null : _deconnecter,
+        child: const Text('Se déconnecter'),
+      ),
+    ],
   );
 }

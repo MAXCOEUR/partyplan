@@ -51,8 +51,8 @@ abstract final class PpTheme {
     required Color bordure,
     required Color texte,
     required Color texteSecondaire,
-    required
-    ({Color creux, Color bas, Color moyen, Color haut, Color sommet}) echelle,
+    required ({Color creux, Color bas, Color moyen, Color haut, Color sommet})
+    echelle,
   }) {
     final schema = ColorScheme(
       brightness: brightness,
@@ -140,7 +140,13 @@ abstract final class PpTheme {
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: surface,
+        // Un cran creusé, et non la couleur de surface. Un champ posé sur une carte
+        // blanche avec un remplissage blanc n'existe que par son liseré : il ne se lit
+        // pas comme une zone où l'on écrit. En clair on descend d'un cran vers le gris,
+        // en sombre on descend vers le puits, sous le fond.
+        fillColor: brightness == Brightness.dark
+            ? echelle.creux
+            : echelle.moyen,
         contentPadding: const EdgeInsets.symmetric(
           horizontal: PpSpacing.lg,
           vertical: PpSpacing.md,
