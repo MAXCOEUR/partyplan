@@ -66,6 +66,11 @@ public static class DependencyInjection
         services.AddSingleton<PartyPlan.SharedKernel.Contracts.IAvatarStorage, AvatarStorage>();
         services.AddSingleton<PartyPlan.SharedKernel.Contracts.IEventImageStorage, EventImageStorage>();
 
+        // Temps réel. Aucun backplane : une seule instance d'API (RG-RT-04), et en
+        // ajouter une seconde impose Redis et un ADR préalable.
+        services.AddSingleton<PartyPlan.SharedKernel.Contracts.IDiffusionEvenement,
+            TempsReel.DiffusionSignalR>();
+
         // Notifications poussées. L'émetteur réel n'est choisi que si une clé de compte de
         // service est lisible ; sinon les notifications sont journalisées (NF-DEV-04,
         // règle 5). Le choix est fait à chaque portée, sur une clé déjà validée.
