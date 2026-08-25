@@ -12,6 +12,16 @@ ARG API_BASE_URL=https://api.partyplan.maxencecoeur.fr
 # Google » n'apparaît pas et l'inscription par mot de passe suffit (NF-DEV-05).
 ARG GOOGLE_CLIENT_ID=
 
+# Configuration Firebase du Web. Ces valeurs ne sont pas des secrets : elles sont
+# publiques dans toute application web livrée, et la clé d'API est restreinte par domaine.
+# Vides par défaut : l'image compile sans Firebase, et l'application tourne sans
+# notifications (règle 5).
+ARG FIREBASE_API_KEY=""
+ARG FIREBASE_PROJECT_ID=""
+ARG FIREBASE_SENDER_ID=""
+ARG FIREBASE_APP_ID=""
+ARG FIREBASE_VAPID_KEY=""
+
 COPY pubspec.yaml pubspec.lock ./
 RUN flutter pub get
 
@@ -21,10 +31,30 @@ COPY . .
 # échec de génération est plus lisible ici que noyé dans la compilation.
 RUN flutter gen-l10n
 
+# Le service worker n'est engendré que si la configuration est fournie : sans lui, le
+# navigateur n'enregistre aucun appareil et l'application fonctionne sans notifications.
+#
+# Le gabarit vit hors de `web/` : Flutter recopie ce répertoire tel quel dans
+# `build/web`, et un gabarit à marqueurs se retrouverait servi publiquement.
+RUN if [ -n "$FIREBASE_API_KEY" ]; then \
+      sed -e "s|__FIREBASE_API_KEY__|$FIREBASE_API_KEY|" \
+          -e "s|__FIREBASE_PROJECT_ID__|$FIREBASE_PROJECT_ID|" \
+          -e "s|__FIREBASE_SENDER_ID__|$FIREBASE_SENDER_ID|" \
+          -e "s|__FIREBASE_APP_ID__|$FIREBASE_APP_ID|" \
+          firebase-messaging-sw.js.template > web/firebase-messaging-sw.js ; \
+    else \
+      echo "Configuration Firebase absente : compilation web sans notifications." ; \
+    fi
+
 RUN flutter build web \
       --release \
       --dart-define=API_BASE_URL=${API_BASE_URL} \
-      --dart-define=GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
+      --dart-define=GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID} \
+      --dart-define=FIREBASE_API_KEY=${FIREBASE_API_KEY} \
+      --dart-define=FIREBASE_PROJECT_ID=${FIREBASE_PROJECT_ID} \
+      --dart-define=FIREBASE_SENDER_ID=${FIREBASE_SENDER_ID} \
+      --dart-define=FIREBASE_APP_ID=${FIREBASE_APP_ID} \
+      --dart-define=FIREBASE_VAPID_KEY=${FIREBASE_VAPID_KEY}
 
 # ---------- Image d'exécution ----------
 FROM nginx:1.27-alpine AS runtime

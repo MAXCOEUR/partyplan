@@ -1,2 +1,7 @@
 # La configuration de paquets locale contient des chemins absolus de l'hôte.
 .dart_tool/
+
+# Artefacts de compilation locaux. Sans cette exclusion, `flutter build web` écrit
+# dans un `build/web` déjà peuplé par la machine du développeur et n'en retire pas
+# les fichiers qu'il ne connaît pas : ils se retrouvent servis par l'image publiée.
+build/

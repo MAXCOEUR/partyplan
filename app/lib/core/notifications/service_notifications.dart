@@ -57,6 +57,16 @@ class ServiceNotificationsFirebase implements ServiceNotifications {
 
   bool? _disponible;
 
+  static const _cleApi = String.fromEnvironment('FIREBASE_API_KEY');
+
+  /// Jeton de l'appareil. Sur le Web, `getToken` exige la clé VAPID : sans elle le
+  /// navigateur refuse d'émettre un jeton, silencieusement.
+  static Future<String?> _jetonCourant() => kIsWeb
+      ? FirebaseMessaging.instance.getToken(
+          vapidKey: const String.fromEnvironment('FIREBASE_VAPID_KEY'),
+        )
+      : FirebaseMessaging.instance.getToken();
+
   Future<bool> _initialiser() async {
     if (_disponible != null) {
       return _disponible!;
@@ -64,7 +74,27 @@ class ServiceNotificationsFirebase implements ServiceNotifications {
 
     try {
       if (Firebase.apps.isEmpty) {
-        await Firebase.initializeApp();
+        // Sur le Web il n'y a pas de google-services.json : les options doivent être
+        // fournies explicitement, et sans elles il n'y a rien à initialiser. Sur
+        // Android le fichier suffit, et cette branche y renverrait faussement
+        // « indisponible ».
+        if (kIsWeb) {
+          if (_cleApi.isEmpty) {
+            _disponible = false;
+            return false;
+          }
+
+          await Firebase.initializeApp(
+            options: const FirebaseOptions(
+              apiKey: _cleApi,
+              projectId: String.fromEnvironment('FIREBASE_PROJECT_ID'),
+              messagingSenderId: String.fromEnvironment('FIREBASE_SENDER_ID'),
+              appId: String.fromEnvironment('FIREBASE_APP_ID'),
+            ),
+          );
+        } else {
+          await Firebase.initializeApp();
+        }
       }
       _disponible = true;
     } catch (_) {
@@ -134,7 +164,7 @@ class ServiceNotificationsFirebase implements ServiceNotifications {
     }
 
     try {
-      final jeton = await FirebaseMessaging.instance.getToken();
+      final jeton = await _jetonCourant();
       if (jeton != null) {
         await _api.retirer(jeton);
       }
@@ -145,7 +175,7 @@ class ServiceNotificationsFirebase implements ServiceNotifications {
 
   Future<void> _envoyerJeton() async {
     try {
-      final jeton = await FirebaseMessaging.instance.getToken();
+      final jeton = await _jetonCourant();
       if (jeton != null) {
         await _api.enregistrer(jeton, plateforme: _plateforme);
       }

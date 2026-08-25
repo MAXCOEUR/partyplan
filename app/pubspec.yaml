@@ -32,6 +32,13 @@ dependencies:
   firebase_core: ^4.1.1
   firebase_messaging: ^16.0.2
 
+  # Maintenu sous la version 3.11 : celle-ci appelle l'extension `isA` sur l'objet
+  # capturé par un `catch`, que le Dart livré avec Flutter 3.38 type en `Object` et non
+  # en `JSAny`. La compilation web échoue alors, alors qu'Android passe et que
+  # `flutter analyze` ne voit rien — l'analyse ne compile pas les greffons web.
+  # À relever avec la prochaine mise à jour de Flutter.
+  firebase_core_web: ">=3.10.0 <3.11.0"
+
   # Stockage du jeton de session.
   #
   # Volontairement maintenu sous la version 11 : celle-ci se compile contre le SDK

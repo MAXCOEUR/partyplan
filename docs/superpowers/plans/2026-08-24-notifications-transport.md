@@ -2650,7 +2650,7 @@ toute application web livrée.
 - Modifier : `app/Dockerfile`, `app/nginx.conf`, `.github/workflows/docker.yml`
 - Modifier : `app/lib/core/notifications/service_notifications.dart`
 
-- [ ] **Étape 1 : écrire le gabarit du service worker**
+- [x] **Étape 1 : écrire le gabarit du service worker**
 
 `app/web/firebase-messaging-sw.js.template`
 
@@ -2672,7 +2672,7 @@ firebase.initializeApp({
 firebase.messaging();
 ```
 
-- [ ] **Étape 2 : substituer à la compilation**
+- [x] **Étape 2 : substituer à la compilation**
 
 Dans `app/Dockerfile`, après les `ARG` existants :
 
@@ -2717,7 +2717,7 @@ RUN flutter build web \
       --dart-define=FIREBASE_VAPID_KEY=${FIREBASE_VAPID_KEY}
 ```
 
-- [ ] **Étape 3 : passer les valeurs depuis le CI**
+- [x] **Étape 3 : passer les valeurs depuis le CI**
 
 Dans `.github/workflows/docker.yml`, aux **deux** blocs `build-args` (publication et pull
 request), ajouter sous `API_BASE_URL=…` :
@@ -2740,7 +2740,7 @@ Valeurs à poser dans les *variables* du dépôt (pas les secrets : elles sont p
 | `FIREBASE_APP_ID` | `1:146275272251:web:a79c8ea920420da96afe1e` |
 | `FIREBASE_VAPID_KEY` | `BFzPW6BjyMHmeN620Kb3EwtozHI9sEW-OwUH1Cs86JEw2meseAwl72KgqpuB9D596p16v-39XVqFtea7pBj8qZQ` |
 
-- [ ] **Étape 4 : servir le service worker sans cache**
+- [x] **Étape 4 : servir le service worker sans cache**
 
 Dans `app/nginx.conf`, à côté du bloc `flutter_service_worker.js` :
 
@@ -2753,7 +2753,7 @@ Dans `app/nginx.conf`, à côté du bloc `flutter_service_worker.js` :
     }
 ```
 
-- [ ] **Étape 5 : initialiser Firebase côté Web**
+- [x] **Étape 5 : initialiser Firebase côté Web**
 
 Dans `service_notifications.dart`, `_initialiser()` doit fournir les options explicitement
 sur le Web — `Firebase.initializeApp()` sans argument échoue faute de
@@ -2796,7 +2796,7 @@ Sur Android, `Firebase.initializeApp()` lit `google-services.json` et n'a pas be
 d'options : la branche `String.fromEnvironment` vide y renverrait faussement
 « indisponible ». Garder donc `!kIsWeb` sur le chemin sans options.
 
-- [ ] **Étape 6 : vérifier les deux compilations web**
+- [x] **Étape 6 : vérifier les deux compilations web**
 
 ```bash
 cd app
@@ -2812,7 +2812,7 @@ docker run --rm pp-web-sans ls /usr/share/nginx/html/ | grep -c firebase-messagi
 ```
 Attendu : les deux images se construisent ; le fichier n'existe que dans la seconde.
 
-- [ ] **Étape 7 : `make verif` puis commit**
+- [x] **Étape 7 : `make verif` puis commit**
 
 ```bash
 make verif

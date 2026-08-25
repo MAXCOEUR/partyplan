@@ -88,3 +88,7 @@ app/packages/partyplan_api/
 infra/compose/secrets/
 app/android/app/google-services.json
 app/web/firebase-config.js
+
+# Service worker des notifications web, engendré à la compilation depuis
+# app/firebase-messaging-sw.js.template (voir app/Dockerfile).
+app/web/firebase-messaging-sw.js

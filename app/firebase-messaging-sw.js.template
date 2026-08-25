@@ -1,0 +1,15 @@
+// Service worker des notifications web.
+//
+// Engendré à la compilation depuis ce gabarit : un service worker ne peut pas lire un
+// --dart-define, et deux sources de configuration divergeraient au premier changement.
+importScripts('https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js');
+importScripts('https://www.gstatic.com/firebasejs/10.14.1/firebase-messaging-compat.js');
+
+firebase.initializeApp({
+  apiKey: '__FIREBASE_API_KEY__',
+  projectId: '__FIREBASE_PROJECT_ID__',
+  messagingSenderId: '__FIREBASE_SENDER_ID__',
+  appId: '__FIREBASE_APP_ID__',
+});
+
+firebase.messaging();
