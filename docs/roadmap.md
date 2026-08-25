@@ -303,15 +303,17 @@ d'administration — et les conditions d'un retour.
     donnerait un bouton condamné
   - → rattachement depuis l'écran des moyens de connexion, et oubli du compte Google à la
     déconnexion — sans quoi un appareil partagé reconnecterait le titulaire précédent
-  - → **Android seulement pour l'instant.** `google_sign_in` 7.x refuse `authenticate()`
-    sur le Web et impose son propre bouton rendu par le SDK Google : le bouton n'y
-    apparaît donc pas, plutôt que d'y être cliquable et sans effet
-  - → reste à faire par l'exploitant : créer les trois clients Google Cloud, voir
-    `docs/comptes-externes.md` §1
-- [ ] `EF-AUTH-06` Connexion Google sur le Web — le bouton rendu par le SDK
-      (`renderButton` de `google_sign_in_web`) et l'écoute de `authenticationEvents`.
-      Forme d'interface imposée par le greffon, elle ne peut pas reprendre le bouton de
-      l'application
+  - → Android et Web. La **forme** du bouton dépend de la plateforme, pas son
+    existence : Android accepte le parcours programmatique et utilise le bouton de
+    l'application ; le Web le refuse et impose celui du SDK Google, dont l'apparence
+    n'est pas négociable. Le jeton arrive alors par `authenticationEvents`
+  - → `serverClientId` est interdit sur le Web par une assertion du greffon, et
+    `clientId` ignoré sur Android : les deux paramètres sont posés séparément
+  - → reste à faire par l'exploitant : déclarer les origines JavaScript autorisées du
+    client Web dans Google Cloud (`http://localhost:5173` et
+    `https://web.partyplan.maxencecoeur.fr`), voir `docs/comptes-externes.md` §1
+  - → **non vérifié de bout en bout sur navigateur** : le bouton rendu exige le vrai
+    SDK Google et un domaine autorisé, qu'aucun test automatisé ne peut fournir
 - [x] `EF-AUTH-08` Détachement d'une connexion tierce, et écran des moyens de connexion
   - → `GET /v1/auth/providers` distingue « l'instance n'a pas les clés » de « le compte est
     rattaché » : une clé retirée ne doit pas rendre un compte indétachable

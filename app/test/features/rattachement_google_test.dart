@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -80,6 +82,17 @@ class _ServiceDouble implements ServiceGoogle {
 
   @override
   bool get parcoursProgrammatique => true;
+
+  final _jetons = StreamController<String>.broadcast();
+
+  @override
+  Stream<String> get jetons => _jetons.stream;
+
+  /// Simule l'arrivée d'un jeton par le bouton rendu par Google.
+  void emettre(String valeur) => _jetons.add(valeur);
+
+  @override
+  Future<void> preparer() async {}
 
   @override
   Future<String?> obtenirJetonIdentite() async => jeton;

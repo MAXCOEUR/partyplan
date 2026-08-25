@@ -9,6 +9,7 @@ import '../../core/providers.dart';
 import '../../design/components/pp_form.dart';
 import '../../design/tokens.dart';
 import '../../l10n/generated/pp_localisations.dart';
+import 'bouton_google.dart';
 import '../../l10n/validateurs.dart';
 
 /// Écran de connexion (EF-AUTH-02).
@@ -68,21 +69,13 @@ class _ConnexionPageState extends ConsumerState<ConnexionPage> {
 
   /// Connexion par Google. Une annulation ne produit rien : c'est un geste ordinaire,
   /// pas un échec, et une erreur rouge pour cela serait une punition.
-  Future<void> _valierAvecGoogle() async {
+  Future<void> _connecterAvecGoogle(String jeton) async {
     setState(() {
       _enCours = true;
       _erreur = null;
     });
 
     try {
-      final jeton = await ref
-          .read(serviceGoogleProvider)
-          .obtenirJetonIdentite();
-
-      if (jeton == null) {
-        return;
-      }
-
       await ref.read(sessionProvider.notifier).connecterAvecGoogle(jeton);
 
       if (mounted) {
@@ -97,18 +90,6 @@ class _ConnexionPageState extends ConsumerState<ConnexionPage> {
         setState(() => _enCours = false);
       }
     }
-  }
-
-  /// Vrai quand les trois conditions sont réunies : l'instance possède la clé,
-  /// l'application embarque un client, et la plateforme accepte d'ouvrir le parcours à
-  /// la demande. Il en manque une et le bouton serait condamné.
-  bool get _googlePossible {
-    final service = ref.watch(serviceGoogleProvider);
-
-    return service.disponible &&
-        service.parcoursProgrammatique &&
-        (ref.watch(fournisseursDisponiblesProvider).value ?? const <String>{})
-            .contains('google');
   }
 
   @override
@@ -171,14 +152,14 @@ class _ConnexionPageState extends ConsumerState<ConnexionPage> {
                       enCours: _enCours,
                       onPressed: _valider,
                     ),
-                    if (_googlePossible) ...[
-                      const SizedBox(height: PpSpacing.lg),
-                      OutlinedButton(
-                        key: const Key('connexion-google'),
-                        onPressed: _enCours ? null : _valierAvecGoogle,
-                        child: const Text('Continuer avec Google'),
-                      ),
-                    ],
+                    const SizedBox(height: PpSpacing.lg),
+                    // Le composant décide seul de s'afficher, et sous quelle forme :
+                    // le bouton de l'application sur Android, celui rendu par le SDK
+                    // Google sur navigateur, rien si l'instance n'a pas la clé.
+                    BoutonGoogle(
+                      desactive: _enCours,
+                      onJeton: _connecterAvecGoogle,
+                    ),
                     const SizedBox(height: PpSpacing.xl),
                     // `Wrap` et non `Row` : sur un écran étroit, la ligne débordait
                     // de plus de cent pixels. Le repli est ici préférable à une

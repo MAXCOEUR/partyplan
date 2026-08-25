@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -71,6 +73,22 @@ void main() {
       expect(serveur.jetonsRecus, ['jeton-de-google']);
     });
 
+    testWidgets('un jeton arrivé par le flux ouvre une session', (
+      tester,
+    ) async {
+      // Chemin du Web : la personne clique dans le bouton rendu par le SDK Google,
+      // que l'application ne contrôle pas. Le jeton ne revient donc pas d'un appel
+      // mais du flux d'événements d'authentification.
+      final serveur = _ServeurAuth();
+      final service = _ServiceDouble(parcoursProgrammatique: false);
+      await _monter(tester, serveur: serveur, service: service);
+
+      service.emettre('jeton-du-bouton-rendu');
+      await tester.pumpAndSettle();
+
+      expect(serveur.jetonsRecus, ['jeton-du-bouton-rendu']);
+    });
+
     testWidgets('une annulation ne présente rien et n’affiche pas d’erreur', (
       tester,
     ) async {
@@ -139,6 +157,17 @@ class _ServiceDouble implements ServiceGoogle {
 
   @override
   final bool parcoursProgrammatique;
+
+  final _jetons = StreamController<String>.broadcast();
+
+  @override
+  Stream<String> get jetons => _jetons.stream;
+
+  /// Simule l'arrivée d'un jeton par le bouton rendu par Google.
+  void emettre(String valeur) => _jetons.add(valeur);
+
+  @override
+  Future<void> preparer() async {}
 
   @override
   Future<String?> obtenirJetonIdentite() async => jeton;
