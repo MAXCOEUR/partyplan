@@ -38,6 +38,50 @@ class CoquilleEvenement extends ConsumerStatefulWidget {
 class _CoquilleEvenementState extends ConsumerState<CoquilleEvenement> {
   int _onglet = 0;
 
+  @override
+  void initState() {
+    super.initState();
+    // Relire à chaque ouverture. Riverpod ne rejette pas un FutureProvider.family
+    // quand plus personne ne l'écoute : sans cette invalidation, ressortir d'une
+    // soirée puis y revenir réaffiche les données de la première visite,
+    // indéfiniment. Quelqu'un qui rejoint, une présence qui change, un article
+    // pris en charge : rien n'apparaissait.
+    //
+    // Posée dans initState et non dans build, qui est rappelé à chaque changement
+    // d'onglet et rechargerait tout à chaque geste.
+    WidgetsBinding.instance.addPostFrameCallback((_) => _relire());
+  }
+
+  /// Redemande au serveur tout ce que cet écran affiche.
+  void _relire() {
+    if (!mounted) {
+      return;
+    }
+
+    ref
+      ..invalidate(evenementProvider(widget.eventId))
+      ..invalidate(membresProvider(widget.eventId))
+      ..invalidate(listeCoursesProvider(widget.eventId))
+      ..invalidate(depensesProvider(widget.eventId))
+      ..invalidate(reglementsProvider(widget.eventId));
+  }
+
+  /// Retour à l'accueil.
+  ///
+  /// `maybePop` d'abord : venant de l'accueil, on rend la pile telle qu'elle était,
+  /// position de défilement comprise. Mais après une adhésion par lien, `context.go`
+  /// a vidé la pile — un `BackButton` seul n'avait alors rien à dépiler et enfermait
+  /// la personne dans la soirée. Même cas en ouvrant depuis une notification.
+  Future<void> _revenir() async {
+    if (await Navigator.of(context).maybePop()) {
+      return;
+    }
+
+    if (mounted) {
+      context.go(PpRoutes.accueil);
+    }
+  }
+
   /// Onglets de la navigation d'événement (RG-UI-01).
   ///
   /// Construits à la demande et non dans une constante : les libellés sont traduits,
@@ -86,29 +130,41 @@ class _CoquilleEvenementState extends ConsumerState<CoquilleEvenement> {
 
     return Scaffold(
       appBar: PpBarreApp(
-        bouton: const BackButton(),
+        bouton: BackButton(
+          key: const Key('retour-evenement'),
+          onPressed: _revenir,
+        ),
         // Sondages et épingles prolongent la conversation : les chercher sous « Plus »
         // oblige à quitter le fil pour y revenir. Ils n'apparaissent que sur cet
         // onglet — ailleurs, ce serait deux icônes de plus dans une barre déjà
         // chargée.
-        actions: _onglet == 3
-            ? [
-                IconButton(
-                  key: const Key('acces-sondages'),
-                  tooltip: 'Sondages',
-                  icon: const Icon(Icons.how_to_vote_outlined),
-                  onPressed: () =>
-                      context.push(PpRoutes.versSondages(widget.eventId)),
-                ),
-                IconButton(
-                  key: const Key('acces-epingles'),
-                  tooltip: 'Messages épinglés',
-                  icon: const Icon(Icons.push_pin_outlined),
-                  onPressed: () =>
-                      context.push(PpRoutes.versEpingles(widget.eventId)),
-                ),
-              ]
-            : const [],
+        actions: [
+          // Sur navigateur, le RefreshIndicator exige un geste de survol
+          // inatteignable à la souris : sans cette commande, il n'existait aucun
+          // moyen d'actualiser.
+          IconButton(
+            key: const Key('actualiser-evenement'),
+            tooltip: 'Actualiser',
+            icon: const Icon(Icons.refresh_rounded),
+            onPressed: _relire,
+          ),
+          if (_onglet == 3) ...[
+            IconButton(
+              key: const Key('acces-sondages'),
+              tooltip: 'Sondages',
+              icon: const Icon(Icons.how_to_vote_outlined),
+              onPressed: () =>
+                  context.push(PpRoutes.versSondages(widget.eventId)),
+            ),
+            IconButton(
+              key: const Key('acces-epingles'),
+              tooltip: 'Messages épinglés',
+              icon: const Icon(Icons.push_pin_outlined),
+              onPressed: () =>
+                  context.push(PpRoutes.versEpingles(widget.eventId)),
+            ),
+          ],
+        ],
         // Le nom de l'événement, pas celui de l'onglet : « Courses » ne dit pas de
         // quelle soirée il s'agit, et l'on peut être membre de trois événements.
         titre: Text(evenement?.nom ?? onglets[_onglet].libelle),
