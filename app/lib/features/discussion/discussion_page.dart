@@ -587,31 +587,40 @@ class _Bulle extends ConsumerWidget {
         top: montrerAuteur ? PpSpacing.md : PpSpacing.xs,
         bottom: PpSpacing.xs,
       ),
-      child: Row(
-        mainAxisAlignment: mien
-            ? MainAxisAlignment.end
-            : MainAxisAlignment.start,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          if (!mien) ...[avatar, const SizedBox(width: PpSpacing.sm)],
-          if (mien) menu,
-          // La bulle ne prend jamais toute la largeur : une conversation dont les deux
-          // côtés touchent les bords ne se distingue plus d'une liste.
-          Flexible(
-            child: ConstrainedBox(
-              constraints: BoxConstraints(
-                maxWidth: MediaQuery.sizeOf(context).width * 0.72,
+      // La largeur vient des contraintes reçues, pas de MediaQuery. Le fil vit dans un
+      // rail qui borne la colonne à 600 pixels : une fraction de la largeur de fenêtre
+      // dépassait la place réellement disponible, et la ligne débordait. Se dimensionner
+      // sur la fenêtre plutôt que sur son parent est un défaut classique, invisible
+      // jusqu'au jour où l'un des deux change.
+      child: LayoutBuilder(
+        builder: (context, contraintes) {
+          // L'avatar et le menu prennent une centaine de pixels : les retirer garantit
+          // que la bulle tient, y compris sur un téléphone de 320 points.
+          final place = contraintes.maxWidth - 100;
+          final maxBulle = place < 140 ? contraintes.maxWidth * 0.6 : place;
+
+          return Row(
+            mainAxisAlignment: mien
+                ? MainAxisAlignment.end
+                : MainAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (!mien) ...[avatar, const SizedBox(width: PpSpacing.sm)],
+              if (mien) menu,
+              // Flexible et non Align : Align occupe tout l'espace que son parent lui
+              // accorde, et la bulle s'étirait sur toute la largeur pour un message de
+              // trois mots. Flexible est lâche, donc le Container se dimensionne sur son
+              // contenu et ne s'étire pas.
+              Flexible(
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(maxWidth: maxBulle),
+                  child: bulle,
+                ),
               ),
-              child: Align(
-                alignment: mien
-                    ? Alignment.centerRight
-                    : Alignment.centerLeft,
-                child: bulle,
-              ),
-            ),
-          ),
-          if (!mien) menu,
-        ],
+              if (!mien) menu,
+            ],
+          );
+        },
       ),
     );
   }
@@ -1337,21 +1346,21 @@ class _BarreSaisie extends StatelessWidget {
                 return KeyEventResult.handled;
               },
               child: TextField(
-              key: const Key('discussion-saisie'),
-              controller: controleur,
-              minLines: 1,
-              maxLines: 5,
-              // newline et non send : c'est le KeyboardListener au-dessus qui décide, et
-              // le champ doit pouvoir insérer un saut de ligne quand Maj est tenue.
-              textInputAction: TextInputAction.newline,
-              decoration: const InputDecoration(
-                hintText: 'Écris un message… @ pour citer quelqu’un',
-                border: InputBorder.none,
-                contentPadding: EdgeInsets.symmetric(
-                  horizontal: PpSpacing.md,
-                  vertical: PpSpacing.sm,
+                key: const Key('discussion-saisie'),
+                controller: controleur,
+                minLines: 1,
+                maxLines: 5,
+                // newline et non send : c'est le KeyboardListener au-dessus qui décide, et
+                // le champ doit pouvoir insérer un saut de ligne quand Maj est tenue.
+                textInputAction: TextInputAction.newline,
+                decoration: const InputDecoration(
+                  hintText: 'Écris un message… @ pour citer quelqu’un',
+                  border: InputBorder.none,
+                  contentPadding: EdgeInsets.symmetric(
+                    horizontal: PpSpacing.md,
+                    vertical: PpSpacing.sm,
+                  ),
                 ),
-              ),
               ),
             ),
           ),

@@ -39,12 +39,17 @@ class PpClaimChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final brightness = Theme.of(context).brightness;
-    // À l'état libre, le libellé est du texte sur fond clair : il lui faut la variante
-    // accessible. À l'état pris, c'est du blanc sur un aplat, d'où un rose assombri.
-    final couleurTexte = _estPris
-        ? Theme.of(context).colorScheme.onSecondary
-        : PpColors.texteSur(PpColors.rose, brightness);
+    final schema = Theme.of(context).colorScheme;
+
+    // Deux registres, et non deux nuances du même. À l'état libre c'est une commande —
+    // « je m'en occupe » — donc un contour qui appelle l'appui. À l'état pris c'est un
+    // état, et un aplat plein en ferait l'élément le plus voyant de la ligne alors
+    // qu'il porte l'information la moins importante : un fond teinté suffit, et laisse
+    // le nom de l'article dominer.
+    //
+    // Le violet et non le rose : la charte réserve le rose à l'argent dû, et une prise
+    // en charge n'est pas une dette.
+    final couleurTexte = schema.primary;
 
     return Semantics(
       button: onPressed != null,
@@ -62,19 +67,18 @@ class PpClaimChip extends StatelessWidget {
             curve: Curves.easeOut,
             constraints: const BoxConstraints(minHeight: PpA11y.cibleMinimale),
             padding: EdgeInsets.only(
-              left: _estPris ? PpSpacing.xs : PpSpacing.lg,
-              right: PpSpacing.lg,
+              left: _estPris ? PpSpacing.xs : PpSpacing.md,
+              right: PpSpacing.md,
               top: PpSpacing.xs,
               bottom: PpSpacing.xs,
             ),
             decoration: BoxDecoration(
-              color: _estPris
-                  ? PpColors.rose
-                  : PpColors.rose.withValues(alpha: 0.08),
+              color: schema.primary.withValues(alpha: _estPris ? 0.14 : 0.07),
               borderRadius: BorderRadius.circular(PpRadius.pill),
+              // Le contour n'apparaît qu'à l'état libre, celui où l'on attend un appui.
               border: _estPris
                   ? null
-                  : Border.all(color: couleurTexte.withValues(alpha: 0.45)),
+                  : Border.all(color: couleurTexte.withValues(alpha: 0.40)),
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
@@ -83,7 +87,9 @@ class PpClaimChip extends StatelessWidget {
                   PpAvatar(
                     nom: nomAttributaire!,
                     urlPhoto: photoAttributaire,
-                    taille: 32,
+                    // 24 et non 32 : un avatar de 32 dans une pastille impose une
+                    // hauteur qui écrase le reste de la ligne.
+                    taille: 24,
                   ),
                   const SizedBox(width: PpSpacing.sm),
                 ],

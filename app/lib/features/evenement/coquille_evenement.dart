@@ -315,6 +315,7 @@ class _SousTitreEvenement extends StatelessWidget
       ),
       child: Row(
         children: [
+          // Le nom de l'onglet ne se coupe pas : c'est le repère, et il est court.
           Text(
             onglet.toUpperCase(),
             style: theme.textTheme.labelSmall?.copyWith(
@@ -325,9 +326,20 @@ class _SousTitreEvenement extends StatelessWidget
           const SizedBox(width: PpSpacing.sm),
           Text('·', style: theme.textTheme.labelSmall),
           const SizedBox(width: PpSpacing.sm),
-          Text(
-            '$presents présents sur $membres',
-            style: theme.textTheme.labelSmall,
+          // La chaîne traduite, et non une concaténation : elle porte les règles
+          // d'accord des deux nombres. Construite à la main, elle affichait
+          // « 1 présents sur 1 invités ».
+          //
+          // Flexible et non Text nu : « Personne n'a encore confirmé » est bien plus
+          // longue que « 2 présents sur 2 », et la ligne débordait de soixante pixels
+          // sur un écran étroit.
+          Flexible(
+            child: Text(
+              PpL10n.of(context).presencesSurInvites(presents, membres),
+              style: theme.textTheme.labelSmall,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
           ),
         ],
       ),
@@ -458,10 +470,16 @@ class _AvecPastille extends StatelessWidget {
       return child;
     }
 
+    // Le rose ici est délibéré et reste dans la charte : une pastille de non-lus est
+    // une sollicitation, pas un état d'avancement, et c'est le seul endroit de la
+    // navigation où l'accent secondaire a un rôle. Le contraste vient du rôle du thème,
+    // pas d'un blanc écrit en dur.
+    final schema = Theme.of(context).colorScheme;
+
     return Badge(
       label: Text(nombre > 9 ? '9+' : '$nombre'),
-      backgroundColor: PpColors.rose,
-      textColor: Colors.white,
+      backgroundColor: schema.secondary,
+      textColor: schema.onSecondary,
       child: child,
     );
   }

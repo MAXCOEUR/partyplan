@@ -1,11 +1,9 @@
 {
   "@@locale": "fr",
-
   "signature": "Organise. Partage. Profite !",
   "@signature": {
     "description": "Signature du produit, affichée sous le logo."
   },
-
   "ongletAccueil": "Accueil",
   "@ongletAccueil": {
     "description": "Navigation principale : cinq entrées, pas une de plus (RG-UI-01)."
@@ -14,75 +12,100 @@
   "ongletDepenses": "Dépenses",
   "ongletDiscussion": "Discussion",
   "ongletPlus": "Plus",
-
   "evenementsAVenir": "À venir",
   "evenementsPasses": "Passés",
   "creerUnEvenement": "Créer un événement",
   "rejoindreUnEvenement": "Rejoindre avec un code",
   "accueilVideTitre": "Aucun événement pour le moment",
   "accueilVideExplication": "Crée ta première soirée, puis partage le lien. Tes invités répondent sans avoir à créer de compte.",
-
   "aPrendre": "À prendre",
   "jeMenOccupe": "Je m’en occupe",
   "coursesAvancement": "Courses",
-
   "totalDepense": "Dépensé",
   "tuDois": "Tu dois",
   "onTeDoit": "On te doit",
   "marquerRembourse": "Marquer comme remboursé",
-
   "presents": "{presents} / {invites} présents",
   "@presents": {
     "description": "Compteur de présences.",
     "placeholders": {
-      "presents": { "type": "int" },
-      "invites": { "type": "int" }
+      "presents": {
+        "type": "int"
+      },
+      "invites": {
+        "type": "int"
+      }
     }
   },
-
   "erreurReseau": "Impossible de joindre PartyPlan. Vérifie ta connexion, puis réessaie.",
   "erreurIntrouvable": "Cet événement n’existe pas, ou tu n’en fais plus partie.",
   "erreurArticleDejaPris": "Quelqu’un vient de s’en occuper. La liste a été mise à jour.",
   "erreurTropDeTentatives": "Trop de tentatives. Patiente une minute avant de réessayer.",
   "erreurEnregistrement": "Ta modification n’a pas été enregistrée. Elle a été annulée.",
   "reessayer": "Réessayer",
-
   "bandeauDeveloppement": "API locale",
-
   "horsLigneDonneesDu": "Données du {date}",
   "@horsLigneDonneesDu": {
     "description": "Bandeau affiché quand l'écran montre l'état en cache. La date rend visible qu'il ne s'agit pas de l'état courant.",
-    "placeholders": { "date": { "type": "String" } }
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
   },
   "horsLigneEnAttente": "{nombre, plural, one{1 modification en attente d’envoi} other{{nombre} modifications en attente d’envoi}}",
   "@horsLigneEnAttente": {
-    "placeholders": { "nombre": { "type": "int" } }
+    "placeholders": {
+      "nombre": {
+        "type": "int"
+      }
+    }
   },
   "horsLigneReessayer": "Réessayer",
   "horsLigneDiffere": "Enregistré. Sera envoyé dès le retour du réseau.",
-
   "accueilChargementErreur": "Impossible de charger tes événements.",
   "accueilReessayer": "Réessayer",
-  "presencesSurInvites": "{presents, plural, =0{Personne n’a encore confirmé} =1{1 présent sur {invites} invités} other{{presents} présents sur {invites} invités}}",
+  "presencesSurInvites": "{presents, plural, =0{Personne n’a encore confirmé} =1{1 présent sur {invites, plural, =1{1 invité} other{{invites} invités}}} other{{presents} présents sur {invites, plural, =1{1 invité} other{{invites} invités}}}}",
   "@presencesSurInvites": {
     "description": "L’accord doit être juste : « 1 présents » se remarque immédiatement et donne une impression de brouillon.",
-    "placeholders": { "presents": { "type": "int" }, "invites": { "type": "int" } }
+    "placeholders": {
+      "presents": {
+        "type": "int"
+      },
+      "invites": {
+        "type": "int"
+      }
+    }
   },
   "peutEtreSuffixe": "{nombre} peut-être",
   "@peutEtreSuffixe": {
     "description": "RG-PRES-03 : les peut-être sont comptés à part, jamais dans les présents.",
-    "placeholders": { "nombre": { "type": "int" } }
+    "placeholders": {
+      "nombre": {
+        "type": "int"
+      }
+    }
   },
   "tetesAPrevoir": "{nombre, plural, =1{1 tête à prévoir} other{{nombre} têtes à prévoir}}",
   "@tetesAPrevoir": {
     "description": "RG-PRES-04 : les têtes comptent les accompagnants, contrairement aux présents. Les confondre fausserait toutes les quantités de courses.",
-    "placeholders": { "nombre": { "type": "int" } }
+    "placeholders": {
+      "nombre": {
+        "type": "int"
+      }
+    }
   },
-
   "creationTitre": "Nouvel événement",
   "creationEtapeSur": "{courante} / {total}",
   "@creationEtapeSur": {
-    "placeholders": { "courante": { "type": "int" }, "total": { "type": "int" } }
+    "placeholders": {
+      "courante": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
   },
   "creationQuestionNom": "Ça s’appelle comment ?",
   "creationQuestionQuand": "C’est quand, et où ?",
@@ -99,19 +122,35 @@
   "creationNomRequis": "Donne un nom à ton événement.",
   "creationEchec": "L’événement n’a pas pu être créé.",
   "creationEtapeSemantique": "Aller à l’étape {numero}",
-  "@creationEtapeSemantique": { "placeholders": { "numero": { "type": "int" } } },
-
+  "@creationEtapeSemantique": {
+    "placeholders": {
+      "numero": {
+        "type": "int"
+      }
+    }
+  },
   "tdbDansNJours": "{jours, plural, =0{Aujourd’hui} =1{Demain} other{Dans {jours} jours}}",
-  "@tdbDansNJours": { "placeholders": { "jours": { "type": "int" } } },
+  "@tdbDansNJours": {
+    "placeholders": {
+      "jours": {
+        "type": "int"
+      }
+    }
+  },
   "tdbMaPresenceQuestion": "Tu viens ?",
   "tdbMaPresenceModifier": "Modifier ma réponse",
   "tdbPartagerInvitation": "Partager l’invitation",
   "tdbSansReponse": "{nombre, plural, =1{1 personne n’a pas répondu} other{{nombre} personnes n’ont pas répondu}}",
-  "@tdbSansReponse": { "placeholders": { "nombre": { "type": "int" } } },
+  "@tdbSansReponse": {
+    "placeholders": {
+      "nombre": {
+        "type": "int"
+      }
+    }
+  },
   "tdbErreur": "Cet événement est introuvable.",
   "tdbAVenir": "À venir",
   "tdbTermine": "Terminé",
-
   "invitesTitre": "Invités",
   "statutPresent": "Présent",
   "statutPeutEtre": "Peut-être",
@@ -122,16 +161,27 @@
   "roleProprietaire": "Organisateur",
   "roleAdministrateur": "Co-organisateur",
   "invitesAccompagnants": "{nombre, plural, =1{+1 accompagnant} other{+{nombre} accompagnants}}",
-  "@invitesAccompagnants": { "placeholders": { "nombre": { "type": "int" } } },
+  "@invitesAccompagnants": {
+    "placeholders": {
+      "nombre": {
+        "type": "int"
+      }
+    }
+  },
   "invitesAccompagnantsPlafond": "Au-delà de dix accompagnants, il s’agit d’un autre événement.",
   "invitesAccompagnantsTitre": "Accompagnants",
   "invitesExclure": "Exclure de l’événement",
   "invitesExclureConfirmation": "{nom} ne verra plus l’événement. Ses dépenses et ses achats restent comptabilisés.",
-  "@invitesExclureConfirmation": { "placeholders": { "nom": { "type": "String" } } },
+  "@invitesExclureConfirmation": {
+    "placeholders": {
+      "nom": {
+        "type": "String"
+      }
+    }
+  },
   "invitesEchecStatut": "Ton statut n’a pas pu être enregistré.",
   "invitesErreur": "Impossible de charger les invités.",
   "invitesChangerStatut": "Changer ma réponse",
-
   "paramTitre": "Paramètres",
   "paramEnregistrer": "Enregistrer",
   "paramEnregistre": "Modifications enregistrées.",
@@ -145,11 +195,16 @@
   "paramQuitterInterditProprietaire": "Transfère d’abord la propriété à quelqu’un d’autre.",
   "paramSupprimer": "Supprimer l’événement",
   "paramSupprimerConfirmation": "Saisis « {nom} » pour confirmer.",
-  "@paramSupprimerConfirmation": { "placeholders": { "nom": { "type": "String" } } },
+  "@paramSupprimerConfirmation": {
+    "placeholders": {
+      "nom": {
+        "type": "String"
+      }
+    }
+  },
   "paramSupprimerDefinitif": "Cette suppression est définitive.",
   "paramDateModifieeAvertissement": "Un changement de date ou de lieu sera inscrit au fil de l’événement.",
   "paramAnnuler": "Annuler",
-
   "invitationTitre": "Inviter",
   "invitationLien": "Lien d’invitation",
   "invitationCodeCourt": "Code à saisir",
@@ -158,16 +213,28 @@
   "invitationPartager": "Partager",
   "invitationPartagerTexte": "Rejoins « {nom} » : {lien}",
   "@invitationPartagerTexte": {
-    "placeholders": { "nom": { "type": "String" }, "lien": { "type": "String" } }
+    "placeholders": {
+      "nom": {
+        "type": "String"
+      },
+      "lien": {
+        "type": "String"
+      }
+    }
   },
   "invitationRegenerer": "Régénérer le lien",
   "invitationRegenererAvertissement": "Le lien et le code actuels cesseront de fonctionner. Toute personne à qui tu les as déjà envoyés devra en recevoir de nouveaux.",
   "invitationFermerArrivees": "Ouvrir les nouvelles arrivées",
   "invitationFermee": "Les nouvelles arrivées sont fermées.",
   "invitationErreur": "Impossible de charger l’invitation.",
-
   "apercuParticipants": "{nombre, plural, =1{1 participant} other{{nombre} participants}}",
-  "@apercuParticipants": { "placeholders": { "nombre": { "type": "int" } } },
+  "@apercuParticipants": {
+    "placeholders": {
+      "nombre": {
+        "type": "int"
+      }
+    }
+  },
   "apercuFermee": "L’organisateur a fermé les nouvelles arrivées.",
   "apercuIntrouvable": "Cette invitation n’existe pas ou n’est plus valable.",
   "apercuCompteRequis": "Connecte-toi pour rejoindre cet événement.",
@@ -175,14 +242,12 @@
   "apercuCreerCompte": "Créer un compte",
   "adhesionEnCours": "Accès à l’événement en cours…",
   "adhesionEchec": "Impossible de rejoindre cet événement.",
-
   "codeCourtTitre": "Rejoindre avec un code",
   "codeCourtChamp": "Code de l’événement",
   "codeCourtAide": "Le code figure sur l’invitation, sous la forme PLAN-XXXXXX.",
   "codeCourtContinuer": "Continuer",
   "codeCourtRequis": "Saisis le code de l’événement.",
   "codeCourtIntrouvable": "Aucun événement ne correspond à ce code.",
-
   "menuPlusInvites": "Invités",
   "menuPlusInviter": "Inviter",
   "menuPlusParametres": "Paramètres",

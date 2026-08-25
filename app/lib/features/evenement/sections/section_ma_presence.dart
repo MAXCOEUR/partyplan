@@ -127,7 +127,10 @@ class _Choix extends StatelessWidget {
         ),
         borderRadius: BorderRadius.circular(PpRadius.pill),
       ),
-      child: PpStatusChip(presence: versPastille(statut)),
+      // Neutre tant que ce n'est pas la réponse retenue. Cinq couleurs pour cinq
+      // options mettaient cinq accents sur l'écran, et la réponse choisie ne se
+      // distinguait plus que par un anneau qu'il fallait chercher.
+      child: PpStatusChip(presence: versPastille(statut), neutre: !choisi),
     ),
   );
 }
