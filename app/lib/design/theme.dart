@@ -137,6 +137,26 @@ abstract final class PpTheme {
         height: 68,
         labelTextStyle: WidgetStatePropertyAll(textes.labelMedium),
       ),
+      // Le rail n'avait aucun thème et retombait sur les défauts de Material, dont
+      // l'indicateur prend `secondaryContainer` — c'est-à-dire le rose. La navigation
+      // latérale était donc magenta pendant que la barre basse était violette, sur le
+      // même écran. Une seule teinte d'accent, celle de la charte.
+      navigationRailTheme: NavigationRailThemeData(
+        backgroundColor: fond,
+        indicatorColor: PpColors.violet.withValues(alpha: 0.12),
+        elevation: 0,
+        // 80 par défaut, ce qui serre « Discussion » et « Dépenses » au point de les
+        // couper. La largeur suit le plus long libellé, pas l'icône.
+        minWidth: 96,
+        useIndicator: true,
+        selectedIconTheme: const IconThemeData(color: PpColors.violet),
+        unselectedIconTheme: IconThemeData(color: texteSecondaire),
+        selectedLabelTextStyle: textes.labelMedium?.copyWith(
+          color: texte,
+          fontWeight: FontWeight.w600,
+        ),
+        unselectedLabelTextStyle: textes.labelMedium,
+      ),
       dividerTheme: DividerThemeData(color: bordure, thickness: 1, space: 1),
       chipTheme: ChipThemeData(
         backgroundColor: surface,

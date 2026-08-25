@@ -99,12 +99,14 @@ class PpPrimaryButton extends StatelessWidget {
     child: FilledButton(
       onPressed: enCours ? null : onPressed,
       child: enCours
-          ? const SizedBox(
+          ? SizedBox(
               height: 20,
               width: 20,
               child: CircularProgressIndicator(
                 strokeWidth: 2.5,
-                color: Colors.white,
+                // Le bouton est un aplat de la couleur primaire : c'est onPrimary qui
+                // garantit le contraste, pas un blanc écrit en dur.
+                color: Theme.of(context).colorScheme.onPrimary,
               ),
             )
           : Row(
@@ -184,19 +186,13 @@ class PpAuthHeader extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Container(
-          width: 56,
-          height: 56,
-          decoration: BoxDecoration(
-            gradient: PpColors.degradeMarque,
-            borderRadius: BorderRadius.circular(PpRadius.card),
-          ),
-          alignment: Alignment.center,
-          child: const Icon(
-            Icons.celebration_rounded,
-            color: Colors.white,
-            size: 28,
-          ),
+        // Le vrai logo, et non plus une icône de cotillon posée sur un dégradé : le
+        // premier écran est celui où l'identité doit être reconnaissable.
+        Image.asset(
+          'assets/brand/logo.png',
+          width: 60,
+          height: 60,
+          filterQuality: FilterQuality.medium,
         ),
         const SizedBox(height: PpSpacing.lg),
         Text(titre, style: theme.textTheme.displayMedium),

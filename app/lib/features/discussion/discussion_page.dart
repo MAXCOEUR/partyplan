@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -529,70 +530,180 @@ class _Bulle extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
 
+    final mien = message.leMien;
+
+    // Les miens à droite, les autres à gauche. C'est la convention de toutes les
+    // messageries, et elle porte une information réelle : on sait qui parle avant
+    // d'avoir lu le nom.
+    final bulle = Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: PpSpacing.md,
+        vertical: PpSpacing.sm,
+      ),
+      decoration: BoxDecoration(
+        color: mien
+            ? theme.colorScheme.primary
+            : theme.colorScheme.surfaceContainer,
+        // Un coin resserré du côté de qui parle : c'est ce qui fait lire la forme comme
+        // une bulle plutôt que comme une carte.
+        borderRadius: BorderRadius.only(
+          topLeft: const Radius.circular(PpRadius.card),
+          topRight: const Radius.circular(PpRadius.card),
+          bottomLeft: Radius.circular(mien ? PpRadius.card : PpRadius.sm),
+          bottomRight: Radius.circular(mien ? PpRadius.sm : PpRadius.card),
+        ),
+      ),
+      child: _ContenuBulle(
+        evenementId: evenementId,
+        message: message,
+        montrerAuteur: montrerAuteur,
+        heure: _heure,
+        surLien: surLien,
+      ),
+    );
+
+    final menu = _MenuMessage(
+      evenementId: evenementId,
+      message: message,
+      surReponse: surReponse,
+    );
+
+    // L'avatar n'apparaît que pour les autres : sur ses propres messages, il occupe une
+    // place sans rien apprendre. Réservée quand même sur les messages groupés, sinon la
+    // suite d'un même auteur se décale sous son début.
+    final avatar = SizedBox(
+      width: 36,
+      child: montrerAuteur
+          ? PpAvatar(
+              nom: message.auteur,
+              urlPhoto: message.auteurPhoto,
+              taille: 32,
+            )
+          : null,
+    );
+
     return Padding(
       padding: EdgeInsets.only(
         top: montrerAuteur ? PpSpacing.md : PpSpacing.xs,
         bottom: PpSpacing.xs,
       ),
       child: Row(
+        mainAxisAlignment: mien
+            ? MainAxisAlignment.end
+            : MainAxisAlignment.start,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          SizedBox(
-            width: 36,
-            child: montrerAuteur
-                ? PpAvatar(
-                    nom: message.auteur,
-                    urlPhoto: message.auteurPhoto,
-                    taille: 32,
-                  )
-                : null,
+          if (!mien) ...[avatar, const SizedBox(width: PpSpacing.sm)],
+          if (mien) menu,
+          // La bulle ne prend jamais toute la largeur : une conversation dont les deux
+          // côtés touchent les bords ne se distingue plus d'une liste.
+          Flexible(
+            child: ConstrainedBox(
+              constraints: BoxConstraints(
+                maxWidth: MediaQuery.sizeOf(context).width * 0.72,
+              ),
+              child: Align(
+                alignment: mien
+                    ? Alignment.centerRight
+                    : Alignment.centerLeft,
+                child: bulle,
+              ),
+            ),
           ),
-          const SizedBox(width: PpSpacing.sm),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                if (montrerAuteur)
-                  Row(
-                    children: [
-                      Text(
-                        message.leMien ? 'Moi' : message.auteur,
-                        style: theme.textTheme.labelLarge,
-                      ),
-                      const SizedBox(width: PpSpacing.sm),
-                      Text(
-                        _heure.format(message.envoyeLe),
-                        style: theme.textTheme.labelSmall,
-                      ),
-                      if (message.epingle) ...[
-                        const SizedBox(width: PpSpacing.xs),
-                        const Icon(
-                          Icons.push_pin_rounded,
-                          size: 12,
-                          color: PpColors.violet,
-                        ),
-                      ],
-                    ],
-                  ),
-                if (message.citation != null)
-                  _Citation(citation: message.citation!),
-                _Corps(
-                  evenementId: evenementId,
-                  message: message,
-                  surLien: surLien,
+          if (!mien) menu,
+        ],
+      ),
+    );
+  }
+}
+
+/// Intérieur d'une bulle : l'entête, la citation, le corps et les réactions.
+///
+/// Séparé pour que la bulle elle-même reste lisible : sa seule affaire est la forme, la
+/// couleur et l'alignement.
+class _ContenuBulle extends StatelessWidget {
+  const _ContenuBulle({
+    required this.evenementId,
+    required this.message,
+    required this.montrerAuteur,
+    required this.heure,
+    required this.surLien,
+  });
+
+  final String evenementId;
+  final Message message;
+  final bool montrerAuteur;
+  final DateFormat heure;
+  final void Function(String) surLien;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final mien = message.leMien;
+
+    // Sur un aplat violet, les couleurs de texte du thème ne conviennent plus : c'est
+    // `onPrimary` qui garantit le contraste, et le thème l'ignore ici.
+    final surAplat = mien ? theme.colorScheme.onPrimary : null;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (montrerAuteur && !mien)
+          Row(
+            children: [
+              Text(message.auteur, style: theme.textTheme.labelLarge),
+              const SizedBox(width: PpSpacing.sm),
+              Text(
+                heure.format(message.envoyeLe),
+                style: theme.textTheme.labelSmall,
+              ),
+              if (message.epingle) ...[
+                const SizedBox(width: PpSpacing.xs),
+                const Icon(
+                  Icons.push_pin_rounded,
+                  size: 12,
+                  color: PpColors.violet,
                 ),
-                if (message.reactions.isNotEmpty)
-                  _Reactions(evenementId: evenementId, message: message),
+              ],
+            ],
+          ),
+        if (message.citation != null) _Citation(citation: message.citation!),
+        DefaultTextStyle.merge(
+          style: surAplat == null ? null : TextStyle(color: surAplat),
+          child: _Corps(
+            evenementId: evenementId,
+            message: message,
+            surLien: surLien,
+          ),
+        ),
+        // L'heure passe sous le texte pour les miens : sans nom d'auteur au-dessus, elle
+        // n'aurait nulle part où se poser.
+        if (mien)
+          Padding(
+            padding: const EdgeInsets.only(top: PpSpacing.xs),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                if (message.epingle) ...[
+                  Icon(
+                    Icons.push_pin_rounded,
+                    size: 12,
+                    color: theme.colorScheme.onPrimary.withValues(alpha: 0.8),
+                  ),
+                  const SizedBox(width: PpSpacing.xs),
+                ],
+                Text(
+                  heure.format(message.envoyeLe),
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    color: theme.colorScheme.onPrimary.withValues(alpha: 0.75),
+                  ),
+                ),
               ],
             ),
           ),
-          _MenuMessage(
-            evenementId: evenementId,
-            message: message,
-            surReponse: surReponse,
-          ),
-        ],
-      ),
+        if (message.reactions.isNotEmpty)
+          _Reactions(evenementId: evenementId, message: message),
+      ],
     );
   }
 }
@@ -1200,11 +1311,38 @@ class _BarreSaisie extends StatelessWidget {
             tooltip: 'Ajouter',
           ),
           Expanded(
-            child: TextField(
+            // Entrée envoie, Maj+Entrée passe à la ligne. C'est ce que fait toute
+            // messagerie de bureau, et l'inverse — Entrée qui saute une ligne — oblige à
+            // viser le bouton pour chaque message.
+            //
+            // Un Shortcuts/Actions n'irait pas : le champ consomme la touche avant eux.
+            // KeyboardListener voit l'événement d'abord, et ne le laisse filer que
+            // lorsque Maj est enfoncée.
+            child: Focus(
+              onKeyEvent: (_, evenement) {
+                if (evenement is! KeyDownEvent ||
+                    evenement.logicalKey != LogicalKeyboardKey.enter ||
+                    HardwareKeyboard.instance.isShiftPressed) {
+                  // Maj tenue, ou toute autre touche : le champ fait son travail
+                  // habituel, saut de ligne compris.
+                  return KeyEventResult.ignored;
+                }
+
+                if (!enCours) {
+                  onEnvoyer();
+                }
+
+                // Avalée, sinon le champ insérerait en plus un saut de ligne dans le
+                // message suivant.
+                return KeyEventResult.handled;
+              },
+              child: TextField(
               key: const Key('discussion-saisie'),
               controller: controleur,
               minLines: 1,
               maxLines: 5,
+              // newline et non send : c'est le KeyboardListener au-dessus qui décide, et
+              // le champ doit pouvoir insérer un saut de ligne quand Maj est tenue.
               textInputAction: TextInputAction.newline,
               decoration: const InputDecoration(
                 hintText: 'Écris un message… @ pour citer quelqu’un',
@@ -1213,6 +1351,7 @@ class _BarreSaisie extends StatelessWidget {
                   horizontal: PpSpacing.md,
                   vertical: PpSpacing.sm,
                 ),
+              ),
               ),
             ),
           ),

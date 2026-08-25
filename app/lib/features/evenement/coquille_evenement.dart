@@ -38,6 +38,10 @@ class CoquilleEvenement extends ConsumerStatefulWidget {
 }
 
 class _CoquilleEvenementState extends ConsumerState<CoquilleEvenement> {
+  /// Rang de l'onglet Discussion. Nommé parce qu'il sert à trois endroits, et qu'un 3
+  /// écrit trois fois se désynchronise le jour où l'ordre des onglets change.
+  static const _ongletDiscussion = 3;
+
   int _onglet = 0;
 
   EcouteEvenement? _ecoute;
@@ -163,6 +167,13 @@ class _CoquilleEvenementState extends ConsumerState<CoquilleEvenement> {
     final onglets = _onglets(context);
     final evenement = ref.watch(evenementProvider(widget.eventId)).value;
 
+    // Pastille de messages non lus sur l'onglet Discussion. Masquée quand on y est
+    // déjà : signaler du non-lu à quelqu'un en train de lire n'a pas de sens, et le
+    // repère de lecture avance de lui-même.
+    final nonLus = _onglet == _ongletDiscussion
+        ? 0
+        : ref.watch(filDiscussionProvider(widget.eventId)).value?.nonLus ?? 0;
+
     // Au-delà de ce seuil, une barre de navigation basse étalée sur toute la largeur
     // sépare le geste du regard : la place est alors sur le côté.
     final large = MediaQuery.sizeOf(context).width >= PpBreakpoints.large;
@@ -187,7 +198,7 @@ class _CoquilleEvenementState extends ConsumerState<CoquilleEvenement> {
             icon: const Icon(Icons.refresh_rounded),
             onPressed: _relire,
           ),
-          if (_onglet == 3) ...[
+          if (_onglet == _ongletDiscussion) ...[
             IconButton(
               key: const Key('acces-sondages'),
               tooltip: 'Sondages',
@@ -221,6 +232,8 @@ class _CoquilleEvenementState extends ConsumerState<CoquilleEvenement> {
         large: large,
         onglets: onglets,
         selection: _onglet,
+        ongletDePastille: _ongletDiscussion,
+        nonLus: nonLus,
         onSelection: (index) => setState(() => _onglet = index),
         child: IndexedStack(
           index: _onglet,
@@ -255,11 +268,13 @@ class _CoquilleEvenementState extends ConsumerState<CoquilleEvenement> {
               destinations: [
                 for (final onglet in onglets)
                   NavigationDestination(
-                    icon: Icon(onglet.icone),
-                    selectedIcon: Icon(
-                      onglet.icoineActive,
-                      color: PpColors.violet,
+                    icon: _AvecPastille(
+                      nombre: onglets.indexOf(onglet) == _ongletDiscussion
+                          ? nonLus
+                          : 0,
+                      child: Icon(onglet.icone),
                     ),
+                    selectedIcon: Icon(onglet.icoineActive),
                     label: onglet.libelle,
                   ),
               ],
@@ -329,6 +344,8 @@ class _Corps extends StatelessWidget {
     required this.large,
     required this.onglets,
     required this.selection,
+    required this.ongletDePastille,
+    required this.nonLus,
     required this.onSelection,
     required this.child,
   });
@@ -336,6 +353,11 @@ class _Corps extends StatelessWidget {
   final bool large;
   final List<({String libelle, IconData icone, IconData icoineActive})> onglets;
   final int selection;
+
+  /// Onglet portant la pastille de non-lus, et leur nombre.
+  final int ongletDePastille;
+  final int nonLus;
+
   final ValueChanged<int> onSelection;
   final Widget child;
 
@@ -354,10 +376,13 @@ class _Corps extends StatelessWidget {
           onDestinationSelected: onSelection,
           labelType: NavigationRailLabelType.all,
           destinations: [
-            for (final onglet in onglets)
+            for (final (rang, onglet) in onglets.indexed)
               NavigationRailDestination(
-                icon: Icon(onglet.icone),
-                selectedIcon: Icon(onglet.icoineActive, color: PpColors.violet),
+                icon: _AvecPastille(
+                  nombre: rang == ongletDePastille ? nonLus : 0,
+                  child: Icon(onglet.icone),
+                ),
+                selectedIcon: Icon(onglet.icoineActive),
                 label: Text(onglet.libelle),
               ),
           ],
@@ -412,6 +437,32 @@ class _MenuPlus extends StatelessWidget {
           onTap: () => context.push(PpRoutes.versParametres(evenementId)),
         ),
       ],
+    );
+  }
+}
+
+/// Icône surmontée d'une pastille de non-lus.
+///
+/// Le nombre plutôt qu'un simple point : « trois messages » et « quarante messages »
+/// ne se lisent pas de la même façon, et on décide d'ouvrir ou non en fonction. Au-delà
+/// de neuf, la pastille s'élargirait au point de déborder l'icône, d'où le « 9+ ».
+class _AvecPastille extends StatelessWidget {
+  const _AvecPastille({required this.nombre, required this.child});
+
+  final int nombre;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    if (nombre <= 0) {
+      return child;
+    }
+
+    return Badge(
+      label: Text(nombre > 9 ? '9+' : '$nombre'),
+      backgroundColor: PpColors.rose,
+      textColor: Colors.white,
+      child: child,
     );
   }
 }

@@ -91,6 +91,11 @@ flutter:
   # Génère PpL10n depuis les fichiers ARB, selon l10n.yaml.
   generate: true
 
+  assets:
+    # Le logo, décliné par tools/ vers web/icons et android/.../mipmap-*. La source
+    # reste assets/brand/logo.svg : c'est elle qu'on modifie, jamais les PNG.
+    - assets/brand/logo.png
+
   # Polices embarquées : aucun téléchargement à l'exécution, le développement
   # fonctionne hors ligne (NF-DEV-02).
   fonts:

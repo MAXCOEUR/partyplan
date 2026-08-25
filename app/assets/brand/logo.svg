@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <!--
+    Logo PartyPlan.
+
+    Un « P » découpé dans une tuile au dégradé de marque, et trois confettis dans l'angle
+    resté libre. Le monogramme porte l'identité et reste lisible à seize pixels, taille à
+    laquelle une illustration détaillée devient une tache ; les confettis disent la
+    soirée sans recourir au cotillon, cliché de toutes les applications du genre.
+
+    La géométrie tient à une contrainte : le bol du P s'arrête à x=332, ce qui dégage
+    l'angle supérieur droit. Sans cela les confettis chevauchent la lettre et le
+    chevauchement se lit comme un défaut, non comme une intention.
+
+    Couleurs de docs/brand/charte.md, jamais redéfinies ici.
+  -->
+  <defs>
+    <linearGradient id="marque" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#6C5CE7"/>
+      <stop offset="1" stop-color="#A855F7"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="512" height="512" rx="116" fill="url(#marque)"/>
+
+  <!-- Le P : fût, bol, et le contre-poinçon évidé par la règle du non-zéro alterné. -->
+  <path fill="#FFFFFF" fill-rule="evenodd"
+        d="M148 132 H258 a74 74 0 0 1 0 148 H210 V380 H148 Z
+           M210 190 H258 a32 32 0 0 1 0 64 H210 Z"/>
+
+  <!-- Trois confettis, dans l'angle libre, tailles et angles décroissants. -->
+  <rect x="376" y="92" width="36" height="36" rx="10" fill="#FF4D8D"
+        transform="rotate(18 394 110)"/>
+  <rect x="428" y="156" width="26" height="26" rx="7" fill="#00C896"
+        transform="rotate(-22 441 169)"/>
+  <rect x="374" y="176" width="20" height="20" rx="6" fill="#FFB020"
+        transform="rotate(34 384 186)"/>
+</svg>
