@@ -92,7 +92,7 @@ Ne pas commencer la tâche 8 sans la clé VAPID en main.
   `ServiceAccountKey.Lire(string? chemin, out string? probleme) → ServiceAccountKey?`,
   `PushOptions.FirebaseServiceAccountPath`
 
-- [ ] **Étape 1 : écrire le test qui échoue**
+- [x] **Étape 1 : écrire le test qui échoue**
 
 `api/tests/PartyPlan.UnitTests/ServiceAccountKeyTests.cs`
 
@@ -246,12 +246,12 @@ public sealed class ServiceAccountKeyTests
 }
 ```
 
-- [ ] **Étape 2 : lancer le test, vérifier qu'il échoue**
+- [x] **Étape 2 : lancer le test, vérifier qu'il échoue**
 
 Commande : `dotnet test api/tests/PartyPlan.UnitTests/PartyPlan.UnitTests.csproj --filter "FullyQualifiedName~ServiceAccountKey"`
 Attendu : ÉCHEC de compilation, `ServiceAccountKey` introuvable.
 
-- [ ] **Étape 3 : écrire `ServiceAccountKey`**
+- [x] **Étape 3 : écrire `ServiceAccountKey`**
 
 `api/src/PartyPlan.Infrastructure/Notifications/ServiceAccountKey.cs`
 
@@ -351,12 +351,12 @@ public sealed record ServiceAccountKey(
 }
 ```
 
-- [ ] **Étape 4 : lancer le test, vérifier qu'il passe**
+- [x] **Étape 4 : lancer le test, vérifier qu'il passe**
 
 Commande : `dotnet test api/tests/PartyPlan.UnitTests/PartyPlan.UnitTests.csproj --filter "FullyQualifiedName~ServiceAccountKey"`
 Attendu : 6 tests réussis.
 
-- [ ] **Étape 5 : renommer l'option**
+- [x] **Étape 5 : renommer l'option**
 
 Dans `api/src/PartyPlan.Infrastructure/Notifications/ConsolePushSender.cs`, remplacer la
 propriété de `PushOptions` :
@@ -394,7 +394,7 @@ puisqu'une clé présente donne maintenant le vrai émetteur :
 
 Retirer alors le bloc `if (IsConfigured) { ... }` de `SendAsync`, devenu inatteignable.
 
-- [ ] **Étape 6 : écrire la fabrique**
+- [x] **Étape 6 : écrire la fabrique**
 
 `api/src/PartyPlan.Infrastructure/Notifications/PushSenderFactory.cs`
 
@@ -444,7 +444,7 @@ public static class PushSenderFactory
 }
 ```
 
-- [ ] **Étape 7 : tester la décision elle-même**
+- [x] **Étape 7 : tester la décision elle-même**
 
 La spec exige qu'une clé illisible bascule sur la console **et** avertisse, sans jamais
 faire échouer le démarrage. C'est la décision qui tient la règle 5 : elle mérite un test.
@@ -516,7 +516,7 @@ internal sealed class JournalDeTest : Microsoft.Extensions.Logging.ILogger
 Commande : `dotnet test api/tests/PartyPlan.UnitTests/PartyPlan.UnitTests.csproj --filter "FullyQualifiedName~ServiceAccountKey"`
 Attendu : 8 tests réussis.
 
-- [ ] **Étape 8 : `make verif` puis commit**
+- [x] **Étape 8 : `make verif` puis commit**
 
 ```bash
 make verif
@@ -538,7 +538,7 @@ git commit -m "feat(notifications): lire la clé de compte de service Firebase"
 - Produit : `GoogleAccessTokens(HttpClient, IClock, ILogger<GoogleAccessTokens>)`,
   `Task<string?> ObtenirAsync(ServiceAccountKey cle, CancellationToken ct)`
 
-- [ ] **Étape 1 : écrire la doublure HTTP**
+- [x] **Étape 1 : écrire la doublure HTTP**
 
 `api/tests/PartyPlan.UnitTests/Infrastructure/HttpStub.cs`
 
@@ -575,7 +575,7 @@ internal sealed class HttpStub(Func<HttpRequestMessage, HttpResponseMessage> rep
 }
 ```
 
-- [ ] **Étape 2 : écrire le test qui échoue**
+- [x] **Étape 2 : écrire le test qui échoue**
 
 `api/tests/PartyPlan.UnitTests/GoogleAccessTokensTests.cs`
 
@@ -730,12 +730,12 @@ internal sealed class HorlogeDeTest : IClock
 }
 ```
 
-- [ ] **Étape 3 : lancer le test, vérifier qu'il échoue**
+- [x] **Étape 3 : lancer le test, vérifier qu'il échoue**
 
 Commande : `dotnet test api/tests/PartyPlan.UnitTests/PartyPlan.UnitTests.csproj --filter "FullyQualifiedName~GoogleAccessTokens"`
 Attendu : ÉCHEC de compilation, `GoogleAccessTokens` introuvable.
 
-- [ ] **Étape 4 : écrire `GoogleAccessTokens`**
+- [x] **Étape 4 : écrire `GoogleAccessTokens`**
 
 `api/src/PartyPlan.Infrastructure/Notifications/GoogleAccessTokens.cs`
 
@@ -892,12 +892,12 @@ public sealed class GoogleAccessTokens(
 }
 ```
 
-- [ ] **Étape 5 : lancer le test, vérifier qu'il passe**
+- [x] **Étape 5 : lancer le test, vérifier qu'il passe**
 
 Commande : `dotnet test api/tests/PartyPlan.UnitTests/PartyPlan.UnitTests.csproj --filter "FullyQualifiedName~GoogleAccessTokens"`
 Attendu : 5 tests réussis.
 
-- [ ] **Étape 6 : `make verif` puis commit**
+- [x] **Étape 6 : `make verif` puis commit**
 
 ```bash
 make verif
@@ -920,7 +920,7 @@ git commit -m "feat(notifications): obtenir et cacher le jeton d'accès Google"
 - Produit : `IPushDeviceRegistry.DisableAsync(string token, string raison, CancellationToken)`,
   `FirebasePushSender` implémentant `IPushSender`
 
-- [ ] **Étape 1 : écrire le contrat**
+- [x] **Étape 1 : écrire le contrat**
 
 `api/src/PartyPlan.SharedKernel/Contracts/IPushDeviceRegistry.cs`
 
@@ -946,7 +946,7 @@ public interface IPushDeviceRegistry
 }
 ```
 
-- [ ] **Étape 2 : écrire le test qui échoue**
+- [x] **Étape 2 : écrire le test qui échoue**
 
 `api/tests/PartyPlan.UnitTests/FirebasePushSenderTests.cs`
 
@@ -1118,12 +1118,12 @@ public sealed class FirebasePushSenderTests
 }
 ```
 
-- [ ] **Étape 3 : lancer le test, vérifier qu'il échoue**
+- [x] **Étape 3 : lancer le test, vérifier qu'il échoue**
 
 Commande : `dotnet test api/tests/PartyPlan.UnitTests/PartyPlan.UnitTests.csproj --filter "FullyQualifiedName~FirebasePushSender"`
 Attendu : ÉCHEC de compilation, `FirebasePushSender` introuvable.
 
-- [ ] **Étape 4 : écrire `FirebasePushSender`**
+- [x] **Étape 4 : écrire `FirebasePushSender`**
 
 `api/src/PartyPlan.Infrastructure/Notifications/FirebasePushSender.cs`
 
@@ -1300,12 +1300,12 @@ public sealed class FirebasePushSender(
 }
 ```
 
-- [ ] **Étape 5 : lancer le test, vérifier qu'il passe**
+- [x] **Étape 5 : lancer le test, vérifier qu'il passe**
 
 Commande : `dotnet test api/tests/PartyPlan.UnitTests/PartyPlan.UnitTests.csproj --filter "FullyQualifiedName~FirebasePushSender"`
 Attendu : 6 tests réussis.
 
-- [ ] **Étape 6 : brancher l'enregistrement**
+- [x] **Étape 6 : brancher l'enregistrement**
 
 Dans `api/src/PartyPlan.Infrastructure/DependencyInjection.cs`, remplacer le bloc
 « Notifications poussées » :
@@ -1361,7 +1361,7 @@ l'enregistrer par `AddSingleton<GoogleAccessTokens>()` échouerait. Le remplacer
             sp.GetRequiredService<ILogger<GoogleAccessTokens>>()));
 ```
 
-- [ ] **Étape 7 : compiler et commiter**
+- [x] **Étape 7 : compiler et commiter**
 
 La compilation réussit : `IPushDeviceRegistry` est résolu par le conteneur, et une
 dépendance non enregistrée ne se manifeste qu'à l'exécution. Son implémentation arrive à la

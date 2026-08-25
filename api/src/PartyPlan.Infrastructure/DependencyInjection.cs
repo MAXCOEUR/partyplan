@@ -3,6 +3,8 @@ namespace PartyPlan.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using PartyPlan.Infrastructure.Email;
 using PartyPlan.Infrastructure.Identity;
 using PartyPlan.Infrastructure.Media;
@@ -64,14 +66,47 @@ public static class DependencyInjection
         services.AddSingleton<PartyPlan.SharedKernel.Contracts.IAvatarStorage, AvatarStorage>();
         services.AddSingleton<PartyPlan.SharedKernel.Contracts.IEventImageStorage, EventImageStorage>();
 
-        // Notifications poussées. L'émetteur de développement journalise au lieu
-        // d'envoyer (NF-DEV-04) ; l'implémentation Firebase le remplacera au lot 1.11,
-        // derrière le même contrat.
+        // Notifications poussées. L'émetteur réel n'est choisi que si une clé de compte de
+        // service est lisible ; sinon les notifications sont journalisées (NF-DEV-04,
+        // règle 5). Le choix est fait à chaque portée, sur une clé déjà validée.
         services.AddOptions<PushOptions>()
             .Bind(configuration.GetSection(PushOptions.SectionName))
             .ValidateOnStart();
 
-        services.AddSingleton<PartyPlan.SharedKernel.Contracts.IPushSender, ConsolePushSender>();
+        services.AddSingleton<ConsolePushSender>();
+
+        services.AddHttpClient(nameof(GoogleAccessTokens))
+            .ConfigureHttpClient(client => client.Timeout = TimeSpan.FromSeconds(10));
+
+        // Le cache du jeton d'accès est singleton : scoped, il serait vidé à chaque requête
+        // et Google interrogé à chaque notification.
+        services.AddSingleton(sp => new GoogleAccessTokens(
+            sp.GetRequiredService<IHttpClientFactory>().CreateClient(nameof(GoogleAccessTokens)),
+            sp.GetRequiredService<PartyPlan.SharedKernel.Abstractions.IClock>(),
+            sp.GetRequiredService<ILogger<GoogleAccessTokens>>()));
+
+        // Scoped : l'émetteur Firebase consomme IPushDeviceRegistry, qui est scoped.
+        services.AddScoped<PartyPlan.SharedKernel.Contracts.IPushSender>(sp =>
+        {
+            var chemin = sp.GetRequiredService<IOptions<PushOptions>>()
+                .Value.FirebaseServiceAccountPath;
+
+            var cle = PushSenderFactory.CleUtilisable(
+                chemin,
+                sp.GetRequiredService<ILogger<GoogleAccessTokens>>());
+
+            if (cle is null)
+            {
+                return sp.GetRequiredService<ConsolePushSender>();
+            }
+
+            return new FirebasePushSender(
+                cle,
+                sp.GetRequiredService<GoogleAccessTokens>(),
+                sp.GetRequiredService<IHttpClientFactory>().CreateClient(nameof(GoogleAccessTokens)),
+                sp.GetRequiredService<PartyPlan.SharedKernel.Contracts.IPushDeviceRegistry>(),
+                sp.GetRequiredService<ILogger<FirebasePushSender>>());
+        });
 
         // --- Connexions tierces ---
         // Sans identifiant client configuré, la vérification échoue proprement : le
