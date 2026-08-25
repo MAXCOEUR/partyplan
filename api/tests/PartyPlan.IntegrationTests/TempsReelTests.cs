@@ -36,6 +36,48 @@ public sealed class TempsReelTests(PartyPlanApiFixture fixture)
     }
 
     [Fact]
+    public async Task Le_jeton_en_chaine_de_requete_est_accepte_par_le_hub()
+    {
+        // Un navigateur ne peut pas poser d'en-tête Authorization sur un WebSocket :
+        // SignalR envoie donc le jeton en « ?access_token= ». Le validateur JWT
+        // d'ASP.NET Core ne lit pas cette chaîne par défaut, et la négociation part
+        // alors en 401 — le temps réel ne fonctionne pas du tout sur navigateur.
+        var (organisateur, evenement) = await SoireeAsync();
+
+        var jeton = organisateur.DefaultRequestHeaders.Authorization!.Parameter!;
+
+        using var anonyme = fixture.CreateClient();
+
+        var reponse = await anonyme.PostAsync(
+            new Uri(
+                $"/hubs/event/negotiate?negotiateVersion=1&eventId={evenement}"
+                + $"&access_token={jeton}",
+                UriKind.Relative),
+            content: null);
+
+        reponse.StatusCode.ShouldBe(HttpStatusCode.OK);
+    }
+
+    [Fact]
+    public async Task Le_jeton_en_chaine_de_requete_n_est_lu_que_sur_le_hub()
+    {
+        // La lecture du jeton en URL est ouverte au seul chemin du hub. Sur le reste de
+        // l'API, un jeton dans l'adresse finirait dans les journaux du proxy et dans
+        // l'historique du navigateur : ce qui est acceptable pour un WebSocket qui n'a
+        // pas d'autre moyen ne l'est pas pour une requête REST qui en a un.
+        var (organisateur, _) = await SoireeAsync();
+
+        var jeton = organisateur.DefaultRequestHeaders.Authorization!.Parameter!;
+
+        using var anonyme = fixture.CreateClient();
+
+        var reponse = await anonyme.GetAsync(
+            new Uri($"/v1/me?access_token={jeton}", UriKind.Relative));
+
+        reponse.StatusCode.ShouldBe(HttpStatusCode.Unauthorized);
+    }
+
+    [Fact]
     public async Task Une_adhesion_et_un_changement_de_presence_sont_diffuses()
     {
         var (organisateur, evenement) = await SoireeAsync();

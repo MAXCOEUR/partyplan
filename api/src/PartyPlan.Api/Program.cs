@@ -89,7 +89,8 @@ app.UseAuthorization();
 // Le hub vit hors du groupe /v1 : ce n'est pas une ressource REST versionnée, et
 // RG-RT-01 fixe son adresse. Monté après l'autorisation, sans quoi son attribut
 // [Authorize] n'aurait aucune identité à examiner.
-app.MapHub<PartyPlan.Infrastructure.TempsReel.EventHub>("/hubs/event");
+app.MapHub<PartyPlan.Infrastructure.TempsReel.EventHub>(
+    PartyPlan.Api.Setup.AuthenticationSetup.CheminDuHub);
 
 // Placé après l'autorisation : la revendication n'existe qu'une fois l'identité
 // établie (RG-ADM-10).

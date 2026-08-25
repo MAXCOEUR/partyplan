@@ -18,6 +18,16 @@ using PartyPlan.SharedKernel.Enums;
 public static class AuthenticationSetup
 {
     /// <summary>Réservée aux rôles plateforme disposant de tous les droits (RG-ADM-05).</summary>
+    /// <summary>
+    /// Chemin du hub temps réel, seul endroit où un jeton est lu depuis l'adresse.
+    /// <para>
+    /// Doit rester en accord avec le <c>MapHub</c> de <c>Program.cs</c> et avec
+    /// <c>RG-RT-01</c>. Les deux valeurs sont dans deux fichiers : une divergence
+    /// rendrait le temps réel muet sans qu'aucun test d'unité ne le voie.
+    /// </para>
+    /// </summary>
+    public const string CheminDuHub = "/hubs/event";
+
     public const string PlatformAdminPolicy = "PlatformAdmin";
 
     /// <summary>Consultation et dépannage : Support ou PlatformAdmin (RG-ADM-05).</summary>
@@ -50,6 +60,34 @@ public static class AuthenticationSetup
                 };
                 options.Events = new JwtBearerEvents
                 {
+                    // Un navigateur ne peut pas poser d'en-tête Authorization sur un
+                    // WebSocket : SignalR envoie donc le jeton en « ?access_token= »,
+                    // et le validateur JWT ne lit pas cette chaîne de lui-même. Sans ce
+                    // relais, la négociation du hub répond 401 et le temps réel ne
+                    // fonctionne pas du tout sur navigateur.
+                    //
+                    // Restreint au chemin du hub, et c'est essentiel : ailleurs, un
+                    // jeton dans l'adresse finirait dans les journaux du proxy et dans
+                    // l'historique du navigateur. Ce qui est inévitable pour un
+                    // WebSocket ne l'est pas pour une requête REST, qui a un en-tête.
+                    OnMessageReceived = context =>
+                    {
+                        var chemin = context.HttpContext.Request.Path;
+
+                        if (!chemin.StartsWithSegments(CheminDuHub))
+                        {
+                            return Task.CompletedTask;
+                        }
+
+                        var jeton = context.Request.Query["access_token"].ToString();
+
+                        if (!string.IsNullOrEmpty(jeton))
+                        {
+                            context.Token = jeton;
+                        }
+
+                        return Task.CompletedTask;
+                    },
                     OnTokenValidated = context =>
                     {
                         if (!Guid.TryParse(
