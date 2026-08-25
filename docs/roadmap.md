@@ -544,14 +544,36 @@ place : la feuille de route avait pris du retard sur les commits.
 comme les sondages n'étaient pas couverts alors qu'ils sont livrés. 21 messages au lieu
 de 18.
 
-- [ ] Exposer le hub SignalR sur `/hubs/event` — `RG-RT-01`
-- [ ] Contrôler l'appartenance à l'événement à l'établissement de la connexion
-- [ ] Diffuser les 18 messages du `§9`
-- [ ] `RG-RT-02` Chaque message porte l'état résultant, pas seulement un identifiant
-- [ ] `RG-RT-03` Rechargement complet de l'écran actif à la reconnexion
-- [ ] Client Flutter : abonnement, reconnexion, application des messages à l'état local
-- [ ] Recette : propagation en moins d'une seconde — `NF-PERF-05`
-- [ ] `RG-RT-04` Rester en instance unique : tout ajout d'une seconde instance impose Redis et un ADR préalable
+- [x] Exposer le hub SignalR sur `/hubs/event` — `RG-RT-01`
+- [x] Contrôler l'appartenance à l'événement à l'établissement de la connexion
+  - → et non à chaque message : une vérification par message coûterait une requête à
+    chaque diffusion. L'identifiant voyage en chaîne de requête, sinon le client serait
+    connecté avant d'être filtré
+  - → un non-membre voit sa connexion abandonnée sans message distinctif (`RG-SEC-02`)
+- [x] Diffuser les messages du `§9` — 21 sur 22
+  - → présences et événement (4), courses (6), dépenses, soldes et remboursements (6),
+    discussion et sondages (5)
+  - → `message.updated` ajouté au `§9` en cours de route : la modification d'un message
+    diffusait `message.created`, ce qui était faux
+- [x] `RG-RT-02` Chaque message porte l'état résultant, pas seulement un identifiant
+  - → trois exceptions assumées, toutes des suppressions : `member.removed`,
+    `item.deleted` et `message.deleted` ne portent qu'un identifiant, la ressource ayant
+    disparu. `balances.changed` non plus : envoyer le tableau complet des soldes dans
+    chaque message le rendrait volumineux pour rien
+- [x] `RG-RT-03` Rechargement complet de l'écran actif à la reconnexion
+- [x] Client Flutter : abonnement, reconnexion
+- [x] `RG-RT-04` Rester en instance unique : tout ajout d'une seconde instance impose Redis et un ADR préalable
+  - → documenté dans `docs/exploitation.md` : deux instances sans backplane donneraient
+    un temps réel qui fonctionne pour la moitié des membres
+- [ ] `activity.appended` — ses trois points d'écriture diffusent déjà un message précis,
+      et l'écran du fil d'activité n'existe pas (lot 1.10)
+- [ ] Rapiéçage de l'état local au lieu d'une relecture REST
+  - → reporté sciemment : rapiécer 22 messages dans autant de listes paginées, triées et
+    filtrées créerait autant d'occasions d'afficher autre chose que la base, sans erreur
+    visible. Le serveur envoie déjà l'état, donc ce sera possible sans y retoucher
+- [ ] Recette : propagation en moins d'une seconde — `NF-PERF-05`, exige deux appareils réels
+- [ ] Recette : couper le réseau d'un appareil, changer trois choses sur l'autre,
+      rétablir, et vérifier que le premier revient **exactement** à jour
 
 ## Lot 1.7 — Dépenses
 
