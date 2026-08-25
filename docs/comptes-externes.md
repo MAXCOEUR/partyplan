@@ -50,9 +50,15 @@ produit dont l'acquisition repose sur le partage entre amis.
 L'empreinte SHA-1 du certificat de débogage s'obtient ainsi :
 
 ```bash
-keytool -list -v -keystore ~/.android/debug.keystore -alias androiddebugkey \
-  -storepass android -keypass android | grep SHA1
+keytool -J-Duser.language=en -J-Duser.country=US \
+  -list -v -keystore ~/.android/debug.keystore -alias androiddebugkey \
+  -storepass android -keypass android | grep -E 'SHA1:|SHA256:'
 ```
+
+La locale est forcée en anglais volontairement : en français, `keytool` du JDK 21 et 25
+échoue sur `MissingFormatArgumentException` avant d'afficher les empreintes — son message
+localisé contient un défaut de format. Le SHA256 est demandé en même temps parce que les
+liens profonds Android en ont besoin, et que c'est la même manipulation.
 
 **Où mettre les valeurs**
 

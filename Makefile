@@ -20,6 +20,16 @@ API_EMU     := http://10.0.2.2:5080
 # autorisées de appsettings.Development.json : les deux valeurs doivent rester égales.
 WEB_DEV_PORT := 5173
 
+# Identifiant client Google, lu dans .env pour n'avoir qu'une source de vérité. Vide
+# tant qu'il n'y est pas : l'application se lance alors sans bouton Google, et
+# l'inscription par mot de passe suffit (NF-DEV-05).
+#
+# C'est l'identifiant du client **Web** qu'il faut, y compris sur Android : le jeton
+# émis porte cette audience, et le client Android n'a pas d'identifiant à inscrire dans
+# le code — il est reconnu par le nom du paquet et l'empreinte du certificat.
+GOOGLE_CLIENT_ID := $(shell grep -E '^GOOGLE_CLIENT_ID=' .env 2>/dev/null | cut -d= -f2-)
+GOOGLE_ANDROID_CLIENT_ID := $(shell grep -E '^GOOGLE_ANDROID_CLIENT_ID=' .env 2>/dev/null | cut -d= -f2-)
+
 .DEFAULT_GOAL := aide
 
 .PHONY: aide init up down restart logs ps api app web test test-api test-app \
@@ -77,9 +87,15 @@ api: ## Lance l'API en rechargement à chaud (base et courriel en conteneur)
 	@# Le SDK .NET 10.0.400 mélange `obj\\Debug` et `obj/Debug` sous Linux dans la
 	@# gestion spéciale des fichiers statiques de dotnet-watch. L'API n'en sert pas :
 	@# la désactiver supprime ce faux échec sans toucher au hot reload du code C#.
+	@# Les identifiants Google viennent de .env : appsettings.Development.json n'en
+	@# porte pas, et sans eux l'API refuse tout jeton Google sans que le bouton de
+	@# l'application le laisse deviner. Vides, la vérification reste simplement
+	@# désactivée (NF-DEV-05).
 	ASPNETCORE_ENVIRONMENT=Development ASPNETCORE_URLS=$(API_URLS) \
 	  env DOTNET_WATCH_SUPPRESS_STATIC_FILE_HANDLING=1 \
 	  App__PublicBaseUrl=http://localhost:$(WEB_DEV_PORT) \
+	  Google__ClientId=$(GOOGLE_CLIENT_ID) \
+	  Google__AndroidClientId=$(GOOGLE_ANDROID_CLIENT_ID) \
 	  $$(./tools/verifier-inotify.sh --env) \
 	  dotnet watch --project $(API_PROJ) run
 
@@ -88,10 +104,12 @@ app: ## Lance l'application Flutter sur Chrome, en rechargement à chaud
 	@# tiré au hasard, jamais présent dans Cors:AllowedOrigins, et le navigateur
 	@# bloque alors chaque appel à l'API sans que rien ne l'explique côté serveur.
 	cd app && flutter run -d chrome --web-port=$(WEB_DEV_PORT) \
-	  --dart-define=API_BASE_URL=http://localhost:5080
+	  --dart-define=API_BASE_URL=http://localhost:5080 \
+	  --dart-define=GOOGLE_CLIENT_ID=$(GOOGLE_CLIENT_ID)
 
 android: ## Lance l'application sur l'émulateur ou le téléphone Android connecté
-	cd app && flutter run --dart-define=API_BASE_URL=$(API_EMU)
+	cd app && flutter run --dart-define=API_BASE_URL=$(API_EMU) \
+	  --dart-define=GOOGLE_CLIENT_ID=$(GOOGLE_CLIENT_ID)
 
 emulateur: ## Démarre l'émulateur Android Pixel_7a
 	flutter emulators --launch Pixel_7a
@@ -110,7 +128,9 @@ devices: ## Liste les appareils et émulateurs disponibles
 	flutter emulators
 
 web: ## Compile l'application Flutter Web en production, en local
-	cd app && flutter build web --release --dart-define=API_BASE_URL=http://localhost:5080
+	cd app && flutter build web --release \
+	  --dart-define=API_BASE_URL=http://localhost:5080 \
+	  --dart-define=GOOGLE_CLIENT_ID=$(GOOGLE_CLIENT_ID)
 
 # --- Base de données ---
 
