@@ -157,8 +157,9 @@ services:
       Admin__Password: REMPLACER_MOT_DE_PASSE_ADMIN
 
       # ---------- Domaines ----------
+      # L'application web, et elle seule : la vitrine est statique et n'appelle pas
+      # l'API. Elle renvoie vers les magasins ou vers l'application.
       Cors__AllowedOrigins__0: https://partyplan.maxencecoeur.fr
-      Cors__AllowedOrigins__1: https://web.partyplan.maxencecoeur.fr
       App__PublicBaseUrl: https://partyplan.maxencecoeur.fr
       App__CdnBaseUrl: https://cdn.partyplan.maxencecoeur.fr
 

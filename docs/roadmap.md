@@ -706,8 +706,17 @@ cochées.** C'est écrit ici parce qu'un transport livré donne l'impression d'u
 
 ## Lot 1.16 — Site vitrine
 
-- [ ] Page d'accueil : proposition de valeur, captures, lien vers l'application
-- [ ] Pages légales publiées
+**Nature arrêtée le 25/08/2026** : site **statique**, indexable, qui n'appelle jamais
+l'API. C'est la seule surface publique du produit — tout le reste est privé par défaut
+(règle 9). Son rôle est le référencement et les mentions légales, puis renvoyer ailleurs :
+trois boutons vers Google Play, l'App Store et l'application web
+(`partyplan.maxencecoeur.fr`). Elle ne figure donc pas dans les origines CORS de l'API :
+lui ouvrir CORS élargirait la surface pour un besoin qui n'existe pas.
+
+- [ ] Page d'accueil : proposition de valeur, captures, et les trois boutons de sortie
+      (Play Store, App Store, application web)
+- [ ] Pages légales publiées — c'est ce qui justifie l'existence du site autant que le
+      référencement
 - [ ] Page de support et adresse de contact
 
 ## Lot 1.17 — Recette et bêta privée

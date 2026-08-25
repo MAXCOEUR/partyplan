@@ -74,9 +74,12 @@ services:
       # n'existe, ou s'il ne satisfait pas RG-AUTH-01.
       Admin__Email: ${ADMIN_EMAIL}
       Admin__Password: ${ADMIN_PASSWORD}
-      # Origines autorisées : application web et vitrine uniquement.
+      # Origine autorisée : l'application web, et elle seule.
+      #
+      # La vitrine n'y figure pas : c'est un site statique qui n'appelle pas l'API. Elle
+      # présente le produit et renvoie vers les magasins ou vers l'application. Lui
+      # ouvrir CORS élargirait la surface pour un besoin qui n'existe pas.
       Cors__AllowedOrigins__0: https://${DOMAIN_APP}
-      Cors__AllowedOrigins__1: https://${DOMAIN_LANDING}
       App__PublicBaseUrl: https://${DOMAIN_APP}
       App__CdnBaseUrl: https://${DOMAIN_CDN}
       # Médias : sans cette injection, la valeur par défaut du code renverrait des
