@@ -15,6 +15,7 @@ class PpClaimChip extends StatelessWidget {
   const PpClaimChip({
     required this.libelleLibre,
     this.nomAttributaire,
+    this.photoAttributaire,
     this.onPressed,
     this.enCours = false,
     super.key,
@@ -25,6 +26,9 @@ class PpClaimChip extends StatelessWidget {
 
   /// Nom de la personne qui s'en occupe. Nul si l'article est libre.
   final String? nomAttributaire;
+
+  /// Photo de l'attributaire, quand il en a une.
+  final String? photoAttributaire;
 
   final VoidCallback? onPressed;
 
@@ -76,7 +80,11 @@ class PpClaimChip extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               children: [
                 if (_estPris) ...[
-                  PpAvatar(nom: nomAttributaire!, taille: 32),
+                  PpAvatar(
+                    nom: nomAttributaire!,
+                    urlPhoto: photoAttributaire,
+                    taille: 32,
+                  ),
                   const SizedBox(width: PpSpacing.sm),
                 ],
                 if (enCours) ...[

@@ -29,6 +29,7 @@ class DiscussionApiPaginee implements DiscussionApi {
           id: 'm$i',
           auteurMembreId: 'autre',
           auteur: 'Lucas',
+          auteurPhoto: null,
           corps: 'message $i',
           urlPieceJointe: null,
           sondageId: null,

@@ -139,6 +139,7 @@ final _article = ArticleCourse(
   categorie: CategorieCourse.boissons,
   membreAttributaire: 'm1',
   nomAttributaire: 'Moi',
+  photoAttributaire: null,
   prisParMoi: true,
   estAchete: false,
   quantiteObtenue: null,

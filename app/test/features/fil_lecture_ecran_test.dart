@@ -14,6 +14,7 @@ Message _message(String id, {bool leMien = false}) => Message(
   id: id,
   auteurMembreId: leMien ? 'moi' : 'lucas',
   auteur: leMien ? 'Moi' : 'Lucas',
+  auteurPhoto: null,
   corps: 'texte $id',
   urlPieceJointe: null,
   sondageId: null,

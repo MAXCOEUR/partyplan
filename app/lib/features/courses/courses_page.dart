@@ -329,6 +329,7 @@ class _CarteArticleState extends ConsumerState<_CarteArticle> {
               PpClaimChip(
                 libelleLibre: 'À prendre',
                 nomAttributaire: article.nomAttributaire,
+                photoAttributaire: article.photoAttributaire,
                 enCours: _enCours,
                 onPressed: article.estPris && !article.prisParMoi
                     ? null

@@ -540,7 +540,11 @@ class _Bulle extends ConsumerWidget {
           SizedBox(
             width: 36,
             child: montrerAuteur
-                ? PpAvatar(nom: message.auteur, taille: 32)
+                ? PpAvatar(
+                    nom: message.auteur,
+                    urlPhoto: message.auteurPhoto,
+                    taille: 32,
+                  )
                 : null,
           ),
           const SizedBox(width: PpSpacing.sm),

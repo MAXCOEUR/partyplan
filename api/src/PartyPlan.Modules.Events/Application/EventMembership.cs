@@ -6,8 +6,10 @@ using PartyPlan.SharedKernel.Abstractions;
 using PartyPlan.SharedKernel.Contracts;
 
 /// <inheritdoc />
-public sealed class EventMembership(IEventsDbContext db, ICurrentUser currentUser)
-    : IEventMembership
+public sealed class EventMembership(
+    IEventsDbContext db,
+    ICurrentUser currentUser,
+    IUserIdentityLookup identites) : IEventMembership
 {
     public async Task<IReadOnlyList<EventMemberRef>> ListActiveAsync(
         Guid eventId,
@@ -21,11 +23,22 @@ public sealed class EventMembership(IEventsDbContext db, ICurrentUser currentUse
             .ToListAsync(cancellationToken)
             .ConfigureAwait(false);
 
+        // Une seule requête pour toutes les photos. Un appel par membre ferait vingt
+        // requêtes pour vingt personnes, et le coût suivrait la taille de la soirée.
+        var photos = await identites
+            .FindManyAsync(
+                [.. membres.Where(m => m.UserId is not null).Select(m => m.UserId!.Value)],
+                cancellationToken)
+            .ConfigureAwait(false);
+
         return
         [
             .. membres.Select(m => new EventMemberRef(
                 m.Id,
                 m.DisplayName,
+                m.UserId is { } id && photos.TryGetValue(id, out var identite)
+                    ? identite.AvatarUrl
+                    : null,
                 m.CountsAsPresent,
                 m.CanManageEvent)),
         ];
@@ -46,12 +59,20 @@ public sealed class EventMembership(IEventsDbContext db, ICurrentUser currentUse
                 .ConfigureAwait(false)
             : null;
 
-        return membre is null
-            ? null
-            : new EventMemberRef(
-                membre.Id,
-                membre.DisplayName,
-                membre.CountsAsPresent,
-                membre.CanManageEvent);
+        if (membre is null)
+        {
+            return null;
+        }
+
+        var identite = membre.UserId is { } id
+            ? await identites.FindAsync(id, cancellationToken).ConfigureAwait(false)
+            : null;
+
+        return new EventMemberRef(
+            membre.Id,
+            membre.DisplayName,
+            identite?.AvatarUrl,
+            membre.CountsAsPresent,
+            membre.CanManageEvent);
     }
 }

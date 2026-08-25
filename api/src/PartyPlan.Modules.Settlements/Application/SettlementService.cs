@@ -10,15 +10,21 @@ using PartyPlan.SharedKernel.Contracts;
 using PartyPlan.SharedKernel.Primitives;
 
 /// <summary>Solde d'un membre, tel que l'interface l'affiche (EF-RMB-01).</summary>
-public sealed record BalanceView(Guid MemberId, string DisplayName, decimal Amount);
+public sealed record BalanceView(
+    Guid MemberId,
+    string DisplayName,
+    string? AvatarUrl,
+    decimal Amount);
 
 /// <summary>Règlement proposé (EF-RMB-02), ou déjà effectué (EF-RMB-03).</summary>
 public sealed record SettlementView(
     Guid? Id,
     Guid FromMemberId,
     string FromDisplayName,
+    string? FromAvatarUrl,
     Guid ToMemberId,
     string ToDisplayName,
+    string? ToAvatarUrl,
     decimal Amount,
     bool Done,
     bool InvolvesMe);
@@ -129,9 +135,11 @@ public sealed class SettlementService(
             .Select(s => new SettlementView(
                 s.Id,
                 s.FromMemberId,
-                noms.GetValueOrDefault(s.FromMemberId, "?"),
+                Nom(noms, s.FromMemberId),
+                Photo(noms, s.FromMemberId),
                 s.ToMemberId,
-                noms.GetValueOrDefault(s.ToMemberId, "?"),
+                Nom(noms, s.ToMemberId),
+                Photo(noms, s.ToMemberId),
                 s.Amount,
                 true,
                 s.FromMemberId == moi.MemberId || s.ToMemberId == moi.MemberId))
@@ -144,7 +152,8 @@ public sealed class SettlementService(
                     .OrderByDescending(s => s.Cents)
                     .Select(s => new BalanceView(
                         s.MemberId,
-                        noms.GetValueOrDefault(s.MemberId, "?"),
+                        Nom(noms, s.MemberId),
+                        Photo(noms, s.MemberId),
                         s.Cents / 100m)),
             ],
             [
@@ -152,9 +161,11 @@ public sealed class SettlementService(
                 .. etat.Proposes.Select(r => new SettlementView(
                     null,
                     r.FromMemberId,
-                    noms.GetValueOrDefault(r.FromMemberId, "?"),
+                    Nom(noms, r.FromMemberId),
+                    Photo(noms, r.FromMemberId),
                     r.ToMemberId,
-                    noms.GetValueOrDefault(r.ToMemberId, "?"),
+                    Nom(noms, r.ToMemberId),
+                    Photo(noms, r.ToMemberId),
                     r.Cents / 100m,
                     false,
                     r.FromMemberId == moi.MemberId || r.ToMemberId == moi.MemberId)),
@@ -307,20 +318,33 @@ public sealed class SettlementService(
         return (soldes, Soldes.Simplifier(soldes), effectues, respecte);
     }
 
-    private async Task<Dictionary<Guid, string>> NomsAsync(
+    /// <summary>Nom d'un membre, avec un substitut pour un participant disparu.</summary>
+    private static string Nom(Dictionary<Guid, EventMemberRef> membres, Guid memberId) =>
+        membres.TryGetValue(memberId, out var membre) ? membre.DisplayName : "?";
+
+    /// <summary>Photo d'un membre, ou <c>null</c> — l'écran affiche ses initiales.</summary>
+    private static string? Photo(Dictionary<Guid, EventMemberRef> membres, Guid memberId) =>
+        membres.TryGetValue(memberId, out var membre) ? membre.AvatarUrl : null;
+
+    private async Task<Dictionary<Guid, EventMemberRef>> NomsAsync(
         Guid eventId,
         IReadOnlyList<Solde> soldes,
         CancellationToken cancellationToken)
     {
         var membres = await membership.ListActiveAsync(eventId, cancellationToken).ConfigureAwait(false);
-        var noms = membres.ToDictionary(m => m.MemberId, m => m.DisplayName);
+        var noms = membres.ToDictionary(m => m.MemberId);
 
         // Un membre exclu conserve ses lignes financières (RG-ROLE-03) mais ne figure
         // plus dans la liste : lui donner un nom générique vaut mieux qu'un « ? » sur un
-        // écran d'argent.
+        // écran d'argent. Sans photo, forcément : le compte n'est plus accessible d'ici.
         foreach (var solde in soldes.Where(s => !noms.ContainsKey(s.MemberId)))
         {
-            noms[solde.MemberId] = "Ancien participant";
+            noms[solde.MemberId] = new EventMemberRef(
+                solde.MemberId,
+                "Ancien participant",
+                null,
+                CountsAsPresent: false,
+                CanManage: false);
         }
 
         return noms;

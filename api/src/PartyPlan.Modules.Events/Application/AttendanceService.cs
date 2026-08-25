@@ -40,7 +40,8 @@ public sealed class AttendanceService(
     ICurrentUser currentUser,
     IClock clock,
     IIdGenerator ids,
-    IDiffusionEvenement diffusion)
+    IDiffusionEvenement diffusion,
+    IUserIdentityLookup identites)
 {
     /// <summary>Plafond d'accompagnants. Au-delà, il s'agit d'un autre événement.</summary>
     public const int MaxExtraGuests = 10;
@@ -74,12 +75,21 @@ public sealed class AttendanceService(
             .ToListAsync(cancellationToken)
             .ConfigureAwait(false);
 
+        // Une seule requête pour toutes les photos, plutôt qu'un appel par membre.
+        var photos = await identites
+            .FindManyAsync(
+                [.. membres.Where(m => m.UserId is not null).Select(m => m.UserId!.Value)],
+                cancellationToken)
+            .ConfigureAwait(false);
+
         return Result<IReadOnlyList<MemberView>>.Success(
         [
             .. membres.Select(m => new MemberView(
                 m.Id,
                 m.DisplayName,
-                null,
+                m.UserId is { } compte && photos.TryGetValue(compte, out var identite)
+                    ? identite.AvatarUrl
+                    : null,
                 m.Status.ToString(),
                 m.ArrivalTime?.ToString("HH\\hmm"),
                 m.DepartureTime?.ToString("HH\\hmm"),
@@ -142,10 +152,14 @@ public sealed class AttendanceService(
 
         await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
+        var identite = membre.UserId is { } compte
+            ? await identites.FindAsync(compte, cancellationToken).ConfigureAwait(false)
+            : null;
+
         var vue = new MemberView(
             membre.Id,
             membre.DisplayName,
-            null,
+            identite?.AvatarUrl,
             membre.Status.ToString(),
             membre.ArrivalTime?.ToString("HH\\hmm"),
             membre.DepartureTime?.ToString("HH\\hmm"),

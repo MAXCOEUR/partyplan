@@ -8,17 +8,23 @@ class Solde {
   const Solde({
     required this.membreId,
     required this.nom,
+    required this.photo,
     required this.montant,
   });
 
   factory Solde.depuisJson(Map<String, dynamic> json) => Solde(
     membreId: json['memberId'] as String,
     nom: json['displayName'] as String? ?? '',
+    photo: json['avatarUrl'] as String?,
     montant: (json['amount'] as num?)?.toDouble() ?? 0,
   );
 
   final String membreId;
   final String nom;
+
+  /// Photo du membre. `null` : l'avatar affiche ses initiales.
+  final String? photo;
+
   final double montant;
 
   bool get onLuiDoit => montant > 0;
@@ -34,8 +40,10 @@ class Reglement {
     required this.id,
     required this.deMembreId,
     required this.deNom,
+    required this.dePhoto,
     required this.versMembreId,
     required this.versNom,
+    required this.versPhoto,
     required this.montant,
     required this.effectue,
     required this.meConcerne,
@@ -45,8 +53,10 @@ class Reglement {
     id: json['id'] as String?,
     deMembreId: json['fromMemberId'] as String,
     deNom: json['fromDisplayName'] as String? ?? '',
+    dePhoto: json['fromAvatarUrl'] as String?,
     versMembreId: json['toMemberId'] as String,
     versNom: json['toDisplayName'] as String? ?? '',
+    versPhoto: json['toAvatarUrl'] as String?,
     montant: (json['amount'] as num?)?.toDouble() ?? 0,
     effectue: json['done'] as bool? ?? false,
     meConcerne: json['involvesMe'] as bool? ?? false,
@@ -57,8 +67,14 @@ class Reglement {
 
   final String deMembreId;
   final String deNom;
+
+  /// Photo de qui doit. `null` : l'avatar affiche ses initiales.
+  final String? dePhoto;
   final String versMembreId;
   final String versNom;
+
+  /// Photo de qui reçoit.
+  final String? versPhoto;
   final double montant;
   final bool effectue;
 

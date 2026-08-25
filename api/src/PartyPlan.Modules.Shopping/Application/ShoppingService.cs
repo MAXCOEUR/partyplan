@@ -17,6 +17,7 @@ public sealed record ShoppingItemView(
     string Category,
     Guid? AssignedMemberId,
     string? AssignedDisplayName,
+    string? AssignedAvatarUrl,
     bool AssignedToMe,
     bool IsPurchased,
     decimal? PurchasedQuantity,
@@ -106,7 +107,7 @@ public sealed class ShoppingService(
         }
 
         var membres = await membership.ListActiveAsync(eventId, cancellationToken).ConfigureAwait(false);
-        var noms = membres.ToDictionary(m => m.MemberId, m => m.DisplayName);
+        var noms = membres.ToDictionary(m => m.MemberId);
 
         var articles = await db.ShoppingItems
             .Where(i => i.EventId == eventId)
@@ -469,13 +470,13 @@ public sealed class ShoppingService(
                 await NomsAsync(eventId, cancellationToken).ConfigureAwait(false)));
     }
 
-    private async Task<Dictionary<Guid, string>> NomsAsync(
+    private async Task<Dictionary<Guid, EventMemberRef>> NomsAsync(
         Guid eventId,
         CancellationToken cancellationToken)
     {
         var membres = await membership.ListActiveAsync(eventId, cancellationToken).ConfigureAwait(false);
 
-        return membres.ToDictionary(m => m.MemberId, m => m.DisplayName);
+        return membres.ToDictionary(m => m.MemberId);
     }
 
     /// <summary>
@@ -505,7 +506,7 @@ public sealed class ShoppingService(
     private static ShoppingItemView Vue(
         ShoppingItem article,
         Guid moiId,
-        IReadOnlyDictionary<Guid, string> noms) =>
+        IReadOnlyDictionary<Guid, EventMemberRef> noms) =>
         new(
             article.Id,
             article.Name,
@@ -514,7 +515,10 @@ public sealed class ShoppingService(
             article.Category.ToString(),
             article.AssignedMemberId,
             article.AssignedMemberId is { } assigne
-                ? noms.GetValueOrDefault(assigne)
+                ? noms.GetValueOrDefault(assigne)?.DisplayName
+                : null,
+            article.AssignedMemberId is { } avecPhoto
+                ? noms.GetValueOrDefault(avecPhoto)?.AvatarUrl
                 : null,
             article.AssignedMemberId == moiId,
             article.IsPurchased,

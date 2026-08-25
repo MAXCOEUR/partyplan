@@ -65,6 +65,7 @@ class ArticleCourse {
     required this.categorie,
     required this.membreAttributaire,
     required this.nomAttributaire,
+    required this.photoAttributaire,
     required this.prisParMoi,
     required this.estAchete,
     required this.quantiteObtenue,
@@ -82,6 +83,7 @@ class ArticleCourse {
     categorie: CategorieCourse.depuisApi(json['category'] as String?),
     membreAttributaire: json['assignedMemberId'] as String?,
     nomAttributaire: json['assignedDisplayName'] as String?,
+    photoAttributaire: json['assignedAvatarUrl'] as String?,
     prisParMoi: json['assignedToMe'] as bool? ?? false,
     estAchete: json['isPurchased'] as bool? ?? false,
     quantiteObtenue: (json['purchasedQuantity'] as num?)?.toDouble(),
@@ -98,6 +100,9 @@ class ArticleCourse {
   final CategorieCourse categorie;
   final String? membreAttributaire;
   final String? nomAttributaire;
+
+  /// Photo de l'attributaire. `null` : l'avatar affiche ses initiales.
+  final String? photoAttributaire;
 
   /// Vrai lorsque l'article est attribué à l'appelant. Distinct de [estPris] : seul le
   /// propriétaire de l'attribution peut la retirer (`EF-CRS-04`).

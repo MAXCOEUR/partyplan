@@ -239,12 +239,20 @@ class _CarteReglementState extends ConsumerState<_CarteReglement> {
         children: [
           Row(
             children: [
-              PpAvatar(nom: reglement.deNom, taille: 32),
+              PpAvatar(
+                nom: reglement.deNom,
+                urlPhoto: reglement.dePhoto,
+                taille: 32,
+              ),
               const Padding(
                 padding: EdgeInsets.symmetric(horizontal: PpSpacing.sm),
                 child: Icon(Icons.arrow_forward_rounded, size: 16),
               ),
-              PpAvatar(nom: reglement.versNom, taille: 32),
+              PpAvatar(
+                nom: reglement.versNom,
+                urlPhoto: reglement.versPhoto,
+                taille: 32,
+              ),
               const SizedBox(width: PpSpacing.md),
               Expanded(
                 child: Text(
@@ -302,7 +310,7 @@ class _LigneSolde extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: PpSpacing.xs),
       child: Row(
         children: [
-          PpAvatar(nom: solde.nom, taille: 32),
+          PpAvatar(nom: solde.nom, urlPhoto: solde.photo, taille: 32),
           const SizedBox(width: PpSpacing.md),
           Expanded(child: Text(solde.nom, style: theme.textTheme.bodyMedium)),
           PpMoney(

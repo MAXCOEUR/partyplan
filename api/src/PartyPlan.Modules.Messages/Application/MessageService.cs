@@ -27,6 +27,9 @@ public sealed record MessageView(
     Guid Id,
     Guid AuthorMemberId,
     string AuthorDisplayName,
+
+    // Photo de l'auteur, ou null : l'écran affiche alors ses initiales.
+    string? AuthorAvatarUrl,
     string? Body,
     string? AttachmentUrl,
     Guid? PollId,
@@ -194,7 +197,7 @@ public sealed class MessageService(
             return EventNotFound;
         }
 
-        var noms = await NomsAsync(eventId, cancellationToken).ConfigureAwait(false);
+        var noms = await MembresAsync(eventId, cancellationToken).ConfigureAwait(false);
 
         var taille = Math.Clamp(limit ?? TaillePageParDefaut, 1, TaillePageMaximale);
 
@@ -721,7 +724,7 @@ public sealed class MessageService(
             return EventNotFound;
         }
 
-        var noms = await NomsAsync(eventId, cancellationToken).ConfigureAwait(false);
+        var noms = await MembresAsync(eventId, cancellationToken).ConfigureAwait(false);
 
         var dossiers = await db.PinFolders
             .Where(f => f.EventId == eventId)
@@ -947,7 +950,7 @@ public sealed class MessageService(
 
         await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
-        var noms = await NomsAsync(eventId, cancellationToken).ConfigureAwait(false);
+        var noms = await MembresAsync(eventId, cancellationToken).ConfigureAwait(false);
 
         return Result<PinView>.Success(new PinView(
             epingle.Id,
@@ -989,15 +992,31 @@ public sealed class MessageService(
 
     // ------------------------------------------------------------------ aides ----
 
-    private async Task<Dictionary<Guid, string>> NomsAsync(
+    /// <summary>
+    /// Membres de l'événement, par identifiant.
+    /// <para>
+    /// Le membre entier et non son seul nom : la photo de profil vient de la même
+    /// requête, et la chercher séparément ferait un second aller-retour pour une donnée
+    /// déjà chargée.
+    /// </para>
+    /// </summary>
+    private async Task<Dictionary<Guid, EventMemberRef>> MembresAsync(
         Guid eventId,
         CancellationToken cancellationToken)
     {
         var membres = await membership.ListActiveAsync(eventId, cancellationToken)
             .ConfigureAwait(false);
 
-        return membres.ToDictionary(m => m.MemberId, m => m.DisplayName);
+        return membres.ToDictionary(m => m.MemberId);
     }
+
+    /// <summary>Nom d'affichage d'un membre, ou un substitut s'il a quitté l'événement.</summary>
+    private static string Nom(Dictionary<Guid, EventMemberRef> membres, Guid memberId) =>
+        membres.TryGetValue(memberId, out var membre) ? membre.DisplayName : "Quelqu'un";
+
+    /// <summary>Photo d'un membre, ou <c>null</c> — l'écran affiche alors ses initiales.</summary>
+    private static string? Photo(Dictionary<Guid, EventMemberRef> membres, Guid memberId) =>
+        membres.TryGetValue(memberId, out var membre) ? membre.AvatarUrl : null;
 
     private async Task<Result<MessageView>> VueSeuleAsync(
         Guid eventId,
@@ -1013,7 +1032,7 @@ public sealed class MessageService(
             .FirstAsync(m => m.Id == messageId, cancellationToken)
             .ConfigureAwait(false);
 
-        var noms = await NomsAsync(eventId, cancellationToken).ConfigureAwait(false);
+        var noms = await MembresAsync(eventId, cancellationToken).ConfigureAwait(false);
 
         var cites = new Dictionary<Guid, Message>();
 
@@ -1040,7 +1059,7 @@ public sealed class MessageService(
     private static MessageView Vue(
         Message message,
         Guid moi,
-        Dictionary<Guid, string> noms,
+        Dictionary<Guid, EventMemberRef> noms,
         Dictionary<Guid, Message> parIdentifiant,
         bool pinned)
     {
@@ -1053,14 +1072,15 @@ public sealed class MessageService(
         {
             citation = new ReplyView(
                 origine.Id,
-                noms.GetValueOrDefault(origine.MemberId, "Quelqu'un"),
+                Nom(noms, origine.MemberId),
                 Tronquer(origine.DeletedAt is null ? origine.Body : null));
         }
 
         return new MessageView(
             message.Id,
             message.MemberId,
-            noms.GetValueOrDefault(message.MemberId, "Quelqu'un"),
+            Nom(noms, message.MemberId),
+            Photo(noms, message.MemberId),
             supprime ? null : message.Body,
             supprime ? null : message.AttachmentUrl,
             supprime ? null : message.PollId,
@@ -1077,7 +1097,7 @@ public sealed class MessageService(
             [
                 .. message.Mentions.Select(m => new MentionView(
                     m.MemberId,
-                    noms.GetValueOrDefault(m.MemberId, "Quelqu'un"))),
+                    Nom(noms, m.MemberId))),
             ],
             message.MemberId == moi,
             message.EditedAt is not null,

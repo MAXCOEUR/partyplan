@@ -11,6 +11,7 @@ namespace PartyPlan.SharedKernel.Contracts;
 public sealed record EventMemberRef(
     Guid MemberId,
     string DisplayName,
+    string? AvatarUrl,
     bool CountsAsPresent,
     bool CanManage);
 
