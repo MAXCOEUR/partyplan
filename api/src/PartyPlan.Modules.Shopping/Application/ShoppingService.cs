@@ -56,7 +56,8 @@ public sealed class ShoppingService(
     IEventMembership membership,
     IExpenseFromPurchase depenses,
     IClock clock,
-    IIdGenerator ids)
+    IIdGenerator ids,
+    IDiffusionEvenement diffusion)
 {
     public static readonly DomainError EventNotFound = DomainError.NotFound(
         "event.not_found",
@@ -166,8 +167,14 @@ public sealed class ShoppingService(
         db.ShoppingItems.Add(article);
         await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
-        return await RelireAsync(eventId, article.Id, moi.MemberId, cancellationToken)
+        var ajoute = await RelireAsync(eventId, article.Id, moi.MemberId, cancellationToken)
             .ConfigureAwait(false);
+
+        return await DiffuserAsync(
+            eventId,
+            MessagesTempsReel.ArticleCree,
+            ajoute,
+            cancellationToken).ConfigureAwait(false);
     }
 
     public async Task<Result<ShoppingItemView>> ModifierAsync(
@@ -201,8 +208,14 @@ public sealed class ShoppingService(
 
         await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
-        return Result<ShoppingItemView>.Success(
-            Vue(article, contexte.MoiId, await NomsAsync(eventId, cancellationToken).ConfigureAwait(false)));
+        return await DiffuserAsync(
+            eventId,
+            MessagesTempsReel.ArticleModifie,
+            Result<ShoppingItemView>.Success(Vue(
+                article,
+                contexte.MoiId,
+                await NomsAsync(eventId, cancellationToken).ConfigureAwait(false))),
+            cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -227,6 +240,16 @@ public sealed class ShoppingService(
 
         contexte.Article!.DeletedAt = clock.UtcNow;
         await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+
+        // Pas d'état : l'article a quitté la liste, son identifiant suffit à savoir
+        // quoi retirer.
+        await diffusion
+            .PublierAsync(
+                eventId,
+                MessagesTempsReel.ArticleSupprime,
+                new { itemId },
+                cancellationToken)
+            .ConfigureAwait(false);
 
         return Result.Success();
     }
@@ -270,8 +293,14 @@ public sealed class ShoppingService(
                 : AlreadyClaimed;
         }
 
-        return await RelireAsync(eventId, itemId, contexte.MoiId, cancellationToken)
+        var vue = await RelireAsync(eventId, itemId, contexte.MoiId, cancellationToken)
             .ConfigureAwait(false);
+
+        return await DiffuserAsync(
+            eventId,
+            MessagesTempsReel.ArticleAttribue,
+            vue,
+            cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>Retire son attribution (EF-CRS-04). Seul l'attributaire peut le faire.</summary>
@@ -299,8 +328,14 @@ public sealed class ShoppingService(
 
         await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
-        return await RelireAsync(eventId, itemId, contexte.MoiId, cancellationToken)
+        var vue = await RelireAsync(eventId, itemId, contexte.MoiId, cancellationToken)
             .ConfigureAwait(false);
+
+        return await DiffuserAsync(
+            eventId,
+            MessagesTempsReel.ArticleLibere,
+            vue,
+            cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -377,8 +412,14 @@ public sealed class ShoppingService(
                 .ConfigureAwait(false);
         }
 
-        return await RelireAsync(eventId, itemId, contexte.MoiId, cancellationToken)
+        var vue = await RelireAsync(eventId, itemId, contexte.MoiId, cancellationToken)
             .ConfigureAwait(false);
+
+        return await DiffuserAsync(
+            eventId,
+            MessagesTempsReel.ArticleAchete,
+            vue,
+            cancellationToken).ConfigureAwait(false);
     }
 
     // --------------------------------------------------------------- outils ----
@@ -435,6 +476,30 @@ public sealed class ShoppingService(
         var membres = await membership.ListActiveAsync(eventId, cancellationToken).ConfigureAwait(false);
 
         return membres.ToDictionary(m => m.MemberId, m => m.DisplayName);
+    }
+
+    /// <summary>
+    /// Diffuse le résultat d'une mutation, et le renvoie tel quel.
+    /// <para>
+    /// Une aide plutôt qu'un appel répété six fois : l'oubli d'une diffusion ne se voit
+    /// pas — l'endpoint répond correctement, seuls les autres écrans restent muets.
+    /// Ne diffuse rien sur un échec : il n'y a alors aucun état résultant.
+    /// </para>
+    /// </summary>
+    private async Task<Result<ShoppingItemView>> DiffuserAsync(
+        Guid eventId,
+        string message,
+        Result<ShoppingItemView> resultat,
+        CancellationToken cancellationToken)
+    {
+        if (resultat.IsSuccess)
+        {
+            await diffusion
+                .PublierAsync(eventId, message, resultat.Value!, cancellationToken)
+                .ConfigureAwait(false);
+        }
+
+        return resultat;
     }
 
     private static ShoppingItemView Vue(

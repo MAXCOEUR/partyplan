@@ -77,9 +77,64 @@ public sealed class TempsReelTests(PartyPlanApiFixture fixture)
         Messages().ShouldContain(MessagesTempsReel.EvenementModifie);
     }
 
+    [Fact]
+    public async Task Chaque_geste_sur_un_article_est_diffuse()
+    {
+        var (organisateur, evenement) = await SoireeAsync();
+        fixture.Diffusions.Clear();
+
+        var creation = await PosterAsync(
+            organisateur,
+            $"/v1/events/{evenement}/shopping",
+            new { name = "Bières", quantity = 24.0, unit = "bouteilles" });
+
+        creation.IsSuccessStatusCode.ShouldBeTrue();
+        Messages().ShouldContain(MessagesTempsReel.ArticleCree);
+
+        var article = (await creation.Content.ReadFromJsonAsync<JsonDocument>())!
+            .RootElement.GetProperty("id").GetGuid();
+
+        fixture.Diffusions.Clear();
+        (await PosterAsync(
+                organisateur,
+                $"/v1/events/{evenement}/shopping/{article}/claim",
+                new { }))
+            .IsSuccessStatusCode.ShouldBeTrue();
+
+        // Savoir qu'un article est déjà pris en charge est ce qui évite d'acheter le
+        // pain deux fois : c'est le cas d'usage du temps réel dans une liste de courses.
+        Messages().ShouldContain(MessagesTempsReel.ArticleAttribue);
+
+        fixture.Diffusions.Clear();
+        (await organisateur.DeleteAsync(
+                new Uri($"/v1/events/{evenement}/shopping/{article}", UriKind.Relative)))
+            .IsSuccessStatusCode.ShouldBeTrue();
+
+        Messages().ShouldContain(MessagesTempsReel.ArticleSupprime);
+    }
+
     // ------------------------------------------------------------------ aides ----
 
     private const string MotDePasse = "Trombone-Nuage-42x";
+
+    /// <summary>
+    /// POST avec clé d'idempotence : les endpoints de mutation l'exigent (§8.1), et sans
+    /// elle la requête est refusée avant d'atteindre le service.
+    /// </summary>
+    private static Task<HttpResponseMessage> PosterAsync(
+        HttpClient client,
+        string chemin,
+        object corps)
+    {
+        var requete = new HttpRequestMessage(HttpMethod.Post, new Uri(chemin, UriKind.Relative))
+        {
+            Content = JsonContent.Create(corps),
+        };
+
+        requete.Headers.Add("Idempotency-Key", Guid.CreateVersion7().ToString());
+
+        return client.SendAsync(requete);
+    }
 
     private IReadOnlyList<string> Messages() =>
         [.. fixture.Diffusions.Publications.Select(p => p.Message)];
