@@ -30,7 +30,7 @@
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data
                     android:scheme="https"
-                    android:host="partyplan.maxencecoeur.fr"
+                    android:host="web.partyplan.maxencecoeur.fr"
                     android:pathPrefix="/join/" />
             </intent-filter>
         </activity>

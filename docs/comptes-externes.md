@@ -43,7 +43,7 @@ produit dont l'acquisition repose sur le partage entre amis.
 
 | Type de client | Pour | Champ à renseigner |
 |---|---|---|
-| Application Web | Flutter Web et l'API | Origines autorisées : `http://localhost:8080` en développement, `https://partyplan.maxencecoeur.fr` en production |
+| Application Web | Flutter Web et l'API | Origines autorisées : `http://localhost:8080` en développement, `https://web.partyplan.maxencecoeur.fr` en production |
 | Android | l'application Android | Nom du paquet `fr.maxencecoeur.partyplan` + empreinte SHA-1 du certificat de signature |
 | iOS | l'application iOS | Identifiant de l'offre groupée `fr.maxencecoeur.partyplan` |
 

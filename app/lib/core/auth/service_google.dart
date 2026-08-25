@@ -12,6 +12,13 @@ abstract interface class ServiceGoogle {
   /// confondre afficherait un bouton condamné à échouer.
   bool get disponible;
 
+  /// Vrai si la plateforme accepte d'ouvrir le parcours de connexion à la demande.
+  ///
+  /// Faux sur le Web : `google_sign_in` 7.x y refuse `authenticate()` et impose son
+  /// propre bouton rendu par le SDK Google. Sans cette distinction, notre bouton y
+  /// serait cliquable et sans effet — le pire des trois états, puisque rien ne le dit.
+  bool get parcoursProgrammatique;
+
   /// Jeton d'identité, ou `null` si la personne a annulé ou si aucun client n'est
   /// embarqué. Une annulation n'est pas une erreur et ne lève pas.
   Future<String?> obtenirJetonIdentite();
@@ -41,6 +48,16 @@ class ServiceGoogleClient implements ServiceGoogle {
 
   @override
   bool get disponible => _identifiantClient.isNotEmpty;
+
+  @override
+  bool get parcoursProgrammatique {
+    try {
+      return GoogleSignIn.instance.supportsAuthenticate();
+    } catch (_) {
+      // Aucune plateforme sous la main : ne rien promettre.
+      return false;
+    }
+  }
 
   @override
   Future<String?> obtenirJetonIdentite() async {

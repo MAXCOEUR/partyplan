@@ -33,6 +33,20 @@ void main() {
       expect(find.byKey(const Key('connexion-google')), findsNothing);
     });
 
+    testWidgets('aucun bouton si la plateforme refuse le parcours programmatique', (
+      tester,
+    ) async {
+      // Sur le Web, google_sign_in 7.x lève UnsupportedError sur authenticate() et
+      // impose son propre bouton rendu. Un OutlinedButton y serait cliquable et sans
+      // effet : le pire des trois états.
+      await _monter(
+        tester,
+        service: _ServiceDouble(jeton: 'jeton', parcoursProgrammatique: false),
+      );
+
+      expect(find.byKey(const Key('connexion-google')), findsNothing);
+    });
+
     testWidgets('le bouton apparaît quand les deux conditions sont réunies', (
       tester,
     ) async {
@@ -112,12 +126,19 @@ Future<void> _monter(
 }
 
 class _ServiceDouble implements ServiceGoogle {
-  _ServiceDouble({this.jeton, this.disponible = true});
+  _ServiceDouble({
+    this.jeton,
+    this.disponible = true,
+    this.parcoursProgrammatique = true,
+  });
 
   final String? jeton;
 
   @override
   final bool disponible;
+
+  @override
+  final bool parcoursProgrammatique;
 
   @override
   Future<String?> obtenirJetonIdentite() async => jeton;

@@ -79,6 +79,9 @@ class _ServiceDouble implements ServiceGoogle {
   final bool disponible;
 
   @override
+  bool get parcoursProgrammatique => true;
+
+  @override
   Future<String?> obtenirJetonIdentite() async => jeton;
 
   @override

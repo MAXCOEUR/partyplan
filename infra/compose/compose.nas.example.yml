@@ -36,7 +36,7 @@
 #  │ Domaine                              │ Destination        │ À cocher      │
 #  ├──────────────────────────────────────┼────────────────────┼───────────────┤
 #  │ partyplan.maxencecoeur.fr            │ 192.168.0.248:1000 │ SSL, Force    │
-#  │ (application web)                    │                    │ SSL, HTTP/2,  │
+#  │ (site vitrine, indexable)            │                    │ SSL, HTTP/2,  │
 #  │                                      │                    │ HSTS          │
 #  ├──────────────────────────────────────┼────────────────────┼───────────────┤
 #  │ api.partyplan.maxencecoeur.fr        │ 192.168.0.248:1001 │ idem, plus    │
@@ -47,7 +47,7 @@
 #  │                                      │                    │ cache ci-bas  │
 #  ├──────────────────────────────────────┼────────────────────┼───────────────┤
 #  │ web.partyplan.maxencecoeur.fr        │ 192.168.0.248:1003 │ SSL, Force    │
-#  │ (site vitrine)                       │                    │ SSL, HTTP/2,  │
+#  │ (application web)                    │                    │ SSL, HTTP/2,  │
 #  │                                      │                    │ HSTS          │
 #  └──────────────────────────────────────┴────────────────────┴───────────────┘
 #
@@ -159,8 +159,10 @@ services:
       # ---------- Domaines ----------
       # L'application web, et elle seule : la vitrine est statique et n'appelle pas
       # l'API. Elle renvoie vers les magasins ou vers l'application.
-      Cors__AllowedOrigins__0: https://partyplan.maxencecoeur.fr
-      App__PublicBaseUrl: https://partyplan.maxencecoeur.fr
+      Cors__AllowedOrigins__0: https://web.partyplan.maxencecoeur.fr
+      # L'application web : c'est elle qui répond sur /join/{jeton} et qui sert
+      # assetlinks.json. La vitrine, sur le domaine racine, est purement statique.
+      App__PublicBaseUrl: https://web.partyplan.maxencecoeur.fr
       App__CdnBaseUrl: https://cdn.partyplan.maxencecoeur.fr
 
       # ---------- Médias ----------
@@ -234,7 +236,7 @@ services:
     depends_on:
       - api
     ports:
-      - "1000:80"
+      - "1003:80"
     networks:
       - edge
 
@@ -244,7 +246,7 @@ services:
     restart: unless-stopped
     logging: *logging
     ports:
-      - "1003:80"
+      - "1000:80"
     networks:
       - edge
 

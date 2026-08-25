@@ -19,7 +19,9 @@ repertoire_build="$racine_depot/app/build/app"
 keystore=$1
 fichier_assetlinks="$racine_depot/app/web/.well-known/assetlinks.json"
 package_android='fr.maxencecoeur.partyplan'
-domaine='partyplan.maxencecoeur.fr'
+# L'application web, et non la vitrine : assetlinks.json est servi par l'image de
+# l'application, et c'est elle qui répond sur /join/.
+domaine='web.partyplan.maxencecoeur.fr'
 prefixe='/join/'
 
 if [[ ! -f $keystore ]]; then

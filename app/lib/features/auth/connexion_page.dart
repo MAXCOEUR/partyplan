@@ -99,12 +99,17 @@ class _ConnexionPageState extends ConsumerState<ConnexionPage> {
     }
   }
 
-  /// Vrai quand les deux conditions sont réunies : l'instance possède la clé, et
-  /// l'application embarque un client. L'une sans l'autre donnerait un bouton condamné.
-  bool get _googlePossible =>
-      ref.watch(serviceGoogleProvider).disponible &&
-      (ref.watch(fournisseursDisponiblesProvider).value ?? const <String>{})
-          .contains('google');
+  /// Vrai quand les trois conditions sont réunies : l'instance possède la clé,
+  /// l'application embarque un client, et la plateforme accepte d'ouvrir le parcours à
+  /// la demande. Il en manque une et le bouton serait condamné.
+  bool get _googlePossible {
+    final service = ref.watch(serviceGoogleProvider);
+
+    return service.disponible &&
+        service.parcoursProgrammatique &&
+        (ref.watch(fournisseursDisponiblesProvider).value ?? const <String>{})
+            .contains('google');
+  }
 
   @override
   Widget build(BuildContext context) => Scaffold(

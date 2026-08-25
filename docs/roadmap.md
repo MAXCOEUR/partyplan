@@ -303,8 +303,15 @@ d'administration — et les conditions d'un retour.
     donnerait un bouton condamné
   - → rattachement depuis l'écran des moyens de connexion, et oubli du compte Google à la
     déconnexion — sans quoi un appareil partagé reconnecterait le titulaire précédent
+  - → **Android seulement pour l'instant.** `google_sign_in` 7.x refuse `authenticate()`
+    sur le Web et impose son propre bouton rendu par le SDK Google : le bouton n'y
+    apparaît donc pas, plutôt que d'y être cliquable et sans effet
   - → reste à faire par l'exploitant : créer les trois clients Google Cloud, voir
     `docs/comptes-externes.md` §1
+- [ ] `EF-AUTH-06` Connexion Google sur le Web — le bouton rendu par le SDK
+      (`renderButton` de `google_sign_in_web`) et l'écoute de `authenticationEvents`.
+      Forme d'interface imposée par le greffon, elle ne peut pas reprendre le bouton de
+      l'application
 - [x] `EF-AUTH-08` Détachement d'une connexion tierce, et écran des moyens de connexion
   - → `GET /v1/auth/providers` distingue « l'instance n'a pas les clés » de « le compte est
     rattaché » : une clé retirée ne doit pas rendre un compte indétachable

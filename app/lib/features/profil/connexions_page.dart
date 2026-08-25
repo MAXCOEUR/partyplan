@@ -130,8 +130,10 @@ class _ConnexionsPageState extends ConsumerState<ConnexionsPage> {
     final theme = Theme.of(context);
     final moyens = ref.watch(moyensConnexionProvider);
     // Décidé à l'exécution : l'identifiant client est injecté à la compilation de
-    // l'image, une constante du code ne pourrait pas le savoir.
-    final clientEmbarque = ref.watch(serviceGoogleProvider).disponible;
+    // l'image, une constante du code ne pourrait pas le savoir. Le parcours
+    // programmatique compte autant — le Web le refuse.
+    final service = ref.watch(serviceGoogleProvider);
+    final clientEmbarque = service.disponible && service.parcoursProgrammatique;
 
     return Scaffold(
       appBar: AppBar(title: const Text('Connexions')),

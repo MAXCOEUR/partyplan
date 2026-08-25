@@ -422,7 +422,7 @@ rafraîchissement manuel.
 
 | Réf | P | Exigence |
 |---|---|---|
-| EF-INV-01 | P0 | Générer un lien d'invitation partageable de la forme `https://partyplan.maxencecoeur.fr/join/{token}`. |
+| EF-INV-01 | P0 | Générer un lien d'invitation partageable de la forme `https://web.partyplan.maxencecoeur.fr/join/{token}`. |
 | EF-INV-02 | P0 | Afficher un QR code correspondant au lien, exportable en image. |
 | EF-INV-03 | P0 | Afficher un code court saisissable manuellement, au format `PLAN-XXXXXX`. |
 | EF-INV-04 | P0 | Après l'aperçu public restreint, se connecter ou créer un compte avant de rejoindre ; le serveur prend le nom du profil et crée le statut `Unknown`. |
@@ -1278,8 +1278,12 @@ relation privée.
 
 ```
 Reverse proxy (TLS, en-têtes de sécurité)
-  ├── partyplan.maxencecoeur.fr        Flutter Web (fichiers statiques)
-  │     └── /admin/*                   back-office, rôles plateforme uniquement
+  ├── web.partyplan.maxencecoeur.fr    Flutter Web (fichiers statiques)
+  │     ├── /admin/*                   back-office, rôles plateforme uniquement
+  │     ├── /join/*                    liens d'invitation (EF-INV-01)
+  │     └── /.well-known/assetlinks.json   association Android
+  ├── partyplan.maxencecoeur.fr        Site vitrine statique, indexable
+  │                                    n'appelle jamais l'API
   ├── api.partyplan.maxencecoeur.fr    API ASP.NET Core 10
   │     └── /hubs/event                SignalR
   └── cdn.partyplan.maxencecoeur.fr    photos de profil, images et pièces jointes
