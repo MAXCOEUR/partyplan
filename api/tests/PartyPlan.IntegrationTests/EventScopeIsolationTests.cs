@@ -46,7 +46,10 @@ public sealed class EventScopeIsolationTests(PartyPlanApiFixture fixture) : IAsy
                 Name = "Anniversaire de test",
                 StartsAt = DateTimeOffset.UtcNow.AddDays(3),
                 InviteToken = _inviteToken,
-                ShortCode = "TST" + Random.Shared.Next(100, 999),
+                // Dérivé de l'identifiant et non tiré au hasard : « TST » + 3 chiffres
+                // n'offrait que 900 valeurs pour une colonne unique, et chaque méthode de
+                // test réamorce. La collision arrivait au hasard des exécutions.
+                ShortCode = _eventId.ToString("N")[..12].ToUpperInvariant(),
                 CreatedByUserId = _memberUserId,
             });
 

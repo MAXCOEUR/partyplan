@@ -9,6 +9,8 @@ public sealed record DomainError(string Code, string Message, ErrorKind Kind)
 {
     public static DomainError NotFound(string code, string message) => new(code, message, ErrorKind.NotFound);
 
+    public static DomainError Unauthenticated(string code, string message) => new(code, message, ErrorKind.Unauthenticated);
+
     public static DomainError Forbidden(string code, string message) => new(code, message, ErrorKind.Forbidden);
 
     public static DomainError Conflict(string code, string message) => new(code, message, ErrorKind.Conflict);

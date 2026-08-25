@@ -1399,7 +1399,7 @@ git commit -m "feat(notifications): envoyer par FCM et mettre au rebut les jeton
 - Produit : `DeviceService` implémentant `IPushDeviceRegistry`, endpoints
   `POST /v1/me/devices` et `DELETE /v1/me/devices/{token}`
 
-- [ ] **Étape 1 : écrire le test qui échoue**
+- [x] **Étape 1 : écrire le test qui échoue**
 
 `api/tests/PartyPlan.IntegrationTests/AppareilsTests.cs`
 
@@ -1571,12 +1571,12 @@ public sealed class AppareilsTests(PartyPlanApiFixture fixture)
 }
 ```
 
-- [ ] **Étape 2 : lancer le test, vérifier qu'il échoue**
+- [x] **Étape 2 : lancer le test, vérifier qu'il échoue**
 
 Commande : `dotnet test api/tests/PartyPlan.IntegrationTests/PartyPlan.IntegrationTests.csproj --filter "FullyQualifiedName~Appareils"`
 Attendu : ÉCHEC — les endpoints répondent 404.
 
-- [ ] **Étape 3 : écrire `DeviceService`**
+- [x] **Étape 3 : écrire `DeviceService`**
 
 `api/src/PartyPlan.Modules.Notifications/Application/DeviceService.cs`
 
@@ -1730,7 +1730,7 @@ Vérifier la signature exacte de `DomainError.Unauthenticated` :
 `grep -n "Unauthenticated" api/src/PartyPlan.SharedKernel/Primitives/DomainError.cs`. Si la
 fabrique porte un autre nom, l'ajuster.
 
-- [ ] **Étape 4 : écrire les endpoints**
+- [x] **Étape 4 : écrire les endpoints**
 
 `api/src/PartyPlan.Modules.Notifications/Endpoints/DeviceEndpoints.cs`
 
@@ -1788,7 +1788,7 @@ internal static class DeviceEndpoints
 }
 ```
 
-- [ ] **Étape 5 : brancher le module**
+- [x] **Étape 5 : brancher le module**
 
 `api/src/PartyPlan.Modules.Notifications/NotificationsModule.cs`
 
@@ -1826,12 +1826,12 @@ public sealed class NotificationsModule : IModule
 }
 ```
 
-- [ ] **Étape 6 : lancer les tests, vérifier qu'ils passent**
+- [x] **Étape 6 : lancer les tests, vérifier qu'ils passent**
 
 Commande : `dotnet test api/tests/PartyPlan.IntegrationTests/PartyPlan.IntegrationTests.csproj --filter "FullyQualifiedName~Appareils"`
 Attendu : 7 tests réussis.
 
-- [ ] **Étape 7 : vérifier les frontières et l'ensemble**
+- [x] **Étape 7 : vérifier les frontières et l'ensemble**
 
 ```bash
 make frontieres
@@ -1839,7 +1839,7 @@ make verif
 ```
 Attendu : 11 modules, aucune violation ; toute la suite verte.
 
-- [ ] **Étape 8 : commit**
+- [x] **Étape 8 : commit**
 
 ```bash
 git add api/src/PartyPlan.Modules.Notifications api/tests/PartyPlan.IntegrationTests/AppareilsTests.cs
