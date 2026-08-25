@@ -6,6 +6,7 @@ import '../../app/router.dart';
 import '../../app/retour_auth.dart';
 import '../../core/network/api_exception.dart';
 import '../../core/providers.dart';
+import '../../design/components/pp_auth_shell.dart';
 import '../../design/components/pp_form.dart';
 import '../../design/tokens.dart';
 import '../../l10n/generated/pp_localisations.dart';
@@ -93,104 +94,84 @@ class _ConnexionPageState extends ConsumerState<ConnexionPage> {
   }
 
   @override
-  Widget build(BuildContext context) => Scaffold(
-    body: SafeArea(
-      child: Center(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(PpSpacing.xl),
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 420),
-            child: Form(
-              key: _formulaire,
-              child: AutofillGroup(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    const PpAuthHeader(
-                      titre: 'Content de te revoir',
-                      sousTitre: 'Connecte-toi pour retrouver tes événements.',
-                    ),
-                    const SizedBox(height: PpSpacing.xxl),
-                    if (_erreur != null) ...[
-                      PpFormError(_erreur!),
-                      const SizedBox(height: PpSpacing.lg),
-                    ],
-                    PpField(
-                      label: 'Adresse e-mail',
-                      controller: _adresse,
-                      hint: 'prenom@exemple.fr',
-                      keyboardType: TextInputType.emailAddress,
-                      autofillHints: const [AutofillHints.email],
-                      textInputAction: TextInputAction.next,
-                      validator: Validateurs.adresse,
-                      enabled: !_enCours,
-                    ),
-                    const SizedBox(height: PpSpacing.lg),
-                    PpField(
-                      label: 'Mot de passe',
-                      controller: _motDePasse,
-                      obscure: true,
-                      autofillHints: const [AutofillHints.password],
-                      textInputAction: TextInputAction.done,
-                      validator: Validateurs.motDePasseExistant,
-                      onSubmitted: (_) => _valider(),
-                      enabled: !_enCours,
-                    ),
-                    const SizedBox(height: PpSpacing.sm),
-                    Align(
-                      alignment: Alignment.centerRight,
-                      child: TextButton(
-                        onPressed: _enCours
-                            ? null
-                            : () => context.push(PpRoutes.motDePasseOublie),
-                        child: const Text('Mot de passe oublié ?'),
-                      ),
-                    ),
-                    const SizedBox(height: PpSpacing.lg),
-                    PpPrimaryButton(
-                      label: 'Se connecter',
-                      enCours: _enCours,
-                      onPressed: _valider,
-                    ),
-                    const SizedBox(height: PpSpacing.lg),
-                    // Le composant décide seul de s'afficher, et sous quelle forme :
-                    // le bouton de l'application sur Android, celui rendu par le SDK
-                    // Google sur navigateur, rien si l'instance n'a pas la clé.
-                    BoutonGoogle(
-                      desactive: _enCours,
-                      onJeton: _connecterAvecGoogle,
-                    ),
-                    const SizedBox(height: PpSpacing.xl),
-                    // `Wrap` et non `Row` : sur un écran étroit, la ligne débordait
-                    // de plus de cent pixels. Le repli est ici préférable à une
-                    // troncature du libellé.
-                    Wrap(
-                      alignment: WrapAlignment.center,
-                      crossAxisAlignment: WrapCrossAlignment.center,
-                      children: [
-                        Text(
-                          'Pas encore de compte ?',
-                          style: Theme.of(context).textTheme.bodyMedium,
-                        ),
-                        TextButton(
-                          onPressed: _enCours
-                              ? null
-                              : () => context.push(
-                                  RetourAuth.versInscription(
-                                    RetourAuth.destination(widget.retour),
-                                  ),
-                                ),
-                          child: const Text('Créer un compte'),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
+  Widget build(BuildContext context) => PpAuthShell(
+    cleFormulaire: _formulaire,
+    enfants: [
+      const PpAuthHeader(
+        titre: 'Content de te revoir',
+        sousTitre: 'Connecte-toi pour retrouver tes événements.',
+      ),
+      const SizedBox(height: PpSpacing.xxl),
+      if (_erreur != null) ...[
+        PpFormError(_erreur!),
+        const SizedBox(height: PpSpacing.lg),
+      ],
+      PpField(
+        label: 'Adresse e-mail',
+        controller: _adresse,
+        hint: 'prenom@exemple.fr',
+        keyboardType: TextInputType.emailAddress,
+        autofillHints: const [AutofillHints.email],
+        textInputAction: TextInputAction.next,
+        validator: Validateurs.adresse,
+        enabled: !_enCours,
+      ),
+      const SizedBox(height: PpSpacing.lg),
+      PpField(
+        label: 'Mot de passe',
+        controller: _motDePasse,
+        obscure: true,
+        autofillHints: const [AutofillHints.password],
+        textInputAction: TextInputAction.done,
+        validator: Validateurs.motDePasseExistant,
+        onSubmitted: (_) => _valider(),
+        enabled: !_enCours,
+      ),
+      const SizedBox(height: PpSpacing.sm),
+      Align(
+        alignment: Alignment.centerRight,
+        child: TextButton(
+          onPressed: _enCours
+              ? null
+              : () => context.push(PpRoutes.motDePasseOublie),
+          child: const Text('Mot de passe oublié ?'),
         ),
       ),
-    ),
+      const SizedBox(height: PpSpacing.lg),
+      PpPrimaryButton(
+        label: 'Se connecter',
+        enCours: _enCours,
+        onPressed: _valider,
+      ),
+      const SizedBox(height: PpSpacing.lg),
+      // Le composant décide seul de s'afficher, et sous quelle forme :
+      // le bouton de l'application sur Android, celui rendu par le SDK
+      // Google sur navigateur, rien si l'instance n'a pas la clé.
+      BoutonGoogle(desactive: _enCours, onJeton: _connecterAvecGoogle),
+      const SizedBox(height: PpSpacing.xl),
+      // `Wrap` et non `Row` : sur un écran étroit, la ligne débordait
+      // de plus de cent pixels. Le repli est ici préférable à une
+      // troncature du libellé.
+      Wrap(
+        alignment: WrapAlignment.center,
+        crossAxisAlignment: WrapCrossAlignment.center,
+        children: [
+          Text(
+            'Pas encore de compte ?',
+            style: Theme.of(context).textTheme.bodyMedium,
+          ),
+          TextButton(
+            onPressed: _enCours
+                ? null
+                : () => context.push(
+                    RetourAuth.versInscription(
+                      RetourAuth.destination(widget.retour),
+                    ),
+                  ),
+            child: const Text('Créer un compte'),
+          ),
+        ],
+      ),
+    ],
   );
 }

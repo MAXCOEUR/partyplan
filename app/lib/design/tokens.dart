@@ -18,6 +18,16 @@ abstract final class PpColors {
   static const fondClair = Color(0xFFF8FAFC);
   static const surfaceClaire = Color(0xFFFFFFFF);
 
+  /// Échelle de surfaces du thème clair, du moins au plus appuyé.
+  ///
+  /// La charte ne donne qu'un fond et une surface. Deux niveaux ne suffisent pas : sans
+  /// paliers intermédiaires, un encart posé dans une carte a la même couleur que la
+  /// carte, et l'écran devient une seule masse plate. Ce sont ces paliers qui créent la
+  /// profondeur, pas des ombres empilées.
+  static const claire2 = Color(0xFFF1F5F9);
+  static const claire3 = Color(0xFFE8EEF6);
+  static const claire4 = Color(0xFFDDE5EF);
+
   /// Bordure du thème clair. La charte ne donne que la bordure sombre (#334155) :
   /// utilisée telle quelle sur fond clair, elle serait beaucoup trop dure.
   static const bordureClaire = Color(0xFFE2E8F0);
@@ -25,8 +35,18 @@ abstract final class PpColors {
   static const texteSecondaireClair = Color(0xFF64748B);
 
   // --- Neutres sombres ---
+  //
+  // Le fond n'est jamais noir pur : un noir absolu fait vibrer les bords et rend les
+  // ombres invisibles. En thème sombre, l'élévation se lit par une surface plus claire.
   static const fondSombre = Color(0xFF0F172A);
   static const surfaceSombre = Color(0xFF1E293B);
+
+  /// Le cran sous le fond, pour un encart creusé — un champ, un puits de valeur.
+  static const sombre0 = Color(0xFF0B1120);
+
+  /// Les deux crans au-dessus de la surface, pour un élément posé sur une carte.
+  static const sombre3 = Color(0xFF26334A);
+  static const sombre4 = Color(0xFF303F59);
   static const bordureSombre = Color(0xFF334155);
   static const texteSombre = Color(0xFFF8FAFC);
   static const texteSecondaireSombre = Color(0xFF94A3B8);
@@ -104,17 +124,39 @@ abstract final class PpDuration {
 }
 
 abstract final class PpElevation {
-  /// Ombre unique du produit. Une seule, très douce : les élévations multiples de
-  /// Material donnent une impression d'application de gestion.
-  static List<BoxShadow> carte(bool sombre) => [
-    BoxShadow(
-      color: sombre
-          ? Colors.black.withValues(alpha: 0.35)
-          : PpColors.texteClair.withValues(alpha: 0.06),
-      blurRadius: 18,
-      offset: const Offset(0, 6),
-    ),
-  ];
+  /// Ombre d'une carte. **Vide en thème sombre**, et c'est volontaire.
+  ///
+  /// Une ombre noire sur un fond presque noir ne se voit pas : elle salit le bord sans
+  /// rien signifier. En sombre, l'élévation se lit par une surface plus claire, ce que
+  /// fait l'échelle de surfaces. Une seule ombre en clair, très douce et haute : les
+  /// élévations multiples de Material donnent une impression d'application de gestion.
+  static List<BoxShadow> carte(bool sombre) => sombre
+      ? const []
+      : [
+          BoxShadow(
+            color: PpColors.texteClair.withValues(alpha: 0.05),
+            blurRadius: 24,
+            offset: const Offset(0, 8),
+            spreadRadius: -4,
+          ),
+          BoxShadow(
+            color: PpColors.texteClair.withValues(alpha: 0.04),
+            blurRadius: 6,
+            offset: const Offset(0, 2),
+          ),
+        ];
+
+  /// Ombre d'un élément flottant : feuille, menu, bouton d'action.
+  static List<BoxShadow> flottant(bool sombre) => sombre
+      ? const []
+      : [
+          BoxShadow(
+            color: PpColors.texteClair.withValues(alpha: 0.12),
+            blurRadius: 32,
+            offset: const Offset(0, 12),
+            spreadRadius: -8,
+          ),
+        ];
 }
 
 /// Seuils de mise en page.
