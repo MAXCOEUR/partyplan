@@ -28,6 +28,7 @@ class _MotDePasseOubliePageState extends ConsumerState<MotDePasseOubliePage> {
   final _adresse = TextEditingController();
   final _code = TextEditingController();
   final _nouveau = TextEditingController();
+  final _confirmation = TextEditingController();
 
   bool _codeDemande = false;
   bool _enCours = false;
@@ -38,6 +39,7 @@ class _MotDePasseOubliePageState extends ConsumerState<MotDePasseOubliePage> {
     _adresse.dispose();
     _code.dispose();
     _nouveau.dispose();
+    _confirmation.dispose();
     super.dispose();
   }
 
@@ -171,7 +173,23 @@ class _MotDePasseOubliePageState extends ConsumerState<MotDePasseOubliePage> {
                       validator: Validateurs.motDePasse,
                       enabled: !_enCours,
                       aide:
-                          '${Validateurs.longueurMotDePasse} caractères minimum.',
+                          'De ${Validateurs.longueurMotDePasse} à ${Validateurs.longueurMaximaleMotDePasse} caractères, avec une majuscule, une minuscule, un chiffre et un caractère spécial.',
+                    ),
+                    const SizedBox(height: PpSpacing.lg),
+                    PpField(
+                      label: 'Confirme le mot de passe',
+                      controller: _confirmation,
+                      obscure: true,
+                      autofillHints: const [AutofillHints.newPassword],
+                      enabled: !_enCours,
+                      textInputAction: TextInputAction.done,
+                      validator: (valeur) =>
+                          Validateurs.confirmation(_nouveau.text, valeur),
+                      onSubmitted: (_) => _reinitialiser(),
+                      // Une faute de frappe sur un champ masqué ne se voit pas : sans
+                      // cette seconde saisie, la personne se retrouverait enfermée
+                      // dehors avec un mot de passe qu'elle croit connaître.
+                      aide: 'La même, pour écarter une faute de frappe.',
                     ),
                     const SizedBox(height: PpSpacing.xl),
                     PpPrimaryButton(

@@ -25,6 +25,7 @@ class _InscriptionPageState extends ConsumerState<InscriptionPage> {
   final _prenom = TextEditingController();
   final _adresse = TextEditingController();
   final _motDePasse = TextEditingController();
+  final _confirmation = TextEditingController();
   bool _enCours = false;
   String? _erreur;
 
@@ -33,6 +34,7 @@ class _InscriptionPageState extends ConsumerState<InscriptionPage> {
     _prenom.dispose();
     _adresse.dispose();
     _motDePasse.dispose();
+    _confirmation.dispose();
     super.dispose();
   }
 
@@ -121,15 +123,28 @@ class _InscriptionPageState extends ConsumerState<InscriptionPage> {
                       controller: _motDePasse,
                       obscure: true,
                       autofillHints: const [AutofillHints.newPassword],
-                      textInputAction: TextInputAction.done,
+                      textInputAction: TextInputAction.next,
                       validator: Validateurs.motDePasse,
-                      onSubmitted: (_) => _valider(),
                       enabled: !_enCours,
                       // La règle est énoncée avant la faute, pas seulement après.
                       aide:
-                          '${Validateurs.longueurMotDePasse} caractères minimum. '
-                          'Une phrase est plus facile à retenir qu’un mot compliqué, '
-                          'et plus difficile à deviner.',
+                          'De ${Validateurs.longueurMotDePasse} à ${Validateurs.longueurMaximaleMotDePasse} caractères, avec une majuscule, une minuscule, un chiffre et un caractère spécial.',
+                    ),
+                    const SizedBox(height: PpSpacing.lg),
+                    PpField(
+                      label: 'Confirme le mot de passe',
+                      controller: _confirmation,
+                      obscure: true,
+                      autofillHints: const [AutofillHints.newPassword],
+                      enabled: !_enCours,
+                      textInputAction: TextInputAction.done,
+                      validator: (valeur) =>
+                          Validateurs.confirmation(_motDePasse.text, valeur),
+                      onSubmitted: (_) => _valider(),
+                      // Une faute de frappe sur un champ masqué ne se voit pas : sans
+                      // cette seconde saisie, la personne se retrouverait enfermée
+                      // dehors avec un mot de passe qu'elle croit connaître.
+                      aide: 'La même, pour écarter une faute de frappe.',
                     ),
                     const SizedBox(height: PpSpacing.xl),
                     PpPrimaryButton(

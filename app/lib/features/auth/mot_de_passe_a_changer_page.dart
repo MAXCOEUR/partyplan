@@ -32,6 +32,7 @@ class _MotDePasseAChangerPageState
   final _formulaire = GlobalKey<FormState>();
   final _actuel = TextEditingController();
   final _nouveau = TextEditingController();
+  final _confirmation = TextEditingController();
 
   bool _enCours = false;
   String? _erreur;
@@ -40,6 +41,7 @@ class _MotDePasseAChangerPageState
   void dispose() {
     _actuel.dispose();
     _nouveau.dispose();
+    _confirmation.dispose();
     super.dispose();
   }
 
@@ -125,8 +127,23 @@ class _MotDePasseAChangerPageState
                     enabled: !_enCours,
                     validator: Validateurs.motDePasse,
                     aide:
-                        '${Validateurs.longueurMotDePasse} caractères minimum. '
-                        'Les mots de passe déjà divulgués sont refusés.',
+                        'De ${Validateurs.longueurMotDePasse} à ${Validateurs.longueurMaximaleMotDePasse} caractères, avec une majuscule, une minuscule, un chiffre et un caractère spécial.',
+                  ),
+                  const SizedBox(height: PpSpacing.lg),
+                  PpField(
+                    label: 'Confirme le mot de passe',
+                    controller: _confirmation,
+                    obscure: true,
+                    autofillHints: const [AutofillHints.newPassword],
+                    enabled: !_enCours,
+                    textInputAction: TextInputAction.done,
+                    validator: (valeur) =>
+                        Validateurs.confirmation(_nouveau.text, valeur),
+                    onSubmitted: (_) => _changer(),
+                    // Une faute de frappe sur un champ masqué ne se voit pas : sans
+                    // cette seconde saisie, la personne se retrouverait enfermée
+                    // dehors avec un mot de passe qu'elle croit connaître.
+                    aide: 'La même, pour écarter une faute de frappe.',
                   ),
                   const SizedBox(height: PpSpacing.xl),
                   PpPrimaryButton(

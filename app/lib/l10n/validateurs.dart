@@ -4,8 +4,9 @@
 /// la seule autorité (`RG-AUTH-01`). L'intérêt ici est d'éviter un aller-retour réseau
 /// pour une faute évidente.
 abstract final class Validateurs {
-  /// Longueur minimale, alignée sur `RG-AUTH-01`.
-  static const longueurMotDePasse = 12;
+  /// Bornes de longueur, alignées sur `RG-AUTH-01`.
+  static const longueurMotDePasse = 8;
+  static const longueurMaximaleMotDePasse = 30;
 
   static String? adresse(String? valeur) {
     final texte = valeur?.trim() ?? '';
@@ -35,7 +36,59 @@ abstract final class Validateurs {
           '$longueurMotDePasse au minimum.';
     }
 
+    if (texte.length > longueurMaximaleMotDePasse) {
+      return '$longueurMaximaleMotDePasse caractères au maximum.';
+    }
+
+    // Le message nomme ce qui manque, et une seule chose à la fois. « Mot de passe
+    // invalide » obligerait à deviner laquelle des quatre exigences n'est pas remplie,
+    // et les énumérer toutes revient à ne rien désigner.
+    final manquant = _classeManquante(texte);
+
+    return manquant == null ? null : 'Il faut aussi $manquant.';
+  }
+
+  /// Première classe de caractères absente, ou `null` si les quatre sont présentes.
+  ///
+  /// L'ordre est celui d'un clavier : on ajoute une majuscule avant de chercher un
+  /// caractère spécial.
+  static String? _classeManquante(String texte) {
+    if (!texte.contains(RegExp('[A-ZÀ-Þ]'))) {
+      return 'une majuscule';
+    }
+
+    if (!texte.contains(RegExp('[a-zß-ÿ]'))) {
+      return 'une minuscule';
+    }
+
+    if (!texte.contains(RegExp('[0-9]'))) {
+      return 'un chiffre';
+    }
+
+    // Par exclusion et non par liste fermée, comme le serveur : une liste refuserait
+    // un caractère légitime imprévu.
+    if (!texte.contains(RegExp('[^0-9A-Za-zÀ-ÿ]'))) {
+      return 'un caractère spécial';
+    }
+
     return null;
+  }
+
+  /// Seconde saisie du mot de passe.
+  ///
+  /// Une faute de frappe sur un mot de passe masqué ne se voit pas : sans confirmation,
+  /// la personne se retrouve enfermée dehors avec un mot de passe qu'elle croit
+  /// connaître. C'est le seul endroit où une double saisie se justifie.
+  static String? confirmation(String? mdp, String? valeur) {
+    final texte = valeur ?? '';
+
+    if (texte.isEmpty) {
+      return 'Saisis une seconde fois le mot de passe.';
+    }
+
+    return texte == (mdp ?? '')
+        ? null
+        : 'Les deux saisies ne correspondent pas.';
   }
 
   static String? motDePasseExistant(String? valeur) =>
