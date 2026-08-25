@@ -204,10 +204,17 @@ Cette section couvre l'identité : elle est développée avant toute fonctionnal
 | ~~EF-AUTH-12~~ | — | ~~Activer une double authentification par code temporel (TOTP).~~ **Abrogé le 24/08/2026 — ADR 0007.** |
 | ~~EF-AUTH-13~~ | — | ~~Recevoir huit codes de secours à l'activation.~~ **Abrogé le 24/08/2026 — ADR 0007.** |
 
-**RG-AUTH-01** — Le mot de passe comporte 12 caractères au minimum, sans autre règle de
-composition, et est refusé s'il figure dans une liste de mots de passe compromis. Aucune
-expiration périodique n'est imposée : ces choix suivent les recommandations de l'ANSSI
-et de la CNIL.
+**RG-AUTH-01** — Le mot de passe comporte de 8 à 30 caractères, dont au moins une
+majuscule, une minuscule, un chiffre et un caractère spécial, et est refusé s'il figure
+dans une liste de mots de passe compromis. Aucune expiration périodique n'est imposée.
+
+Règle modifiée le 25/08/2026 sur décision du produit. La précédente — 12 caractères sans
+exigence de composition — suivait les recommandations de l'ANSSI et de la CNIL. Ce que le
+changement coûte, pour mémoire : huit caractères complexes offrent moins de résistance que
+douze quelconques, et le plafond à 30 interdit les phrases de passe. Le refus des mots de
+passe divulgués reste donc la protection la plus efficace de cette règle, et il est
+contrôlé **avant** la composition : dire « ajoute un caractère spécial » à quelqu'un dont
+le mot de passe figure dans une fuite le pousse vers une variante de ce même mot de passe.
 
 **RG-AUTH-02** — Le mot de passe est haché avec Argon2id. Aucun mot de passe n'est
 journalisé, transmis par courriel, ni consultable par qui que ce soit, administrateur
@@ -1226,7 +1233,7 @@ en aucun cas applicatif d'entreprise.
 | NF-SEC-03 | Journalisation | aucun montant, aucune adresse, aucun jeton en clair dans les journaux |
 | NF-SEC-04 | Limitation de débit | par IP et par session sur les endpoints d'authentification et de résolution de code |
 | NF-SEC-05 | Dépendances | analyse de vulnérabilités en intégration continue, blocage sur criticité haute |
-| NF-SEC-06 | Mots de passe | Argon2id, 12 caractères minimum, refus des mots de passe compromis — `RG-AUTH-01`, `RG-AUTH-02` |
+| NF-SEC-06 | Mots de passe | Argon2id, 8 à 30 caractères avec les quatre classes exigées, refus des mots de passe compromis — `RG-AUTH-01`, `RG-AUTH-02` |
 | ~~NF-SEC-07~~ | ~~Rôles plateforme~~ | ~~double authentification obligatoire~~ — **sans objet depuis l'`ADR 0007`** |
 | NF-SEC-08 | Journal d'audit | ajout seul, sans droit `UPDATE` ni `DELETE` pour le rôle applicatif — `RG-ADM-06` |
 | NF-SEC-09 | Téléversements | type MIME vérifié par le contenu, métadonnées EXIF supprimées, taille plafonnée — `RG-USR-01` |
