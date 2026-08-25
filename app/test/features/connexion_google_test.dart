@@ -67,7 +67,13 @@ void main() {
         service: _ServiceDouble(jeton: 'jeton-de-google'),
       );
 
-      await tester.tap(find.byKey(const Key('connexion-google')));
+      // La surface de test est plus courte qu'un téléphone : sans ce défilement, le
+      // bouton se trouve hors du viewport et l'appui n'a aucun effet, ce qui produit un
+      // échec trompeur. Le logo a grandi, la mise en page a suivi.
+      final bouton = find.byKey(const Key('connexion-google'));
+      await tester.ensureVisible(bouton);
+      await tester.pumpAndSettle();
+      await tester.tap(bouton);
       await tester.pumpAndSettle();
 
       expect(serveur.jetonsRecus, ['jeton-de-google']);

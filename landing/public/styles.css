@@ -49,6 +49,25 @@
   --texte: #e8edf7;
   --texte-doux: #9aa8c4;
 
+  /* Échelle de surfaces, reprise du thème sombre de l'application. Deux niveaux
+   * suffisaient tant que la vitrine n'avait que des cartes bordées ; les paliers sont
+   * ce qui donne la profondeur, comme dans l'application. */
+  --creux: #0b1120;
+  --surface-haute: #26334a;
+  --surface-sommet: #303f59;
+
+  /* Rayons de l'application : 20 px pour une carte, capsule pour un élément
+   * interactif. La vitrine était à 0,75 rem, ce qui ne se reconnaissait pas. */
+  --rayon-carte: 1.25rem;
+  --rayon-moyen: 0.75rem;
+  --rayon-capsule: 999px;
+
+  /* Ombre unique, très douce et haute, comme dans l'application. Les élévations
+   * multiples donnent une impression d'application de gestion. */
+  --ombre-carte: 0 1.5rem 3rem -0.5rem rgb(0 0 0 / 45%);
+
+  --degrade-marque: linear-gradient(135deg, var(--violet), var(--violet-clair));
+
   --serrage-titre: -0.03em;
   --mesure: 34rem; /* longueur de ligne confortable pour du texte long */
 }
@@ -149,16 +168,24 @@ a:hover {
   text-decoration: none;
 }
 
-.marque__glyphe {
-  display: grid;
-  place-items: center;
-  width: 2rem;
-  height: 2rem;
-  border-radius: 0.6rem;
-  background: var(--violet);
-  color: #fff;
+/* Le vrai pictogramme, et non plus un « P » composé dans une pastille violette.
+ *
+ * Le mot reste du texte et n'est pas l'image de lockup fournie : celle-ci porte
+ * « Party » en bleu nuit, illisible sur le fond sombre de cette page. Composé en
+ * Poppins, il retrouve la même forme avec un contraste juste. */
+.marque__picto {
+  width: auto;
+  height: 2.25rem;
+  display: block;
+}
+
+.marque__mot {
   font-weight: 700;
-  font-size: 1rem;
+}
+
+.marque__mot b {
+  font-weight: 700;
+  color: var(--violet-clair);
 }
 
 .entete__lien {
@@ -407,8 +434,9 @@ a:hover {
 .moment {
   padding: 1.5rem;
   border: 1px solid var(--bordure);
-  border-radius: 0.75rem;
+  border-radius: var(--rayon-carte);
   background: var(--surface);
+  box-shadow: var(--ombre-carte);
 }
 
 /* « Avant / Pendant / Après » : la soirée est une chronologie, l'étiquette porte donc
@@ -461,9 +489,10 @@ a:hover {
   flex-direction: column;
   gap: 0.35rem;
   padding: 1.25rem 1.4rem;
-  border-radius: 0.75rem;
+  border-radius: var(--rayon-carte);
   border: 1px solid var(--bordure);
   background: var(--surface);
+  box-shadow: var(--ombre-carte);
   color: var(--texte);
   text-decoration: none;
   transition: border-color 0.18s ease, transform 0.18s ease;
@@ -475,14 +504,18 @@ a:hover {
   transform: translateY(-2px);
 }
 
+/* Le dégradé de marque, réservé à l'action principale. C'est l'élément signature de
+ * l'application — il n'y apparaît que sur l'annonce de la prochaine soirée et le bouton
+ * principal. Étendu à d'autres surfaces, il cesserait de désigner quoi que ce soit. */
 .sortie--principale {
-  background: var(--violet);
-  border-color: var(--violet);
+  background: var(--degrade-marque);
+  border-color: transparent;
+  box-shadow: 0 1.5rem 2.5rem -0.75rem rgb(108 92 231 / 45%);
 }
 
 .sortie--principale:hover {
-  background: var(--violet-clair);
-  border-color: var(--violet-clair);
+  border-color: transparent;
+  filter: brightness(1.08);
 }
 
 /* Un magasin où l'application n'est pas encore publiée n'est pas un lien : le dire

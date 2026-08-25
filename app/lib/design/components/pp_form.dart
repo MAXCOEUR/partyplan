@@ -186,12 +186,16 @@ class PpAuthHeader extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Le vrai logo, et non plus une icône de cotillon posée sur un dégradé : le
-        // premier écran est celui où l'identité doit être reconnaissable.
+        // Le logo de la marque, et non une icône générique : le premier écran est celui
+        // où l'identité doit être reconnaissable. Le pictogramme seul, jamais le lockup
+        // avec le mot : celui-ci porte « Party » en bleu nuit et disparaîtrait sur le
+        // thème sombre.
         Image.asset(
           'assets/brand/logo.png',
-          width: 60,
-          height: 60,
+          // 80 et non 64 : le pictogramme est haut et étroit, et sa toile carrée le
+          // fait paraître plus petit que sa boîte. À 64 il ne tenait pas face au titre.
+          width: 80,
+          height: 80,
           filterQuality: FilterQuality.medium,
         ),
         const SizedBox(height: PpSpacing.lg),

@@ -58,12 +58,14 @@ public sealed class HubBoutEnBoutTests(PartyPlanApiFixture fixture)
 
         (await client.SendAsync(envoi)).EnsureSuccessStatusCode();
 
-        var abandon = Task.Delay(TimeSpan.FromSeconds(10));
+        // Trente secondes, et non dix. Ce délai n'est pas une exigence de performance —
+        // NF-PERF-05 demande moins d'une seconde — mais une borne pour échouer au lieu
+        // de rester suspendu. Serré, il rend le test instable dès que la machine est
+        // chargée, et un test instable est pire qu'absent : il finit ignoré.
+        var abandon = Task.Delay(TimeSpan.FromSeconds(30));
         var gagnant = await Task.WhenAny(recu.Task, abandon);
 
-        gagnant.ShouldBe(
-            recu.Task,
-            "le changement doit arriver au client en moins de dix secondes");
+        gagnant.ShouldBe(recu.Task, "le changement doit arriver au client");
 
         (await recu.Task).ShouldBe("message.created");
     }
