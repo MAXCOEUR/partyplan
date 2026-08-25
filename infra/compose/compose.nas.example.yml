@@ -22,32 +22,34 @@
 #  b) Remplacer les huit marqueurs `REMPLACER_...` ci-dessous. Les commandes de
 #     génération sont indiquées au-dessus de chacun.
 #
-#  c) Vérifier que les ports 8091 à 8094 sont libres sur le NAS.
+#  c) Vérifier que les ports 1000 à 1003 sont libres sur le NAS.
 #
 # ---------------------------------------------------------------------------
 #  2. APRÈS LE DÉMARRAGE — configuration de Nginx Proxy Manager
 # ---------------------------------------------------------------------------
 #
-#  Créer quatre hôtes proxy. `IP_DU_NAS` est l'adresse locale du NAS
-#  (par exemple 192.168.1.20) : ne pas mettre `localhost`, NPM tourne dans son
-#  propre conteneur et ne verrait pas ces services.
+#  Créer quatre hôtes proxy. L'adresse locale du NAS est 192.168.0.248 : ne pas
+#  mettre `localhost`, NPM tourne dans son propre conteneur et ne verrait pas
+#  ces services.
 #
-#  ┌──────────────────────────────────────┬──────────────┬─────────────────────┐
-#  │ Domaine                              │ Destination  │ Options à cocher    │
-#  ├──────────────────────────────────────┼──────────────┼─────────────────────┤
-#  │ partyplan.maxencecoeur.fr            │ IP_DU_NAS    │ SSL, Force SSL,     │
-#  │                                      │ :8092        │ HTTP/2, HSTS        │
-#  ├──────────────────────────────────────┼──────────────┼─────────────────────┤
-#  │ api.partyplan.maxencecoeur.fr        │ IP_DU_NAS    │ SSL, Force SSL,     │
-#  │                                      │ :8091        │ HTTP/2, HSTS,       │
-#  │                                      │              │ **Websockets**      │
-#  ├──────────────────────────────────────┼──────────────┼─────────────────────┤
-#  │ cdn.partyplan.maxencecoeur.fr        │ IP_DU_NAS    │ SSL, Force SSL,     │
-#  │                                      │ :8094        │ HTTP/2, HSTS        │
-#  ├──────────────────────────────────────┼──────────────┼─────────────────────┤
-#  │ www.maxencecoeur.fr                  │ IP_DU_NAS    │ SSL, Force SSL,     │
-#  │                                      │ :8093        │ HTTP/2, HSTS        │
-#  └──────────────────────────────────────┴──────────────┴─────────────────────┘
+#  ┌──────────────────────────────────────┬────────────────────┬───────────────┐
+#  │ Domaine                              │ Destination        │ À cocher      │
+#  ├──────────────────────────────────────┼────────────────────┼───────────────┤
+#  │ partyplan.maxencecoeur.fr            │ 192.168.0.248:1000 │ SSL, Force    │
+#  │ (application web)                    │                    │ SSL, HTTP/2,  │
+#  │                                      │                    │ HSTS          │
+#  ├──────────────────────────────────────┼────────────────────┼───────────────┤
+#  │ api.partyplan.maxencecoeur.fr        │ 192.168.0.248:1001 │ idem, plus    │
+#  │                                      │                    │ Websockets    │
+#  ├──────────────────────────────────────┼────────────────────┼───────────────┤
+#  │ cdn.partyplan.maxencecoeur.fr        │ 192.168.0.248:1002 │ idem, plus    │
+#  │                                      │                    │ l'en-tête de  │
+#  │                                      │                    │ cache ci-bas  │
+#  ├──────────────────────────────────────┼────────────────────┼───────────────┤
+#  │ web.partyplan.maxencecoeur.fr        │ 192.168.0.248:1003 │ SSL, Force    │
+#  │ (site vitrine)                       │                    │ SSL, HTTP/2,  │
+#  │                                      │                    │ HSTS          │
+#  └──────────────────────────────────────┴────────────────────┴───────────────┘
 #
 #  Websockets sur l'API : obligatoire. Le hub SignalR vit sur `/hubs/*` du
 #  domaine de l'API (ADR 0003). Sans cette case, la mise à jour en temps réel
@@ -83,7 +85,7 @@
 #  4. LIMITE CONNUE
 # ---------------------------------------------------------------------------
 #
-#  Les ports 8091 à 8094 sont ouverts sur le réseau local. L'API fait confiance
+#  Les ports 1000 à 1003 sont ouverts sur le réseau local. L'API fait confiance
 #  à l'en-tête `X-Forwarded-For` sans liste de proxys autorisés, ce qui est
 #  correct derrière NPM mais permet à une machine du LAN d'usurper une adresse
 #  et de contourner la limitation de débit par IP (RG-AUTH-05). Acceptable sur
@@ -133,7 +135,7 @@ services:
       db:
         condition: service_healthy
     ports:
-      - "8091:8080"
+      - "1001:8080"
     environment:
       ASPNETCORE_ENVIRONMENT: Production
       # Le mot de passe doit être identique à POSTGRES_PASSWORD ci-dessus.
@@ -156,7 +158,7 @@ services:
 
       # ---------- Domaines ----------
       Cors__AllowedOrigins__0: https://partyplan.maxencecoeur.fr
-      Cors__AllowedOrigins__1: https://www.maxencecoeur.fr
+      Cors__AllowedOrigins__1: https://web.partyplan.maxencecoeur.fr
       App__PublicBaseUrl: https://partyplan.maxencecoeur.fr
       App__CdnBaseUrl: https://cdn.partyplan.maxencecoeur.fr
 
@@ -216,7 +218,7 @@ services:
     depends_on:
       - api
     ports:
-      - "8092:80"
+      - "1000:80"
     networks:
       - edge
 
@@ -226,7 +228,7 @@ services:
     restart: unless-stopped
     logging: *logging
     ports:
-      - "8093:80"
+      - "1003:80"
     networks:
       - edge
 
@@ -244,7 +246,7 @@ services:
     restart: unless-stopped
     logging: *logging
     ports:
-      - "8094:80"
+      - "1002:80"
     volumes:
       - media:/usr/share/nginx/html:ro
     networks:
