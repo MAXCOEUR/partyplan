@@ -610,7 +610,21 @@ navigation : quatre onglets subsistent, et la place est prise par la discussion.
 
 ## Lot 1.11 — Notifications
 
-- [ ] Configurer les notifications poussées FCM pour Android et Web — exclusivement pour les notifications, jamais pour les liens, l'authentification, les données ou le temps réel
+**Transport livré le 25/08/2026** — voir
+`docs/superpowers/plans/2026-08-24-notifications-transport.md`. Une notification part du
+serveur et arrive sur un appareil, Android comme Web. **Aucun déclencheur métier n'est
+branché : personne ne reçoit rien tant que les lignes `EF-NOT-` ci-dessous ne sont pas
+cochées.** C'est écrit ici parce qu'un transport livré donne l'impression d'un lot fait.
+
+- [x] Configurer les notifications poussées FCM pour Android et Web — exclusivement pour les notifications, jamais pour les liens, l'authentification, les données ou le temps réel
+  - → enregistrement des appareils, `POST`/`DELETE /v1/me/devices`, idempotent et réaffectant
+  - → émetteur FCM HTTP v1 sans dépendance nouvelle ; repli console sans clé (règle 5)
+  - → mise au rebut des jetons refusés par FCM, `UNREGISTERED` et `INVALID_ARGUMENT`
+    seulement : une panne passagère de Google ne doit pas désactiver les appareils
+  - → service worker web engendré à la compilation de l'image, et seulement avec la
+    configuration Firebase
+  - → reste à faire par l'exploitant : déposer la clé de compte de service et poser les
+    cinq variables web, voir `docs/comptes-externes.md` §2
 - [ ] `EF-NOT-01` Réponses aux invitations, à l'organisateur
 - [ ] `EF-NOT-02` Modification de date ou de lieu
 - [ ] `EF-NOT-03` Rappel de non-réponse à J-3 et J-1
@@ -621,7 +635,11 @@ navigation : quatre onglets subsistent, et la place est prise par la discussion.
 - [ ] `EF-NOT-08` Mise en sourdine d'un événement
 - [ ] `RG-NOT-01` Silence entre 22 h et 8 h, hors rappel de début
 - [ ] `RG-NOT-02` Regroupement : une notification d'activité par événement et par quart d'heure
-- [ ] `RG-NOT-03` Consentement demandé au moment utile, pas au premier lancement
+- [x] `RG-NOT-03` Consentement demandé au moment utile, pas au premier lancement
+  - → demandé à l'entrée dans une soirée, jamais au lancement : un refus système ne se
+    redemande pas, et demander trop tôt fait refuser par réflexe
+- [x] Ouverture du lien profond au tap, application déjà lancée ou démarrée par la
+      notification — le second cas est celui qu'on oublie, et c'est le plus fréquent
 - [ ] Mettre en place l'ordonnanceur des tâches de fond
 - [ ] Écrans : notifications, préférences de notification
 

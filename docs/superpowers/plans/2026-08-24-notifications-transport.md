@@ -2830,7 +2830,7 @@ git commit -m "feat(notifications): notifications web, service worker engendré 
 - Modifier : `docs/comptes-externes.md`, `docs/exploitation.md`, `docs/roadmap.md`
 - Modifier : `docs/api/openapi.json`
 
-- [ ] **Étape 1 : déclarer la variable**
+- [x] **Étape 1 : déclarer la variable**
 
 Dans `.env.example` et `infra/compose/.env.example` :
 
@@ -2842,7 +2842,7 @@ Dans `.env.example` et `infra/compose/.env.example` :
 FIREBASE_SERVICE_ACCOUNT_PATH=
 ```
 
-- [ ] **Étape 2 : les trois fichiers compose**
+- [x] **Étape 2 : les trois fichiers compose**
 
 `infra/compose/compose.yml` et `compose.example.yml`, service `api` :
 
@@ -2871,14 +2871,14 @@ et dans le même service :
 Vérifier si le service `api` a déjà un bloc `volumes` et compléter plutôt que d'en créer un
 second.
 
-- [ ] **Étape 3 : `make variables`**
+- [x] **Étape 3 : `make variables`**
 
 ```bash
 ./tools/verifier-variables-env.sh
 ```
 Attendu : aucune variable déclarée non lue, toutes les clés lues déclarées.
 
-- [ ] **Étape 4 : documenter l'obtention**
+- [x] **Étape 4 : documenter l'obtention**
 
 Ajouter une section à `docs/comptes-externes.md` : projet `partyplan-99106`, enregistrement
 des deux applications, `firebase apps:sdkconfig ANDROID … --out app/android/app/google-services.json`,
@@ -2889,7 +2889,7 @@ Dans `docs/exploitation.md`, ajouter au tableau des secrets :
 
 | `./secrets/firebase.json` | Clé remise par Firebase, déposée telle quelle. Sa perte : régénérer une clé, les anciennes se révoquent dans la console |
 
-- [ ] **Étape 5 : régénérer le contrat**
+- [x] **Étape 5 : régénérer le contrat**
 
 ```bash
 make api    # dans un autre terminal
@@ -2897,7 +2897,7 @@ make openapi
 ```
 Vérifier que le diff n'ajoute que `/v1/me/devices` et `DeviceBody`.
 
-- [ ] **Étape 6 : mettre la feuille de route à jour**
+- [x] **Étape 6 : mettre la feuille de route à jour**
 
 Dans `docs/roadmap.md`, lot 1.11, ajouter en tête de section :
 
@@ -2918,7 +2918,7 @@ ici parce qu'un transport livré donne l'impression d'un lot fait.
 et laisser décochées les lignes `EF-NOT-01` à `EF-NOT-09`, `RG-NOT-01`, `RG-NOT-02` et
 l'ordonnanceur.
 
-- [ ] **Étape 7 : `make verif` puis commit**
+- [x] **Étape 7 : `make verif` puis commit**
 
 ```bash
 make verif

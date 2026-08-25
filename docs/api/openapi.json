@@ -1875,6 +1875,71 @@
         ]
       }
     },
+    "/v1/me/devices": {
+      "post": {
+        "tags": [
+          "Notifications"
+        ],
+        "summary": "Inscrit l'appareil courant. Idempotent sur le jeton.",
+        "operationId": "RegisterDevice",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeviceBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpValidationProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "Bearer": []
+          }
+        ]
+      }
+    },
+    "/v1/me/devices/{token}": {
+      "delete": {
+        "tags": [
+          "Notifications"
+        ],
+        "summary": "Retire l'appareil. Réussit même si le jeton est inconnu.",
+        "operationId": "UnregisterDevice",
+        "parameters": [
+          {
+            "name": "token",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "Bearer": []
+          }
+        ]
+      }
+    },
     "/v1/events/{eventId}/polls": {
       "get": {
         "tags": [
@@ -2660,6 +2725,27 @@
         }
       }
     },
+    "/v1/auth/providers/available": {
+      "get": {
+        "tags": [
+          "Auth"
+        ],
+        "summary": "Fournisseurs tiers dont l'instance possède les clés.",
+        "operationId": "ListAvailableProviders",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AvailableProviders"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/auth/providers": {
       "get": {
         "tags": [
@@ -3240,6 +3326,36 @@
         },
         "description": "Entrée du journal d'audit, telle que présentée dans le back-office."
       },
+      "AvailableProvider": {
+        "required": [
+          "provider",
+          "configured"
+        ],
+        "type": "object",
+        "properties": {
+          "provider": {
+            "type": "string"
+          },
+          "configured": {
+            "type": "boolean"
+          }
+        },
+        "description": "Ce que l'instance sait faire, indépendamment de tout compte. Distinct de\nProviderState, qui porte en plus l'état de rattachement : le mélanger\nici en ferait une réponse divulguant un compte à un appelant anonyme."
+      },
+      "AvailableProviders": {
+        "required": [
+          "providers"
+        ],
+        "type": "object",
+        "properties": {
+          "providers": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AvailableProvider"
+            }
+          }
+        }
+      },
       "BalanceView": {
         "required": [
           "memberId",
@@ -3352,6 +3468,22 @@
           }
         },
         "description": "Suppression de compte. L'adresse est exigée en confirmation : l'opération est\nirréversible et touche des données financières partagées (RG-USR-05)."
+      },
+      "DeviceBody": {
+        "required": [
+          "token",
+          "platform"
+        ],
+        "type": "object",
+        "properties": {
+          "token": {
+            "type": "string"
+          },
+          "platform": {
+            "type": "string"
+          }
+        },
+        "description": "Appareil à inscrire pour recevoir les notifications."
       },
       "EventInvitation": {
         "required": [
@@ -5495,6 +5627,9 @@
     },
     {
       "name": "Messages"
+    },
+    {
+      "name": "Notifications"
     },
     {
       "name": "Polls"

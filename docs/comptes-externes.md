@@ -118,10 +118,35 @@ elle qui ramène l'utilisateur dans l'application, donc le principal levier de r
 
 **Où mettre les valeurs**
 
+Trois endroits, un par cible. Le projet créé est `partyplan-99106`.
+
 ```bash
-# .env  — le chemin du fichier de clé de compte de service
+# .env  — serveur : le chemin du fichier de clé de compte de service
 FIREBASE_SERVICE_ACCOUNT_PATH=/chemin/vers/serviceAccountKey.json
 ```
+
+Android : rien à configurer, `app/android/app/google-services.json` suffit. Le greffon
+Google Services n'est appliqué que si ce fichier est présent, donc un clone sans compte
+Firebase compile — c'est vérifié par `app/android/app/build.gradle.kts`.
+
+Web : la configuration est injectée à la compilation de l'image, comme l'adresse de
+l'API. Ces cinq valeurs **ne sont pas des secrets** — elles sont publiques dans toute
+application web livrée, et la clé d'API est restreinte par domaine. Elles se posent donc
+dans les *variables* du dépôt GitHub, jamais dans les secrets :
+
+| Variable | Où la trouver |
+|---|---|
+| `FIREBASE_PROJECT_ID` | *Paramètres du projet → Général* |
+| `FIREBASE_SENDER_ID` | *Paramètres du projet → Cloud Messaging* |
+| `FIREBASE_API_KEY` | configuration de l'application Web |
+| `FIREBASE_APP_ID` | configuration de l'application Web |
+| `FIREBASE_VAPID_KEY` | *Cloud Messaging → Web Push certificates* |
+
+Le service worker `firebase-messaging-sw.js` est engendré depuis
+`app/firebase-messaging-sw.js.template` au moment de construire l'image, et seulement si
+`FIREBASE_API_KEY` est fournie : sans elle, aucun service worker et aucune notification
+web. Le gabarit vit hors de `app/web/` parce que Flutter recopie ce répertoire tel quel
+dans le site livré.
 
 **Attention** : `app/android/app/google-services.json` contient des identifiants de
 projet. Il n'est pas secret au sens d'un mot de passe, mais il ne doit pas être versionné

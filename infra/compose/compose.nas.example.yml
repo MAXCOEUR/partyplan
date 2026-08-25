@@ -193,9 +193,20 @@ services:
       Google__ClientId: ""
       Google__AndroidClientId: ""
       Google__IosClientId: ""
+
+      # ---------- Notifications poussées ----------
+      # Vide : les notifications sont journalisées et rien ne part (NF-DEV-04).
+      #
+      # Pour les activer réellement, déposer la clé de compte de service remise par
+      # Firebase dans `secrets/firebase.json` à côté de ce compose, sans la retoucher,
+      # puis décommenter la ligne suivante ET le montage en fin de service. L'ordre
+      # importe : monter un fichier absent fait créer un répertoire à sa place par
+      # Docker, et l'API n'y lit alors aucune clé.
+      # Push__FirebaseServiceAccountPath: /run/secrets/firebase.json
       Push__FirebaseServiceAccountPath: ""
     volumes:
       - media:/var/lib/partyplan/media
+      # - ./secrets/firebase.json:/run/secrets/firebase.json:ro
     networks:
       - internal
       - edge
