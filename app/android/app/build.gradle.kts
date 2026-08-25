@@ -5,6 +5,23 @@ plugins {
     id("dev.flutter.flutter-gradle-plugin")
 }
 
+// Le greffon Google Services n'est appliqué que si google-services.json est présent.
+//
+// Le fichier est hors dépôt (NF-SEC-02, règle 5) : un clone frais doit compiler et
+// tourner sans compte Firebase. Appliquer le greffon inconditionnellement ferait échouer
+// la compilation avec « File google-services.json is missing », ce qui rendrait le dépôt
+// inutilisable pour quiconque n'a pas le projet Firebase.
+if (file("google-services.json").exists()) {
+    apply(plugin = "com.google.gms.google-services")
+} else {
+    // Avertissement et non information : « lifecycle » est filtré par la sortie de
+    // flutter build, et une clé absente désactive silencieusement les notifications.
+    logger.warn(
+        "google-services.json absent : compilation sans notifications poussées. " +
+            "Voir docs/comptes-externes.md."
+    )
+}
+
 android {
     namespace = "fr.maxencecoeur.partyplan"
     // Fixé explicitement : la plateforme android-37 n'est distribuée que sous le nom

@@ -19,6 +19,7 @@ import 'network/depenses_api.dart';
 import 'network/discussion_api.dart';
 import 'network/reglements_api.dart';
 import 'network/sondages_api.dart';
+import 'network/appareils_api.dart';
 import 'network/evenements_api.dart';
 import 'offline/cache_lecture.dart';
 import 'offline/etat_reseau.dart';
@@ -475,3 +476,9 @@ final apercuInvitationProvider =
 
       return api.apercuParCode(cle.code!);
     });
+
+// ------------------------------------------------------------- notifications ----
+
+final appareilsApiProvider = Provider<AppareilsApi>(
+  (ref) => AppareilsApi(ref.watch(apiClientProvider)),
+);

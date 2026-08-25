@@ -1863,7 +1863,7 @@ git commit -m "feat(notifications): enregistrer et retirer un appareil"
 - Produit : `AppareilsApi.enregistrer(String jeton, {required String plateforme})`,
   `AppareilsApi.retirer(String jeton)`, `appareilsApiProvider`
 
-- [ ] **Étape 1 : écrire le test qui échoue**
+- [x] **Étape 1 : écrire le test qui échoue**
 
 `app/test/core/appareils_api_test.dart`
 
@@ -1925,12 +1925,12 @@ Vérifier la signature réelle du constructeur d'`ApiClient` :
 `grep -n "ApiClient(" -A8 app/lib/core/network/api_client.dart`, et l'adapter. S'inspirer
 d'un test existant qui construit un `ApiClient` : `app/test/core/courses_client_test.dart`.
 
-- [ ] **Étape 2 : lancer le test, vérifier qu'il échoue**
+- [x] **Étape 2 : lancer le test, vérifier qu'il échoue**
 
 Commande : `cd app && flutter test test/core/appareils_api_test.dart`
 Attendu : ÉCHEC, `appareils_api.dart` introuvable.
 
-- [ ] **Étape 3 : écrire le client**
+- [x] **Étape 3 : écrire le client**
 
 `app/lib/core/network/appareils_api.dart`
 
@@ -1964,7 +1964,7 @@ class AppareilsApi {
 
 Corriger la coquille « Appels » dans le commentaire de tête au passage.
 
-- [ ] **Étape 4 : ajouter le provider**
+- [x] **Étape 4 : ajouter le provider**
 
 Dans `app/lib/core/providers.dart`, à la suite des autres providers d'API :
 
@@ -1978,12 +1978,12 @@ final appareilsApiProvider = Provider<AppareilsApi>(
 
 Ajouter l'import `import 'network/appareils_api.dart';`.
 
-- [ ] **Étape 5 : lancer le test, vérifier qu'il passe**
+- [x] **Étape 5 : lancer le test, vérifier qu'il passe**
 
 Commande : `cd app && flutter test test/core/appareils_api_test.dart`
 Attendu : 2 tests réussis.
 
-- [ ] **Étape 6 : ajouter les dépendances Flutter**
+- [x] **Étape 6 : ajouter les dépendances Flutter**
 
 Dans `app/pubspec.yaml`, section `dependencies` :
 
@@ -1999,7 +1999,7 @@ Puis `cd app && flutter pub get`. Si les versions ne résolvent pas avec Flutter
 prendre les dernières compatibles annoncées par `flutter pub get` et **noter les versions
 retenues dans le message de commit**.
 
-- [ ] **Étape 7 : rendre le greffon Google Services conditionnel**
+- [x] **Étape 7 : rendre le greffon Google Services conditionnel**
 
 Dans `app/android/settings.gradle.kts`, déclarer le greffon sans l'appliquer :
 
@@ -2026,7 +2026,7 @@ if (file("google-services.json").exists()) {
 }
 ```
 
-- [ ] **Étape 8 : vérifier les deux compilations**
+- [x] **Étape 8 : vérifier les deux compilations**
 
 ```bash
 cd app
@@ -2039,7 +2039,7 @@ mv /tmp/gs.json android/app/google-services.json
 ```
 Attendu : les deux compilations réussissent, le message apparaît dans la seconde.
 
-- [ ] **Étape 9 : `make verif` puis commit**
+- [x] **Étape 9 : `make verif` puis commit**
 
 ```bash
 make verif
