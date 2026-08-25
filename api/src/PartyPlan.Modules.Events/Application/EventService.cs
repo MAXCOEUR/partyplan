@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using PartyPlan.Modules.Events.Domain;
 using PartyPlan.Modules.Events.Persistence;
 using PartyPlan.SharedKernel.Abstractions;
+using PartyPlan.SharedKernel.Contracts;
 using PartyPlan.SharedKernel.Enums;
 using PartyPlan.SharedKernel.Primitives;
 
@@ -53,7 +54,8 @@ public sealed class EventService(
     ICurrentUser currentUser,
     IEventScope scope,
     IClock clock,
-    IIdGenerator ids)
+    IIdGenerator ids,
+    IDiffusionEvenement diffusion)
 {
     /// <summary>Nombre de tentatives de tirage d'un code court avant abandon.</summary>
     private const int ShortCodeAttempts = 5;
@@ -312,7 +314,23 @@ public sealed class EventService(
 
         await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
-        return await LireAsync(eventId, cancellationToken).ConfigureAwait(false);
+        var resume = await LireAsync(eventId, cancellationToken).ConfigureAwait(false);
+
+        if (resume.IsSuccess)
+        {
+            // Un changement de date ou de lieu est ce qui compte le plus pour les
+            // invités : le leur montrer sans qu'ils rechargent est le premier usage du
+            // temps réel.
+            await diffusion
+                .PublierAsync(
+                    eventId,
+                    MessagesTempsReel.EvenementModifie,
+                    resume.Value!,
+                    cancellationToken)
+                .ConfigureAwait(false);
+        }
+
+        return resume;
     }
 
     public async Task<Result> DefinirOuvertureAsync(

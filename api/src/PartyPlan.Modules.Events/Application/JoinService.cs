@@ -38,7 +38,8 @@ public sealed class JoinService(
     IEventScope scope,
     IUserIdentityLookup users,
     IClock clock,
-    IIdGenerator ids)
+    IIdGenerator ids,
+    IDiffusionEvenement diffusion)
 {
     public static readonly DomainError InvitationNotFound = DomainError.NotFound(
         "invitation.not_found",
@@ -164,6 +165,24 @@ public sealed class JoinService(
         });
 
         await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+
+        // L'état du nouveau membre, pas seulement son identifiant (RG-RT-02) : les
+        // autres écrans doivent pouvoir l'afficher sans relire la liste entière. La
+        // vue est construite ici plutôt que réutilisée d'un endpoint : ce service ne
+        // renvoie qu'un identifiant, il n'a pas de MemberView sous la main.
+        await diffusion
+            .PublierAsync(
+                evenement.Id,
+                MessagesTempsReel.MembreArrive,
+                new
+                {
+                    id = membre.Id,
+                    displayName = membre.DisplayName,
+                    status = membre.Status.ToString(),
+                    role = membre.Role.ToString(),
+                },
+                cancellationToken)
+            .ConfigureAwait(false);
 
         return new JoinResult(evenement.Id, membre.Id);
     }

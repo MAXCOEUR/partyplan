@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using PartyPlan.Modules.Events.Domain;
 using PartyPlan.Modules.Events.Persistence;
 using PartyPlan.SharedKernel.Abstractions;
+using PartyPlan.SharedKernel.Contracts;
 using PartyPlan.SharedKernel.Enums;
 using PartyPlan.SharedKernel.Primitives;
 
@@ -38,7 +39,8 @@ public sealed class AttendanceService(
     IEventsDbContext db,
     ICurrentUser currentUser,
     IClock clock,
-    IIdGenerator ids)
+    IIdGenerator ids,
+    IDiffusionEvenement diffusion)
 {
     /// <summary>Plafond d'accompagnants. Au-delà, il s'agit d'un autre événement.</summary>
     public const int MaxExtraGuests = 10;
@@ -140,7 +142,7 @@ public sealed class AttendanceService(
 
         await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
-        return new MemberView(
+        var vue = new MemberView(
             membre.Id,
             membre.DisplayName,
             null,
@@ -151,6 +153,14 @@ public sealed class AttendanceService(
             membre.Role.ToString(),
             membre.UserId is not null,
             true);
+
+        // L'état résultant et non l'identifiant seul (RG-RT-02) : c'est exactement ce
+        // que l'endpoint renvoie, donc rien à construire en plus.
+        await diffusion
+            .PublierAsync(eventId, MessagesTempsReel.MembreStatutChange, vue, cancellationToken)
+            .ConfigureAwait(false);
+
+        return vue;
     }
 
     /// <summary>Exclusion d'un membre par le propriétaire ou un administrateur (RG-ROLE-01).</summary>
@@ -186,6 +196,16 @@ public sealed class AttendanceService(
         cible.RemovedAt = clock.UtcNow;
 
         await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+
+        // Pas d'état à envoyer : le membre a disparu de la liste, et son identifiant
+        // suffit à savoir quoi retirer.
+        await diffusion
+            .PublierAsync(
+                eventId,
+                MessagesTempsReel.MembreRetire,
+                new { memberId = cible.Id },
+                cancellationToken)
+            .ConfigureAwait(false);
 
         return Result.Success();
     }
@@ -253,6 +273,14 @@ public sealed class AttendanceService(
 
         membre.RemovedAt = clock.UtcNow;
         await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+
+        await diffusion
+            .PublierAsync(
+                eventId,
+                MessagesTempsReel.MembreRetire,
+                new { memberId = membre.Id },
+                cancellationToken)
+            .ConfigureAwait(false);
 
         return Result.Success();
     }
