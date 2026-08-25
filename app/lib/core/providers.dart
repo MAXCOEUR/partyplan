@@ -415,6 +415,58 @@ class FilDiscussionNotifier extends AsyncNotifier<FilDiscussion> {
     }
   }
 
+  /// Relit la page la plus récente et la fusionne avec ce qui est déjà chargé.
+  ///
+  /// Appelée à chaque changement diffusé par le temps réel. Un `invalidate` aurait été
+  /// plus court, mais il aurait remis le fil à sa première page : les pages remontées et
+  /// la position de lecture disparaîtraient à chaque message reçu, ce qui est
+  /// exactement ce qu'il ne faut pas faire dans une conversation.
+  ///
+  /// La fusion se fait sur l'identifiant. Un message modifié, supprimé ou nouvellement
+  /// réagi garde le sien : le remplacer plutôt que l'ajouter évite de le voir deux fois,
+  /// une fois dans son ancienne version.
+  Future<void> rafraichir() async {
+    final actuel = state.value;
+
+    if (actuel == null) {
+      // Le fil n'a jamais été chargé : la construction ordinaire s'en charge, et la
+      // forcer ici doublerait la requête.
+      return;
+    }
+
+    final FilDiscussion recents;
+
+    try {
+      recents = await ref
+          .read(discussionApiProvider)
+          .lire(evenementId, limite: parPage);
+    } catch (_) {
+      // Un rafraîchissement raté ne doit rien casser. Il est déclenché par le temps
+      // réel, donc sans que personne l'ait demandé : lever ici produirait une exception
+      // asynchrone non capturée, et remplacer l'état par une erreur effacerait une
+      // conversation parfaitement lisible pour un incident réseau passager. L'écran
+      // garde ce qu'il a, et le prochain message ou une actualisation manuelle
+      // rattrapera.
+      return;
+    }
+
+    final frais = recents.messages.map((m) => m.id).toSet();
+
+    state = AsyncData(
+      recents.avec(
+        // Les messages plus anciens que la page fraîche sont conservés tels quels : ce
+        // sont les pages remontées, que le serveur ne renvoie pas ici.
+        messages: [
+          ...actuel.messages.where((m) => !frais.contains(m.id)),
+          ...recents.messages,
+        ],
+        // Le haut du fil n'a pas bougé : c'est l'état courant qui dit s'il reste des
+        // pages au-dessus, pas la page fraîche qui n'en sait rien.
+        encorePlusHaut: actuel.encorePlusHaut,
+      ),
+    );
+  }
+
   /// Nombre maximal de pages chargées pour rejoindre le premier message non lu.
   ///
   /// « Tout jusqu'au premier non lu » n'est pas tenable : après trois semaines

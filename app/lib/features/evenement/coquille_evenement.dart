@@ -90,7 +90,19 @@ class _CoquilleEvenementState extends ConsumerState<CoquilleEvenement> {
       ..invalidate(membresProvider(widget.eventId))
       ..invalidate(listeCoursesProvider(widget.eventId))
       ..invalidate(depensesProvider(widget.eventId))
-      ..invalidate(reglementsProvider(widget.eventId));
+      ..invalidate(reglementsProvider(widget.eventId))
+      ..invalidate(sondagesProvider(widget.eventId))
+      ..invalidate(epinglesProvider(widget.eventId));
+
+    // Le fil de discussion se rafraîchit au lieu d'être invalidé. C'est un notifier
+    // paginé : l'invalider le remettrait à sa première page, et les pages remontées
+    // comme la position de lecture disparaîtraient à chaque message reçu.
+    //
+    // Son absence de cette liste était la raison pour laquelle la discussion ne bougeait
+    // pas alors que le temps réel fonctionnait : le message arrivait, et rien ne
+    // demandait au fil de se relire.
+    // ignore: discarded_futures
+    ref.read(filDiscussionProvider(widget.eventId).notifier).rafraichir();
   }
 
   /// Retour à l'accueil.
