@@ -538,6 +538,12 @@ place : la feuille de route avait pris du retard sur les commits.
 
 ## Lot 1.6 — Temps réel
 
+**En cours depuis le 25/08/2026** — voir
+`docs/superpowers/plans/2026-08-25-temps-reel-signalr.md`. Le `§9` du cahier des charges a
+été corrigé d'abord : `schedule.changed` était mort avec le planning, et la discussion
+comme les sondages n'étaient pas couverts alors qu'ils sont livrés. 21 messages au lieu
+de 18.
+
 - [ ] Exposer le hub SignalR sur `/hubs/event` — `RG-RT-01`
 - [ ] Contrôler l'appartenance à l'événement à l'établissement de la connexion
 - [ ] Diffuser les 18 messages du `§9`

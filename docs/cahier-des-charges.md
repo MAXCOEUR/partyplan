@@ -1132,11 +1132,25 @@ item.created             item.updated              item.claimed
 item.unclaimed           item.purchased            item.deleted
 expense.created          expense.updated           expense.deleted
 balances.changed         settlement.marked         settlement.cancelled
-schedule.changed         event.updated             activity.appended
+event.updated            activity.appended
+message.created          message.deleted
+poll.created             poll.voted
 ```
+
+`schedule.changed` a disparu avec le planning, abandonné. Les quatre messages
+`message.*` et `poll.*` ont été ajoutés le 25/08/2026 : la discussion et les sondages
+sont livrés depuis la V1.0, et `activity.appended` ne les couvrait pas — une ligne de fil
+d'activité n'est pas un message de discussion. C'est cette omission qui rendait la
+discussion muette jusqu'à un rechargement manuel.
 
 **RG-RT-02** — Chaque message contient l'état résultant de la ressource concernée, pas
 seulement son identifiant, afin d'éviter une requête de relecture par le client.
+
+Le client de la V1 relit néanmoins par REST à la réception d'un message, plutôt que de
+rapiécer son état local : rapiécer vingt et un messages dans autant de listes paginées,
+triées et filtrées crée autant d'occasions d'afficher autre chose que la base, sans
+qu'aucune erreur ne le signale. L'état est tout de même envoyé, ce qui laisse le
+rapiéçage possible plus tard sans toucher au serveur.
 
 **RG-RT-03** — Le temps réel est une optimisation, jamais la source de vérité :
 l'interface doit rester exacte après une simple relecture REST. Une reconnexion
