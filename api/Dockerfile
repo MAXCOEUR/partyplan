@@ -45,9 +45,18 @@ RUN dotnet publish src/PartyPlan.Api/PartyPlan.Api.csproj \
 FROM mcr.microsoft.com/dotnet/aspnet:10.0-noble AS runtime
 WORKDIR /app
 
+# Deux paquets, deux raisons.
+#
 # curl est requis par le contrôle d'état ci-dessous : l'image aspnet ne le fournit pas.
+#
+# libfontconfig1 est exigé par SkiaSharp.NativeAssets.Linux. Sans lui, la première
+# utilisation de SkiaSharp lève une DllNotFoundException sur « libfontconfig.so.1 » et
+# tout envoi d'image échoue en 500 — alors que libSkiaSharp.so est bien dans l'image.
+# Le défaut ne se voit ni à la construction, ni au démarrage, ni sur /health : seulement
+# au premier envoi de photo. Le paquet reste nécessaire même si le code ne dessine aucun
+# texte, la vérification de compatibilité de SkiaSharp s'exécutant au chargement du type.
 RUN apt-get update \
- && apt-get install -y --no-install-recommends curl \
+ && apt-get install -y --no-install-recommends curl libfontconfig1 \
  && rm -rf /var/lib/apt/lists/*
 
 # Exécution sans privilèges (utilisateur `app` fourni par l'image de base).
