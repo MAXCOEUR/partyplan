@@ -2,8 +2,14 @@ import 'package:flutter/material.dart';
 
 import '../tokens.dart';
 
-/// Carte du produit. Rayon généreux, bordure fine, ombre unique.
-class PpCard extends StatelessWidget {
+/// Carte du produit.
+///
+/// Deux traitements selon le thème, et non un seul décliné. En clair, une carte blanche
+/// posée sur un fond gris pâle avec une ombre douce : pas de bordure, parce qu'un liseré
+/// gris sur chaque carte, empilé trois ou quatre fois par écran, donne une pile de boîtes
+/// de formulaire. En sombre, une surface plus claire que le fond et un liseré fin, parce
+/// qu'une ombre noire sur fond presque noir ne se voit pas.
+class PpCard extends StatefulWidget {
   const PpCard({
     required this.child,
     this.onTap,
@@ -16,26 +22,56 @@ class PpCard extends StatelessWidget {
   final EdgeInsets padding;
 
   @override
+  State<PpCard> createState() => _PpCardState();
+}
+
+class _PpCardState extends State<PpCard> {
+  bool _enfoncee = false;
+
+  @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final sombre = theme.brightness == Brightness.dark;
+    final interactive = widget.onTap != null;
 
-    return DecoratedBox(
+    // Le retour au toucher est un enfoncement léger, jamais un rebond : une carte qui
+    // rebondit à chaque appui devient fatigante sur un écran qu'on parcourt.
+    final echelle = _enfoncee && interactive ? 0.985 : 1.0;
+
+    final carte = DecoratedBox(
       decoration: BoxDecoration(
-        color: theme.colorScheme.surface,
+        color: sombre
+            ? theme.colorScheme.surfaceContainer
+            : theme.colorScheme.surfaceContainerLowest,
         borderRadius: BorderRadius.circular(PpRadius.card),
-        border: Border.all(color: theme.colorScheme.outline),
+        border: sombre
+            ? Border.all(color: theme.colorScheme.outline)
+            : null,
         boxShadow: PpElevation.carte(sombre),
       ),
       child: Material(
         color: Colors.transparent,
         borderRadius: BorderRadius.circular(PpRadius.card),
         child: InkWell(
-          onTap: onTap,
+          onTap: widget.onTap,
+          onHighlightChanged: interactive
+              ? (enfoncee) => setState(() => _enfoncee = enfoncee)
+              : null,
           borderRadius: BorderRadius.circular(PpRadius.card),
-          child: Padding(padding: padding, child: child),
+          child: Padding(padding: widget.padding, child: widget.child),
         ),
       ),
+    );
+
+    if (!interactive) {
+      return carte;
+    }
+
+    return AnimatedScale(
+      scale: echelle,
+      duration: PpDuration.rapide,
+      curve: Curves.easeOut,
+      child: carte,
     );
   }
 }

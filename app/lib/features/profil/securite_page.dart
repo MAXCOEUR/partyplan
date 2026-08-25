@@ -183,7 +183,7 @@ class _SecuritePageState extends ConsumerState<SecuritePage> {
           sessions.when(
             loading: () => const Padding(
               padding: EdgeInsets.all(PpSpacing.xl),
-              child: PpLoadingState(),
+              child: PpLoadingIndicateur(),
             ),
             error: (_, _) => PpErrorState(
               message: PpL10n.of(context).erreurReseau,
