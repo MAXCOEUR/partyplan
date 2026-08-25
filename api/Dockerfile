@@ -1,7 +1,13 @@
 # syntax=docker/dockerfile:1
 
 # ---------- Étape de compilation ----------
-FROM mcr.microsoft.com/dotnet/sdk:10.0-noble AS build
+#
+# `--platform=$BUILDPLATFORM` : la compilation tourne sur l'architecture de la machine
+# de construction, jamais sous émulation. Le résultat d'un `dotnet publish` portable est
+# indépendant de l'architecture — les bibliothèques natives, SkiaSharp comprise, sont
+# livrées pour toutes les cibles dans `runtimes/` et résolues au démarrage. Compiler
+# sous QEMU multiplierait la durée par dix pour un résultat identique.
+FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:10.0-noble AS build
 WORKDIR /src
 
 # Les fichiers de configuration et les .csproj d'abord : la couche de restauration est

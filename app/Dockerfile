@@ -1,7 +1,12 @@
 # syntax=docker/dockerfile:1
 
 # ---------- Étape de compilation Flutter Web ----------
-FROM ghcr.io/cirruslabs/flutter:3.38.9 AS build
+#
+# `--platform=$BUILDPLATFORM` : la compilation tourne nativement sur la machine de
+# construction. Sa sortie est du HTML, du CSS et du JavaScript, identiques quelle que
+# soit l'architecture visée — seule l'image nginx qui les sert en dépend. L'image
+# Flutter n'est d'ailleurs publiée qu'en amd64.
+FROM --platform=$BUILDPLATFORM ghcr.io/cirruslabs/flutter:3.38.9 AS build
 WORKDIR /src
 
 # `API_BASE_URL` est injecté à la compilation : Flutter Web produit des fichiers
