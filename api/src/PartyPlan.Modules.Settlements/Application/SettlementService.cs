@@ -55,7 +55,8 @@ public sealed class SettlementService(
     IEventMembership membership,
     IClock clock,
     IIdGenerator ids,
-    ILogger<SettlementService> logger)
+    ILogger<SettlementService> logger,
+    IDiffusionEvenement diffusion)
     : ISettlementStatus
 {
     public static readonly DomainError EventNotFound = DomainError.NotFound(
@@ -77,6 +78,38 @@ public sealed class SettlementService(
     public static readonly DomainError UnknownMember = DomainError.Validation(
         "settlement.unknown_member",
         "Ce membre ne fait pas partie de l'événement.");
+
+    /// <summary>
+    /// Diffuse un règlement puis le changement de soldes, et renvoie le résultat.
+    /// <para>
+    /// Les deux messages partent ensemble : marquer un remboursement change les soldes
+    /// de deux personnes, et le taire laisserait l'une réclamer ce que l'autre a déjà
+    /// payé.
+    /// </para>
+    /// </summary>
+    private async Task<Result<SettlementsPage>> DiffuserAsync(
+        Guid eventId,
+        string message,
+        Result<SettlementsPage> resultat,
+        CancellationToken cancellationToken)
+    {
+        if (resultat.IsSuccess)
+        {
+            await diffusion
+                .PublierAsync(eventId, message, resultat.Value!, cancellationToken)
+                .ConfigureAwait(false);
+
+            await diffusion
+                .PublierAsync(
+                    eventId,
+                    MessagesTempsReel.SoldesChanges,
+                    new { eventId },
+                    cancellationToken)
+                .ConfigureAwait(false);
+        }
+
+        return resultat;
+    }
 
     public async Task<Result<SettlementsPage>> ConsulterAsync(
         Guid eventId,
@@ -176,7 +209,14 @@ public sealed class SettlementService(
 
         await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
-        return await ConsulterAsync(eventId, cancellationToken).ConfigureAwait(false);
+        var page = await ConsulterAsync(eventId, cancellationToken)
+            .ConfigureAwait(false);
+
+        return await DiffuserAsync(
+            eventId,
+            MessagesTempsReel.ReglementMarque,
+            page,
+            cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -208,7 +248,14 @@ public sealed class SettlementService(
         reglement.CancelledAt = clock.UtcNow;
         await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
-        return await ConsulterAsync(eventId, cancellationToken).ConfigureAwait(false);
+        var page = await ConsulterAsync(eventId, cancellationToken)
+            .ConfigureAwait(false);
+
+        return await DiffuserAsync(
+            eventId,
+            MessagesTempsReel.ReglementAnnule,
+            page,
+            cancellationToken).ConfigureAwait(false);
     }
 
     /// <inheritdoc />

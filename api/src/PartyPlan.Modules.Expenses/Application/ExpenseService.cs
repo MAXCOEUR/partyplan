@@ -80,7 +80,8 @@ public sealed class ExpenseService(
     IExpensesDbContext db,
     IEventMembership membership,
     IClock clock,
-    IIdGenerator ids)
+    IIdGenerator ids,
+    IDiffusionEvenement diffusion)
     : IExpenseLedger, IExpenseFromPurchase
 {
     public static readonly DomainError NotFound = DomainError.NotFound(
@@ -124,6 +125,48 @@ public sealed class ExpenseService(
         "Cette dépense vient d'un article de courses : modifie le prix payé sur l'article.");
 
     // ------------------------------------------------------------- lecture ----
+
+    /// <summary>
+    /// Diffuse une dépense et le changement de soldes qu'elle entraîne, puis renvoie le
+    /// résultat tel quel.
+    /// <para>
+    /// Les deux messages vont ensemble et ne se séparent pas : une dépense change
+    /// forcément les soldes, et ne diffuser que la dépense laisserait l'écran des
+    /// remboursements faux jusqu'à sa prochaine ouverture. C'est précisément le genre
+    /// d'écart qu'on ne remarque qu'en réclamant de l'argent à quelqu'un qui a déjà payé.
+    /// </para>
+    /// </summary>
+    private async Task<Result<ExpenseDetail>> DiffuserAsync(
+        Guid eventId,
+        string message,
+        Result<ExpenseDetail> resultat,
+        CancellationToken cancellationToken)
+    {
+        if (resultat.IsSuccess)
+        {
+            await diffusion
+                .PublierAsync(eventId, message, resultat.Value!, cancellationToken)
+                .ConfigureAwait(false);
+
+            await DiffuserSoldesAsync(eventId, cancellationToken).ConfigureAwait(false);
+        }
+
+        return resultat;
+    }
+
+    /// <summary>
+    /// Signale que les soldes ont changé, sans les envoyer.
+    /// <para>
+    /// Le tableau complet des soldes de tous les membres dans chaque message le rendrait
+    /// volumineux pour rien : le client relit (RG-RT-02, précision du 25/08/2026).
+    /// </para>
+    /// </summary>
+    private Task DiffuserSoldesAsync(Guid eventId, CancellationToken cancellationToken) =>
+        diffusion.PublierAsync(
+            eventId,
+            MessagesTempsReel.SoldesChanges,
+            new { eventId },
+            cancellationToken);
 
     public async Task<Result<ExpensesPage>> ListerAsync(
         Guid eventId,
@@ -260,7 +303,14 @@ public sealed class ExpenseService(
         db.Expenses.Add(depense);
         await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
-        return await DetailAsync(eventId, depense.Id, cancellationToken).ConfigureAwait(false);
+        var creee = await DetailAsync(eventId, depense.Id, cancellationToken)
+            .ConfigureAwait(false);
+
+        return await DiffuserAsync(
+            eventId,
+            MessagesTempsReel.DepenseCreee,
+            creee,
+            cancellationToken).ConfigureAwait(false);
     }
 
     public async Task<Result<ExpenseDetail>> ModifierAsync(
@@ -334,7 +384,14 @@ public sealed class ExpenseService(
 
         await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
-        return await DetailAsync(eventId, expenseId, cancellationToken).ConfigureAwait(false);
+        var modifiee = await DetailAsync(eventId, expenseId, cancellationToken)
+            .ConfigureAwait(false);
+
+        return await DiffuserAsync(
+            eventId,
+            MessagesTempsReel.DepenseModifiee,
+            modifiee,
+            cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -370,6 +427,18 @@ public sealed class ExpenseService(
 
         depense.DeletedAt = clock.UtcNow;
         await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+
+        // Une suppression change les soldes comme une création : les deux messages
+        // partent ensemble.
+        await diffusion
+            .PublierAsync(
+                eventId,
+                MessagesTempsReel.DepenseSupprimee,
+                new { expenseId },
+                cancellationToken)
+            .ConfigureAwait(false);
+
+        await DiffuserSoldesAsync(eventId, cancellationToken).ConfigureAwait(false);
 
         return Result.Success();
     }

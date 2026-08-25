@@ -113,6 +113,42 @@ public sealed class TempsReelTests(PartyPlanApiFixture fixture)
         Messages().ShouldContain(MessagesTempsReel.ArticleSupprime);
     }
 
+    [Fact]
+    public async Task Une_depense_diffuse_aussi_les_soldes()
+    {
+        var (organisateur, evenement) = await SoireeAsync();
+        await RejoindreAsync(evenement, organisateur, "Lucas");
+
+        var membres = await organisateur.GetFromJsonAsync<JsonDocument>(
+            new Uri($"/v1/events/{evenement}/members", UriKind.Relative));
+
+        var payeur = membres!.RootElement.EnumerateArray().First()
+            .GetProperty("id").GetGuid();
+
+        fixture.Diffusions.Clear();
+
+        var creation = await PosterAsync(
+            organisateur,
+            $"/v1/events/{evenement}/expenses",
+            new
+            {
+                label = "Courses",
+                amount = 42.50m,
+                paidByMemberId = payeur,
+                shareMode = "AllPresent",
+            });
+
+        creation.IsSuccessStatusCode.ShouldBeTrue();
+
+        var messages = Messages();
+
+        messages.ShouldContain(MessagesTempsReel.DepenseCreee);
+        // Une dépense change forcément les soldes. Ne diffuser que la dépense
+        // laisserait l'écran des remboursements faux jusqu'à sa prochaine ouverture, et
+        // quelqu'un réclamerait de l'argent à qui a déjà payé.
+        messages.ShouldContain(MessagesTempsReel.SoldesChanges);
+    }
+
     // ------------------------------------------------------------------ aides ----
 
     private const string MotDePasse = "Trombone-Nuage-42x";
