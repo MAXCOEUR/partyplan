@@ -39,6 +39,11 @@ cahier des charges). Mode **préservation** : la marque est violette et le reste
 | 25/08/2026 | Les cartes ne sont plus bordées en thème clair. Une bordure sur chaque carte, empilée trois ou quatre fois par écran, donnait une pile de boîtes à liseré gris — le principal motif de laideur. |
 | 25/08/2026 | Squelettes de chargement. La justification d'origine (« pas de squelette tant que les écrans réels n'existent pas ») a expiré : ils existent. |
 | 25/08/2026 | Couche d'animation discrète : retour au toucher, et apparition en cascade des listes. Rien d'autre. |
+| 26/08/2026 | Le rail de navigation reçoit enfin un thème. Sans lui, il retombait sur `secondaryContainer` — le rose — et la navigation latérale était magenta pendant que la barre basse était violette, sur le même écran. |
+| 26/08/2026 | Le rose quitte l'avancement des courses, l'étiquette de prise en charge et l'origine des dépenses. Il ne reste que sur l'argent dû et la pastille de non-lus, seule sollicitation de la navigation. |
+| 26/08/2026 | Les listes de choix rendent leurs options en neutre : seule la réponse retenue porte sa couleur. Cinq options en cinq couleurs mettaient cinq accents sur un écran. |
+| 26/08/2026 | La discussion passe en bulles, les miennes à droite, largeur bornée par les contraintes reçues et non par la fenêtre. |
+| 26/08/2026 | Logo dessiné en SVG, décliné en favicon, icônes web et lanceur Android. Les icônes de Flutter par défaut ont disparu. |
 
 ## Ce qui ne change jamais sans accord explicite
 
