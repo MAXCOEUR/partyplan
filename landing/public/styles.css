@@ -1,0 +1,609 @@
+/* PartyPlan — site vitrine
+ *
+ * Poppins est hébergée ici et non chargée depuis Google Fonts : appeler
+ * fonts.gstatic.com transmettrait l'adresse IP de chaque visiteur à un tiers, ce que la
+ * politique de confidentialité de ce même site affirme ne pas faire. 31 ko au total.
+ */
+
+@font-face {
+  font-family: 'Poppins';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('fonts/poppins-400.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Poppins';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url('fonts/poppins-500.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Poppins';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url('fonts/poppins-600.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Poppins';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('fonts/poppins-700.woff2') format('woff2');
+}
+
+:root {
+  /* docs/brand/charte.md — valeurs exactes, aucune variante inventée. */
+  --violet: #6c5ce7;
+  --violet-clair: #a855f7;
+  --rose: #ff4d8d;
+  --succes: #00c896;
+  --nuit: #0f172a;
+  --surface: #1e293b;
+  --bordure: #334155;
+  --papier: #f8fafc;
+
+  --encre: #0f172a;
+  --texte: #e8edf7;
+  --texte-doux: #9aa8c4;
+
+  --serrage-titre: -0.03em;
+  --mesure: 34rem; /* longueur de ligne confortable pour du texte long */
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  background: var(--nuit);
+  color: var(--texte);
+  font-family: 'Poppins', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  font-size: clamp(1rem, 0.95rem + 0.2vw, 1.0625rem);
+  line-height: 1.65;
+  -webkit-font-smoothing: antialiased;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+a {
+  color: var(--violet-clair);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.2em;
+}
+
+a:hover {
+  color: var(--rose);
+}
+
+:focus-visible {
+  outline: 2px solid var(--violet-clair);
+  outline-offset: 3px;
+  border-radius: 4px;
+}
+
+.saut-contenu {
+  position: absolute;
+  left: -9999px;
+  top: 0;
+  background: var(--papier);
+  color: var(--encre);
+  padding: 0.75rem 1rem;
+  font-weight: 600;
+  z-index: 10;
+}
+
+.saut-contenu:focus {
+  left: 1rem;
+  top: 1rem;
+}
+
+.contenant {
+  width: 100%;
+  max-width: 68rem;
+  margin-inline: auto;
+  padding-inline: clamp(1.25rem, 4vw, 2.5rem);
+}
+
+/* ---------------------------------------------------------------- en-tête ---- */
+
+.entete {
+  padding-block: 1.75rem;
+}
+
+.entete__barre {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.marque {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-weight: 600;
+  font-size: 1.125rem;
+  letter-spacing: var(--serrage-titre);
+  color: var(--texte);
+  text-decoration: none;
+}
+
+.marque__glyphe {
+  display: grid;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 0.6rem;
+  background: var(--violet);
+  color: #fff;
+  font-weight: 700;
+  font-size: 1rem;
+}
+
+.entete__lien {
+  font-size: 0.9375rem;
+  font-weight: 500;
+}
+
+/* ------------------------------------------------------------------ héros ---- */
+
+.heros {
+  padding-block: clamp(2.5rem, 6vw, 5rem) clamp(3rem, 7vw, 6rem);
+}
+
+.heros__grille {
+  display: grid;
+  gap: clamp(2.5rem, 5vw, 4rem);
+  align-items: center;
+}
+
+@media (min-width: 60rem) {
+  .heros__grille {
+    grid-template-columns: 1fr 22rem;
+  }
+}
+
+.surtitre {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--texte-doux);
+  margin: 0 0 1.25rem;
+}
+
+/* Le titre mêle deux graisses : la question qui fâche est en Semibold, le reste en
+ * Regular. C'est la hiérarchie de la phrase, pas une décoration. */
+.titre {
+  margin: 0 0 1.5rem;
+  font-size: clamp(2.25rem, 1.5rem + 3.6vw, 4rem);
+  font-weight: 400;
+  line-height: 1.05;
+  letter-spacing: var(--serrage-titre);
+}
+
+.titre strong {
+  font-weight: 600;
+}
+
+.titre em {
+  font-style: normal;
+  color: var(--rose);
+}
+
+.chapo {
+  margin: 0 0 2rem;
+  max-width: var(--mesure);
+  color: var(--texte-doux);
+  font-size: 1.0625rem;
+}
+
+.signature-marque {
+  margin: 2.5rem 0 0;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--texte-doux);
+}
+
+/* ---------------------------------------------------- ticket, l'élément clé ---- */
+
+/* Le ticket de caisse : matière du sujet, pas ornement. Le papier clair de la charte
+ * n'est utilisé que là, ce qui en fait le seul point lumineux de la page. */
+.ticket {
+  position: relative;
+  background: var(--papier);
+  color: var(--encre);
+  padding: 1.75rem 1.5rem 2.25rem;
+  border-radius: 0.5rem 0.5rem 0 0;
+  box-shadow: 0 1.5rem 3rem rgb(0 0 0 / 45%);
+  font-size: 0.9375rem;
+}
+
+/* Bord déchiré, obtenu par un dégradé conique répété : aucune image à charger. */
+.ticket::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -0.7rem;
+  height: 0.75rem;
+  background: repeating-conic-gradient(
+    from 135deg at 50% 0,
+    var(--papier) 0 25%,
+    transparent 0 50%
+  );
+  background-size: 1.1rem 1.1rem;
+}
+
+.ticket__entete {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px dashed #cbd5e1;
+}
+
+.ticket__titre {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.ticket__date {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: #64748b;
+  font-variant-numeric: tabular-nums;
+}
+
+.lignes {
+  list-style: none;
+  margin: 0;
+  padding: 0.75rem 0;
+}
+
+.lignes li {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  padding-block: 0.3rem;
+  color: #475569;
+}
+
+/* Un montant ne se coupe jamais : « 15,60 € » réparti sur deux lignes se lit une
+ * fraction de seconde comme deux nombres. */
+.lignes b {
+  font-weight: 700;
+  color: var(--encre);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.ticket__bascule {
+  margin: 0.5rem 0 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px dashed #cbd5e1;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #64748b;
+}
+
+.reglements {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.5rem;
+}
+
+/* Les trois lignes de règlement arrivent l'une après l'autre : c'est le calcul qui se
+ * déroule sous les yeux, et c'est le seul mouvement de la page. */
+.reglements li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.55rem 0.7rem;
+  border-radius: 0.4rem;
+  background: #eef2ff;
+  font-weight: 500;
+  animation: arrivee 0.5s ease-out both;
+}
+
+.reglements li:nth-child(1) {
+  animation-delay: 0.45s;
+}
+.reglements li:nth-child(2) {
+  animation-delay: 0.65s;
+}
+.reglements li:nth-child(3) {
+  animation-delay: 0.85s;
+}
+
+@keyframes arrivee {
+  from {
+    opacity: 0;
+    transform: translateY(0.4rem);
+  }
+}
+
+.reglements .qui {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: var(--encre);
+}
+
+.fleche {
+  color: var(--violet);
+  font-weight: 700;
+}
+
+.montant {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--violet);
+  white-space: nowrap;
+}
+
+.ticket__pied {
+  margin: 1.25rem 0 0;
+  font-size: 0.75rem;
+  line-height: 1.5;
+  color: #64748b;
+}
+
+/* ---------------------------------------------------------------- moments ---- */
+
+.moments {
+  padding-block: clamp(3rem, 6vw, 5rem);
+  border-top: 1px solid var(--bordure);
+}
+
+.section__titre {
+  margin: 0 0 2.5rem;
+  font-size: clamp(1.5rem, 1.2rem + 1.2vw, 2rem);
+  font-weight: 600;
+  letter-spacing: var(--serrage-titre);
+}
+
+.moments__grille {
+  display: grid;
+  gap: 1.25rem;
+}
+
+@media (min-width: 48rem) {
+  .moments__grille {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+.moment {
+  padding: 1.5rem;
+  border: 1px solid var(--bordure);
+  border-radius: 0.75rem;
+  background: var(--surface);
+}
+
+/* « Avant / Pendant / Après » : la soirée est une chronologie, l'étiquette porte donc
+ * une information et non un numéro décoratif. */
+.moment__quand {
+  display: block;
+  margin-bottom: 0.75rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--violet-clair);
+}
+
+.moment h3 {
+  margin: 0 0 0.6rem;
+  font-size: 1.0625rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.moment p {
+  margin: 0;
+  color: var(--texte-doux);
+  font-size: 0.9375rem;
+}
+
+/* ------------------------------------------------------------------ accès ---- */
+
+.acces {
+  padding-block: clamp(3rem, 6vw, 5rem);
+  border-top: 1px solid var(--bordure);
+}
+
+.acces__grille {
+  display: grid;
+  gap: 1rem;
+  margin-top: 2rem;
+}
+
+@media (min-width: 48rem) {
+  .acces__grille {
+    grid-template-columns: repeat(3, 1fr);
+    align-items: stretch;
+  }
+}
+
+.sortie {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding: 1.25rem 1.4rem;
+  border-radius: 0.75rem;
+  border: 1px solid var(--bordure);
+  background: var(--surface);
+  color: var(--texte);
+  text-decoration: none;
+  transition: border-color 0.18s ease, transform 0.18s ease;
+}
+
+.sortie:hover {
+  border-color: var(--violet-clair);
+  color: var(--texte);
+  transform: translateY(-2px);
+}
+
+.sortie--principale {
+  background: var(--violet);
+  border-color: var(--violet);
+}
+
+.sortie--principale:hover {
+  background: var(--violet-clair);
+  border-color: var(--violet-clair);
+}
+
+/* Un magasin où l'application n'est pas encore publiée n'est pas un lien : le dire
+ * vaut mieux qu'un bouton qui mène à une page d'erreur. */
+.sortie--attente {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.sortie__quoi {
+  font-weight: 600;
+  font-size: 1rem;
+  letter-spacing: -0.01em;
+}
+
+.sortie__ou {
+  font-size: 0.8125rem;
+  color: var(--texte-doux);
+}
+
+.sortie--principale .sortie__ou {
+  color: rgb(255 255 255 / 78%);
+}
+
+/* -------------------------------------------------------------------- pied ---- */
+
+.pied {
+  padding-block: 2.5rem 3rem;
+  border-top: 1px solid var(--bordure);
+  font-size: 0.875rem;
+  color: var(--texte-doux);
+}
+
+.pied__liens {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1.5rem;
+  margin-bottom: 1.25rem;
+  padding: 0;
+  list-style: none;
+}
+
+.pied p {
+  margin: 0;
+  max-width: 40rem;
+}
+
+/* ------------------------------------------------- pages de texte long ---- */
+
+.page-texte {
+  padding-block: clamp(2rem, 5vw, 3.5rem) clamp(3rem, 6vw, 5rem);
+}
+
+.page-texte__entete {
+  padding-bottom: 2rem;
+  margin-bottom: 2.5rem;
+  border-bottom: 1px solid var(--bordure);
+}
+
+.page-texte h1 {
+  margin: 0 0 0.75rem;
+  font-size: clamp(1.75rem, 1.4rem + 1.6vw, 2.5rem);
+  font-weight: 600;
+  letter-spacing: var(--serrage-titre);
+}
+
+.maj {
+  margin: 0;
+  font-size: 0.875rem;
+  color: var(--texte-doux);
+  font-variant-numeric: tabular-nums;
+}
+
+.prose {
+  max-width: var(--mesure);
+}
+
+.prose h2 {
+  margin: 2.75rem 0 0.85rem;
+  font-size: 1.25rem;
+  font-weight: 600;
+  letter-spacing: -0.015em;
+}
+
+.prose h3 {
+  margin: 1.75rem 0 0.6rem;
+  font-size: 1.0625rem;
+  font-weight: 600;
+}
+
+.prose p,
+.prose li {
+  color: #c6cfe3;
+}
+
+.prose ul {
+  padding-left: 1.25rem;
+}
+
+.prose li {
+  margin-block: 0.4rem;
+}
+
+.prose strong {
+  color: var(--texte);
+  font-weight: 600;
+}
+
+/* Encadré des points qui surprennent : ils méritent d'être vus, pas noyés. */
+.notable {
+  margin: 1.75rem 0;
+  padding: 1.25rem 1.4rem;
+  border-left: 3px solid var(--violet);
+  border-radius: 0 0.5rem 0.5rem 0;
+  background: var(--surface);
+}
+
+.notable p:last-child {
+  margin-bottom: 0;
+}
+
+.a-remplir {
+  border-left-color: var(--rose);
+}

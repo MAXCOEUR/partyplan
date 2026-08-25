@@ -704,12 +704,24 @@ cochées.** C'est écrit ici parce qu'un transport livré donne l'impression d'u
 
 ## Lot 1.15 — Documents légaux
 
-- [ ] Conditions générales d'utilisation
-- [ ] Politique de confidentialité, incluant `RG-RGPD-01`
-- [ ] Mentions légales
-- [ ] `RG-LEG-01` Mention explicite : PartyPlan ne détient ni ne transfère aucun fonds
+**Rédigés le 25/08/2026**, publiés par le site vitrine. Ils décrivent fidèlement le
+fonctionnement du service ; ils n'ont **pas** été relus par un juriste, et les identités
+de l'éditeur et de l'hébergeur restent à renseigner.
+
+- [x] Conditions générales d'utilisation
+- [x] Politique de confidentialité, incluant `RG-RGPD-01`
+  - → l'anonymisation des contributions financières à la suppression d'un compte est
+    expliquée avec son motif : effacer une dépense fausserait les comptes d'une soirée à
+    laquelle d'autres ont participé
+  - → le périmètre d'un administrateur est décrit, `RG-RGPD-04` et `RG-ADM-01` compris
+- [x] Mentions légales — **valeurs entre crochets à remplacer avant mise en ligne**
+- [x] `RG-LEG-01` Mention explicite : PartyPlan ne détient ni ne transfère aucun fonds —
+      présente dans le pied de chaque page et développée dans les conditions
 - [ ] Fiche de confidentialité Google Play
-- [ ] Politique de cookies (aucun cookie non essentiel au lancement)
+- [x] Politique de cookies — sans objet et dit comme tel : le site n'en dépose aucun, et
+      les polices sont hébergées avec lui
+- [ ] Relecture juridique des trois documents
+- [ ] Renseigner éditeur, hébergeur et adresses de contact
 
 ## Lot 1.16 — Site vitrine
 
@@ -720,11 +732,20 @@ trois boutons vers Google Play, l'App Store et l'application web
 (`partyplan.maxencecoeur.fr`). Elle ne figure donc pas dans les origines CORS de l'API :
 lui ouvrir CORS élargirait la surface pour un besoin qui n'existe pas.
 
-- [ ] Page d'accueil : proposition de valeur, captures, et les trois boutons de sortie
+- [x] Page d'accueil : proposition de valeur, et les trois boutons de sortie
       (Play Store, App Store, application web)
-- [ ] Pages légales publiées — c'est ce qui justifie l'existence du site autant que le
-      référencement
-- [ ] Page de support et adresse de contact
+  - → Play et App Store sont annoncés « bientôt » et ne sont pas des liens : l'application
+    n'y est pas publiée, un lien mènerait à une page d'erreur
+  - → Poppins est hébergée avec le site : la charger depuis Google transmettrait l'adresse
+    IP de chaque visiteur, ce que la politique de confidentialité affirme ne pas faire
+  - → captures d'écran à ajouter quand les écrans seront figés
+- [x] Pages légales publiées — confidentialité, conditions d'utilisation, mentions légales
+  - → **incomplètes par construction** : identité de l'éditeur, hébergeur et adresses de
+    contact sont marqués « à compléter », seul l'éditeur peut les fournir
+  - → relecture juridique non faite
+- [x] Page de support et adresse de contact — l'adresse reste à renseigner
+- [ ] Fiche de confidentialité Google Play — dépend de la publication (lot 1.18)
+- [ ] Captures d'écran de l'application sur la page d'accueil
 
 ## Lot 1.17 — Recette et bêta privée
 

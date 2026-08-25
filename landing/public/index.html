@@ -3,11 +3,168 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>PartyPlan — Ta soirée, enfin organisée</title>
+  <title>PartyPlan — qui vient, qui apporte quoi, qui doit combien</title>
+  <meta name="description" content="PartyPlan organise vos soirées entre amis : les présences, la liste de courses, les dépenses, et le calcul des remboursements. Application web et Android.">
+  <link rel="canonical" href="https://partyplan.maxencecoeur.fr/">
+  <meta name="robots" content="index, follow">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="PartyPlan">
+  <meta property="og:title" content="PartyPlan — qui vient, qui apporte quoi, qui doit combien">
+  <meta property="og:description" content="Les présences, les courses, les dépenses et les remboursements d'une soirée entre amis, au même endroit.">
+  <meta property="og:url" content="https://partyplan.maxencecoeur.fr/">
+  <meta property="og:locale" content="fr_FR">
+  <meta name="theme-color" content="#0f172a">
+  <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-  <h1>PartyPlan</h1>
-  <p>Organise. Partage. Profite !</p>
-  <p>Site vitrine à construire — jalon J10.</p>
+  <a class="saut-contenu" href="#contenu">Aller au contenu</a>
+
+  <header class="entete">
+    <div class="contenant entete__barre">
+      <a class="marque" href="/">
+        <span class="marque__glyphe" aria-hidden="true">P</span>
+        PartyPlan
+      </a>
+      <a class="entete__lien" href="https://web.partyplan.maxencecoeur.fr">Ouvrir l’application</a>
+    </div>
+  </header>
+
+  <main id="contenu">
+
+    <section class="heros">
+      <div class="contenant heros__grille">
+        <div>
+          <p class="surtitre">Soirées entre amis</p>
+          <h1 class="titre">
+            <strong>Qui doit combien</strong>,<br>
+            sans <em>refaire les comptes</em> à trois heures du matin.
+          </h1>
+          <p class="chapo">
+            Chacun avance ce qu’il achète, PartyPlan tient la liste et calcule
+            qui rembourse qui. Le reste suit : les présences, les courses, ce
+            qu’il manque encore.
+          </p>
+          <p class="signature-marque">Organise. Partage. Profite !</p>
+        </div>
+
+        <!-- Le ticket : les chiffres tombent juste, c'est vérifiable à la main.
+             47,30 + 28,90 + 15,60 = 91,80 pour quatre, soit 22,95 chacun. -->
+        <div class="ticket">
+          <div class="ticket__entete">
+            <h2 class="ticket__titre">Raclette chez Léa</h2>
+            <span class="ticket__date">14/02/2026</span>
+          </div>
+
+          <ul class="lignes">
+            <li><span>Léa — fromage, charcuterie</span> <b>47,30 €</b></li>
+            <li><span>Tom — boissons</span> <b>28,90 €</b></li>
+            <li><span>Sarah — pommes de terre</span> <b>15,60 €</b></li>
+            <li><span>Malik — rien</span> <b>0,00 €</b></li>
+          </ul>
+
+          <p class="ticket__bascule">Remboursements — 3 virements</p>
+
+          <ul class="reglements">
+            <li>
+              <span class="qui">Malik <span class="fleche" aria-hidden="true">→</span> Léa</span>
+              <span class="montant">22,95 €</span>
+            </li>
+            <li>
+              <span class="qui">Sarah <span class="fleche" aria-hidden="true">→</span> Léa</span>
+              <span class="montant">1,40 €</span>
+            </li>
+            <li>
+              <span class="qui">Sarah <span class="fleche" aria-hidden="true">→</span> Tom</span>
+              <span class="montant">5,95 €</span>
+            </li>
+          </ul>
+
+          <p class="ticket__pied">
+            Quatre parts de 22,95 €. PartyPlan cherche le plus petit nombre de
+            virements plutôt que de faire tourner l’argent en rond.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <section class="moments">
+      <div class="contenant">
+        <h2 class="section__titre">Une soirée, trois moments</h2>
+        <div class="moments__grille">
+
+          <article class="moment">
+            <span class="moment__quand">Avant</span>
+            <h3>Savoir qui vient</h3>
+            <p>
+              Un lien à partager, une réponse par personne. Plus de sondage
+              perdu dans une conversation de groupe à quarante messages.
+            </p>
+          </article>
+
+          <article class="moment">
+            <span class="moment__quand">Pendant</span>
+            <h3>Ne pas racheter le pain</h3>
+            <p>
+              La liste de courses est commune. Chacun prend ce qu’il apporte,
+              et tout le monde voit ce qu’il reste à couvrir.
+            </p>
+          </article>
+
+          <article class="moment">
+            <span class="moment__quand">Après</span>
+            <h3>Solder sans discuter</h3>
+            <p>
+              Les dépenses sont déjà là. PartyPlan en tire la liste des
+              virements, et personne n’a à réclamer.
+            </p>
+          </article>
+
+        </div>
+      </div>
+    </section>
+
+    <section class="acces">
+      <div class="contenant">
+        <h2 class="section__titre">Commencer</h2>
+        <div class="acces__grille">
+
+          <a class="sortie sortie--principale" href="https://web.partyplan.maxencecoeur.fr">
+            <span class="sortie__quoi">Ouvrir dans le navigateur</span>
+            <span class="sortie__ou">Rien à installer</span>
+          </a>
+
+          <!-- Ni Play ni App Store ne référencent encore l'application : un lien
+               mènerait à une page d'erreur. On l'annonce au lieu de le promettre. -->
+          <div class="sortie sortie--attente" aria-disabled="true">
+            <span class="sortie__quoi">Google Play</span>
+            <span class="sortie__ou">Bientôt</span>
+          </div>
+
+          <div class="sortie sortie--attente" aria-disabled="true">
+            <span class="sortie__quoi">App Store</span>
+            <span class="sortie__ou">Bientôt</span>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="pied">
+    <div class="contenant">
+      <ul class="pied__liens">
+        <li><a href="/confidentialite">Confidentialité</a></li>
+        <li><a href="/conditions">Conditions d’utilisation</a></li>
+        <li><a href="/mentions-legales">Mentions légales</a></li>
+        <li><a href="/support">Support</a></li>
+      </ul>
+      <p>
+        PartyPlan ne détient, ne transfère et ne garantit aucun fonds. Les
+        remboursements entre participants relèvent uniquement de leur relation
+        privée : l’application calcule, elle ne paie pas.
+      </p>
+    </div>
+  </footer>
 </body>
 </html>

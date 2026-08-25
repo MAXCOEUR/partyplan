@@ -1,0 +1,7 @@
+# Le site vitrine est la seule surface publique de PartyPlan : elle doit être
+# indexée. L'application, sur web.partyplan.maxencecoeur.fr, ne l'est jamais —
+# elle émet son propre X-Robots-Tag (règle 9, privé par défaut).
+User-agent: *
+Allow: /
+
+Sitemap: https://partyplan.maxencecoeur.fr/sitemap.xml
