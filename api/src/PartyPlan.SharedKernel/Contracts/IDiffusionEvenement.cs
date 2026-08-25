@@ -58,6 +58,7 @@ public static class MessagesTempsReel
     public const string ActiviteAjoutee = "activity.appended";
 
     public const string MessageCree = "message.created";
+    public const string MessageModifie = "message.updated";
     public const string MessageSupprime = "message.deleted";
     public const string SondageCree = "poll.created";
     public const string SondageVote = "poll.voted";

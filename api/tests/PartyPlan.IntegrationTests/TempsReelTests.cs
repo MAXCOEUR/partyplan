@@ -149,9 +149,65 @@ public sealed class TempsReelTests(PartyPlanApiFixture fixture)
         messages.ShouldContain(MessagesTempsReel.SoldesChanges);
     }
 
+    [Fact]
+    public async Task Un_message_de_discussion_est_diffuse()
+    {
+        var (organisateur, evenement) = await SoireeAsync();
+        fixture.Diffusions.Clear();
+
+        // Une conversation qui n'arrive qu'au rechargement n'est pas une conversation.
+        (await PosterAsync(
+                organisateur,
+                $"/v1/events/{evenement}/messages",
+                new { body = "On apporte quoi ?" }))
+            .IsSuccessStatusCode.ShouldBeTrue();
+
+        Messages().ShouldContain(MessagesTempsReel.MessageCree);
+    }
+
+    [Fact]
+    public async Task Un_sondage_et_son_vote_sont_diffuses()
+    {
+        var (organisateur, evenement) = await SoireeAsync();
+        fixture.Diffusions.Clear();
+
+        var creation = await PosterAsync(
+            organisateur,
+            $"/v1/events/{evenement}/polls",
+            new
+            {
+                question = "Raclette ou fondue ?",
+                options = Choix,
+                allowMultiple = false,
+            });
+
+        creation.IsSuccessStatusCode.ShouldBeTrue();
+        Messages().ShouldContain(MessagesTempsReel.SondageCree);
+
+        var sondage = (await creation.Content.ReadFromJsonAsync<JsonDocument>())!.RootElement;
+        var option = sondage.GetProperty("options").EnumerateArray().First()
+            .GetProperty("id").GetGuid();
+
+        fixture.Diffusions.Clear();
+
+        // Un vote qui n'apparaît qu'au rechargement fait voter deux fois sur la même
+        // question.
+        (await organisateur.PutAsJsonAsync(
+                new Uri(
+                    $"/v1/events/{evenement}/polls/{sondage.GetProperty("id").GetGuid()}/votes",
+                    UriKind.Relative),
+                new { optionIds = new[] { option } }))
+            .IsSuccessStatusCode.ShouldBeTrue();
+
+        Messages().ShouldContain(MessagesTempsReel.SondageVote);
+    }
+
     // ------------------------------------------------------------------ aides ----
 
     private const string MotDePasse = "Trombone-Nuage-42x";
+
+    /// <summary>Options du sondage de test, en champ pour éviter CA1861.</summary>
+    private static readonly string[] Choix = ["Raclette", "Fondue"];
 
     /// <summary>
     /// POST avec clé d'idempotence : les endpoints de mutation l'exigent (§8.1), et sans

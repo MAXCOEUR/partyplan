@@ -48,7 +48,8 @@ public sealed class PollService(
     IEventMembership membership,
     IPollAnnouncement annonce,
     IClock clock,
-    IIdGenerator ids)
+    IIdGenerator ids,
+    IDiffusionEvenement diffusion)
 {
     /// <summary>Nombre minimal d'options. Une seule réponse n'est pas un choix.</summary>
     private const int OptionsMinimales = 2;
@@ -91,6 +92,30 @@ public sealed class PollService(
     public static readonly DomainError NotMine = DomainError.Rule(
         "poll.not_mine",
         "Seule la personne qui a lancé le sondage, ou l'organisateur, peut le clore.");
+
+    /// <summary>
+    /// Diffuse un sondage et renvoie le résultat.
+    /// <para>
+    /// Un vote qui n'apparaît qu'au rechargement fait voter deux fois sur la même
+    /// question : c'est la raison pour laquelle les sondages sont dans la liste, alors
+    /// que le §9 les avait omis.
+    /// </para>
+    /// </summary>
+    private async Task<Result<PollView>> DiffuserAsync(
+        Guid eventId,
+        string message,
+        Result<PollView> resultat,
+        CancellationToken cancellationToken)
+    {
+        if (resultat.IsSuccess)
+        {
+            await diffusion
+                .PublierAsync(eventId, message, resultat.Value!, cancellationToken)
+                .ConfigureAwait(false);
+        }
+
+        return resultat;
+    }
 
     public async Task<Result<PollPage>> ListerAsync(
         Guid eventId,
@@ -208,11 +233,15 @@ public sealed class PollService(
             .AnnounceAsync(eventId, moi.MemberId, sondage.Id, question, cancellationToken)
             .ConfigureAwait(false);
 
-        return Result<PollView>.Success(
+        return await DiffuserAsync(
+            eventId,
+            MessagesTempsReel.SondageCree,
+            Result<PollView>.Success(
             Vue(sondage, [], moi.MemberId, new Dictionary<Guid, string>
             {
                 [moi.MemberId] = moi.DisplayName,
-            }));
+            })),
+            cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -287,8 +316,14 @@ public sealed class PollService(
 
         await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
-        return await RelireAsync(eventId, pollId, moi.MemberId, cancellationToken)
+        var vue = await RelireAsync(eventId, pollId, moi.MemberId, cancellationToken)
             .ConfigureAwait(false);
+
+        return await DiffuserAsync(
+            eventId,
+            MessagesTempsReel.SondageVote,
+            vue,
+            cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -329,8 +364,14 @@ public sealed class PollService(
 
         await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
-        return await RelireAsync(eventId, pollId, moi.MemberId, cancellationToken)
+        var vue = await RelireAsync(eventId, pollId, moi.MemberId, cancellationToken)
             .ConfigureAwait(false);
+
+        return await DiffuserAsync(
+            eventId,
+            MessagesTempsReel.SondageVote,
+            vue,
+            cancellationToken).ConfigureAwait(false);
     }
 
     public async Task<Result> SupprimerAsync(

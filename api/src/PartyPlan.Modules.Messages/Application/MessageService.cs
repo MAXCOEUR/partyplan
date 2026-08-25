@@ -95,7 +95,8 @@ public sealed class MessageService(
     IEventMembership membership,
     IEventImageStorage images,
     IClock clock,
-    IIdGenerator ids) : IPollAnnouncement
+    IIdGenerator ids,
+    IDiffusionEvenement diffusion) : IPollAnnouncement
 {
     /// <summary>Longueur du corps d'un message cité, au-delà de laquelle il est coupé.</summary>
     private const int LongueurCitation = 120;
@@ -154,6 +155,30 @@ public sealed class MessageService(
         "Ce message n'est pas épinglé.");
 
     // --------------------------------------------------------------------- fil ----
+
+    /// <summary>
+    /// Diffuse un message de discussion et renvoie le résultat.
+    /// <para>
+    /// Une conversation qui n'arrive qu'au rechargement n'est pas une conversation.
+    /// C'est le cas où l'absence de temps réel se remarque le plus vite, et celui que le
+    /// §9 du cahier des charges avait omis jusqu'au 25/08/2026.
+    /// </para>
+    /// </summary>
+    private async Task<Result<MessageView>> DiffuserAsync(
+        Guid eventId,
+        string message,
+        Result<MessageView> resultat,
+        CancellationToken cancellationToken)
+    {
+        if (resultat.IsSuccess)
+        {
+            await diffusion
+                .PublierAsync(eventId, message, resultat.Value!, cancellationToken)
+                .ConfigureAwait(false);
+        }
+
+        return resultat;
+    }
 
     public async Task<Result<MessagePage>> ListerAsync(
         Guid eventId,
@@ -434,8 +459,14 @@ public sealed class MessageService(
         db.Messages.Add(message);
         await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
-        return await VueSeuleAsync(eventId, message.Id, moi.MemberId, cancellationToken)
+        var vue = await VueSeuleAsync(eventId, message.Id, moi.MemberId, cancellationToken)
             .ConfigureAwait(false);
+
+        return await DiffuserAsync(
+            eventId,
+            MessagesTempsReel.MessageCree,
+            vue,
+            cancellationToken).ConfigureAwait(false);
     }
 
     public async Task<Result<MessageView>> ModifierAsync(
@@ -484,8 +515,14 @@ public sealed class MessageService(
 
         await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
-        return await VueSeuleAsync(eventId, message.Id, moi.MemberId, cancellationToken)
+        var vue = await VueSeuleAsync(eventId, message.Id, moi.MemberId, cancellationToken)
             .ConfigureAwait(false);
+
+        return await DiffuserAsync(
+            eventId,
+            MessagesTempsReel.MessageModifie,
+            vue,
+            cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -529,6 +566,14 @@ public sealed class MessageService(
         message.AttachmentUrl = null;
 
         await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+
+        await diffusion
+            .PublierAsync(
+                eventId,
+                MessagesTempsReel.MessageSupprime,
+                new { messageId },
+                cancellationToken)
+            .ConfigureAwait(false);
 
         return Result.Success();
     }

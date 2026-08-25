@@ -99,3 +99,20 @@ L'identité est traitée en premier : voir `docs/roadmap.md`.
 Redis, microservices, files de messages, GraphQL, Docker Swarm/Kubernetes,
 fonctionnalités IA. Le périmètre du MVP est : comptes et administration, puis présences,
 courses, dépenses, remboursements, planning, notifications.
+
+Pour toutes les interfaces Flutter :
+
+- Prioriser une vraie qualité UI/UX, pas seulement une interface fonctionnelle.
+- Utiliser Material 3.
+- Utiliser un design system global.
+- Ne jamais hardcoder les couleurs, radius, espacements ou tailles de texte.
+- Utiliser ThemeData, ColorScheme et des design tokens.
+- Conserver exactement la même identité visuelle sur toute l'application.
+- Faire du responsive mobile/tablette/web.
+- Créer des composants réutilisables.
+- Ajouter des états loading, empty, error et disabled.
+- Utiliser Skeleton/Shimmer lorsque pertinent.
+- Ajouter des animations légères et cohérentes.
+- Respecter accessibilité, contrastes et zones tactiles.
+- Éviter l'apparence Flutter/Material générique.
+- Avant de coder un nouvel écran, analyser la hiérarchie visuelle et l'expérience utilisateur.

@@ -1133,11 +1133,11 @@ item.unclaimed           item.purchased            item.deleted
 expense.created          expense.updated           expense.deleted
 balances.changed         settlement.marked         settlement.cancelled
 event.updated            activity.appended
-message.created          message.deleted
+message.created          message.updated           message.deleted
 poll.created             poll.voted
 ```
 
-`schedule.changed` a disparu avec le planning, abandonné. Les quatre messages
+`schedule.changed` a disparu avec le planning, abandonné. Les cinq messages
 `message.*` et `poll.*` ont été ajoutés le 25/08/2026 : la discussion et les sondages
 sont livrés depuis la V1.0, et `activity.appended` ne les couvrait pas — une ligne de fil
 d'activité n'est pas un message de discussion. C'est cette omission qui rendait la
