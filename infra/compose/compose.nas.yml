@@ -4,17 +4,43 @@
 #  DÉPLOIEMENT
 # ============================================================================
 #
-#  Deux fichiers dans le même répertoire sur le NAS, et rien d'autre :
+#  Deux fichiers à déposer, et un dossier de données à préparer :
 #
 #      partyplan/
 #        ├── docker-compose.yml   ← ce fichier
-#        └── .env                 ← les valeurs, jamais versionnées
+#        ├── .env                 ← les valeurs, jamais versionnées
+#        └── donnees/
+#            ├── db/              base PostgreSQL
+#            ├── media/           photos de profil et images d'événements
+#            └── sauvegardes/     vidages quotidiens
 #
 #  Le nom `.env` est imposé par Docker Compose, qui le lit automatiquement dans
 #  le répertoire du fichier compose. Un fichier nommé autrement est ignoré sans
 #  message : les variables seraient alors vides et le démarrage refusé.
 #
+#  Les données sont dans des dossiers visibles plutôt que dans des volumes
+#  Docker : sur un NAS, on veut pouvoir les parcourir, les sauvegarder avec les
+#  outils de la machine, et les copier ailleurs sans passer par Docker.
+#
+#      mkdir -p donnees/db donnees/media donnees/sauvegardes
+#      chown -R 1654:1654 donnees/media
 #      docker compose pull && docker compose up -d
+#
+#  Le `chown` n'est pas optionnel. L'API tourne sans privilèges, sous
+#  l'utilisateur `app` d'identifiant 1654, et Docker ne change jamais les droits
+#  d'un dossier monté depuis l'hôte. Sans lui, l'API démarre normalement et
+#  l'envoi d'une photo de profil échoue — un défaut qui n'apparaît qu'à l'usage.
+#
+#  Une nuance sur `donnees/db` : PostgreSQL ajuste ce dossier tout seul au
+#  premier démarrage, mais il exige des droits 0700 et se l'attribue. Le dossier
+#  sera donc visible sans être parcourable autrement qu'en root. `media/` et
+#  `sauvegardes/` le sont normalement, et c'est `sauvegardes/` qui contient ce
+#  qu'on veut vraiment lire : des vidages `.sql.gz` exploitables.
+#
+#  POUR TOUT SUPPRIMER : `docker compose down` puis effacer `donnees/`. Le
+#  dossier `db/` appartient à un autre utilisateur, il faut donc être root, ou
+#  passer par Docker :
+#      docker run --rm -v "$PWD/donnees:/d" alpine rm -rf /d
 #
 #  Ce fichier diffère de `compose.example.yml` sur un point d'architecture : pas
 #  de reverse proxy Caddy, parce que Nginx Proxy Manager tient déjà ce rôle.
@@ -122,7 +148,7 @@ services:
       # Comparaisons insensibles à la casse cohérentes avec citext.
       LANG: fr_FR.utf8
     volumes:
-      - db-data:/var/lib/postgresql/data
+      - ${DATA_PATH:-./donnees}/db:/var/lib/postgresql/data
     networks:
       - internal
     # Aucun port publié : la base n'est joignable que depuis le réseau interne.
@@ -213,7 +239,7 @@ services:
       # alors aucune clé.
       Push__FirebaseServiceAccountPath: ${FIREBASE_SERVICE_ACCOUNT_PATH}
     volumes:
-      - media:/var/lib/partyplan/media
+      - ${DATA_PATH:-./donnees}/media:/var/lib/partyplan/media
       # - ./secrets/firebase.json:/run/secrets/firebase.json:ro
     networks:
       - internal
@@ -269,18 +295,17 @@ services:
     ports:
       - "${CDN_PORT:-1002}:80"
     volumes:
-      - media:/usr/share/nginx/html:ro
+      - ${DATA_PATH:-./donnees}/media:/usr/share/nginx/html:ro
     networks:
       - edge
 
   # ----------------------------------------------------------- sauvegardes ----
   # Vidage quotidien, rétention 30 jours (NF-OPS-04).
   #
-  # Une sauvegarde restée sur la machine ne protège pas de sa perte : le volume
-  # `backups` doit être recopié hors du NAS. Sur UGOS, le plus simple est de
-  # remplacer la ligne du volume par un montage vers un dossier partagé déjà
-  # synchronisé, par exemple :
-  #     - /volume1/sauvegardes/partyplan:/backups
+  # Une sauvegarde restée sur la machine ne protège pas de sa perte :
+  # `donnees/sauvegardes` doit être recopié hors du NAS. Le plus simple est de
+  # placer DATA_PATH sur un dossier partagé déjà synchronisé vers l'extérieur,
+  # ou de pointer ce seul montage ailleurs.
   backup:
     image: postgres:16-alpine
     restart: unless-stopped
@@ -291,7 +316,7 @@ services:
     environment:
       PGPASSWORD: ${POSTGRES_PASSWORD:?}
     volumes:
-      - backups:/backups
+      - ${DATA_PATH:-./donnees}/sauvegardes:/backups
     networks:
       - internal
     entrypoint: ["/bin/sh", "-c"]
@@ -311,8 +336,3 @@ networks:
     internal: true
   # Services que Nginx Proxy Manager doit atteindre par les ports publiés.
   edge: {}
-
-volumes:
-  db-data: {}
-  media: {}
-  backups: {}
