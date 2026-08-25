@@ -2,6 +2,7 @@
 .env
 .env.*
 !.env.example
+!.env.nas.example
 *.pem
 *.key
 appsettings.Development.local.json
