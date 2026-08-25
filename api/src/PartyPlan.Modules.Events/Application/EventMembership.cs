@@ -44,6 +44,26 @@ public sealed class EventMembership(
         ];
     }
 
+    public Task<bool> IsMemberAsync(
+        Guid eventId,
+        Guid userId,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(db);
+
+        // IgnoreQueryFilters est indispensable, et pour la même raison que dans
+        // EventScopePrimer : cette requête établit l'appartenance, elle ne peut donc pas
+        // être soumise au filtre que l'appartenance alimente. Le cloisonnement est
+        // assuré par la condition explicite sur le compte, pas par le filtre.
+        return db.EventMembers
+            .IgnoreQueryFilters()
+            .AnyAsync(
+                m => m.EventId == eventId
+                    && m.UserId == userId
+                    && m.RemovedAt == null,
+                cancellationToken);
+    }
+
     public async Task<EventMemberRef?> FindCurrentAsync(
         Guid eventId,
         CancellationToken cancellationToken)

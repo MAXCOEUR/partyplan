@@ -33,4 +33,17 @@ public interface IEventMembership
     /// refusé » (RG-SEC-02).
     /// </summary>
     Task<EventMemberRef?> FindCurrentAsync(Guid eventId, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Appartenance d'un compte désigné explicitement, hors de toute requête HTTP.
+    /// <para>
+    /// Nécessaire au hub temps réel, et à lui seul. Les autres méthodes lisent l'appelant
+    /// dans le contexte HTTP et s'appuient sur le périmètre d'événements amorcé par
+    /// l'intergiciel — deux choses qui n'existent pas dans un <c>OnConnectedAsync</c> de
+    /// SignalR, qui s'exécute dans son propre périmètre d'injection et sans contexte de
+    /// requête. Les utiliser depuis le hub renvoyait « non membre » pour tout le monde :
+    /// personne ne rejoignait son groupe, et aucun changement n'était jamais reçu.
+    /// </para>
+    /// </summary>
+    Task<bool> IsMemberAsync(Guid eventId, Guid userId, CancellationToken cancellationToken);
 }

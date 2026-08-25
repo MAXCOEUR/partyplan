@@ -1,5 +1,6 @@
 namespace PartyPlan.Infrastructure.TempsReel;
 
+using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Logging;
@@ -26,31 +27,51 @@ public sealed class EventHub(
     /// <summary>Nom du groupe. Un préfixe évite toute collision avec un autre usage.</summary>
     public static string Groupe(Guid eventId) => $"event:{eventId}";
 
+    /// <summary>
+    /// Message unique de refus. Volontairement muet sur la cause : distinguer « pas
+    /// membre » de « événement inexistant » révélerait l'existence de l'événement
+    /// (RG-SEC-02).
+    /// </summary>
+    private const string Refus = "Abonnement refusé.";
+
     public override async Task OnConnectedAsync()
     {
-        var brut = Context.GetHttpContext()?.Request.Query["eventId"].ToString();
+        var requete = Context.GetHttpContext()?.Request;
 
-        if (!Guid.TryParse(brut, out var eventId))
+        if (!Guid.TryParse(requete?.Query["eventId"].ToString(), out var eventId))
         {
-            // Aucun événement demandé : rien à écouter, on refuse plutôt que de laisser
-            // une connexion inutile ouverte.
-            Context.Abort();
-            return;
+            throw new HubException(Refus);
         }
 
+        // L'identité vient de Context.User et non de ICurrentUser. ICurrentUser lit
+        // IHttpContextAccessor, qui n'est pas peuplé pendant OnConnectedAsync sur un
+        // transport WebSocket : l'appelant y paraissait anonyme, donc non membre, et
+        // personne ne rejoignait jamais son groupe.
+        if (!Guid.TryParse(
+                Context.User?.FindFirstValue(ClaimTypes.NameIdentifier),
+                out var userId))
+        {
+            throw new HubException(Refus);
+        }
+
+        // IsMemberAsync et non FindCurrentAsync : cette dernière s'appuie sur le
+        // périmètre d'événements amorcé par l'intergiciel HTTP, et SignalR exécute cette
+        // méthode dans son propre périmètre d'injection, où rien n'a été amorcé.
         var membre = await appartenance
-            .FindCurrentAsync(eventId, Context.ConnectionAborted)
+            .IsMemberAsync(eventId, userId, Context.ConnectionAborted)
             .ConfigureAwait(false);
 
-        if (membre is null)
+        if (!membre)
         {
-            // Abandon sans message : distinguer « pas membre » de « inexistant »
-            // révélerait l'existence de l'événement (RG-SEC-02).
             logger.LogInformation(
-                "Connexion temps réel refusée : appelant non membre de {Evenement}.",
+                "Connexion temps réel refusée : compte non membre de {Evenement}.",
                 eventId);
-            Context.Abort();
-            return;
+
+            // Une exception et non Context.Abort() : l'abandon est asynchrone, la
+            // poignée de main se terminait donc normalement et le client se croyait
+            // abonné jusqu'à la fermeture. Une HubException fait échouer la connexion
+            // tout de suite, ce que le client peut voir.
+            throw new HubException(Refus);
         }
 
         await Groups

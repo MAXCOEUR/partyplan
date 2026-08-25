@@ -73,8 +73,18 @@ public sealed class PartyPlanApiFixture : WebApplicationFactory<Program>, IAsync
 
         builder.ConfigureServices(services =>
         {
+            // La doublure enregistre **et** relaie vers la vraie diffusion SignalR.
+            // Enregistrer seulement suffisait tant qu'on vérifiait que les services
+            // publient ; prouver qu'un abonné reçoit exige que la diffusion parte pour
+            // de bon.
             services.RemoveAll<IDiffusionEvenement>();
-            services.AddSingleton<IDiffusionEvenement>(Diffusions);
+            services.AddSingleton<IDiffusionEvenement>(sp =>
+            {
+                Diffusions.Interne ??= ActivatorUtilities
+                    .CreateInstance<PartyPlan.Infrastructure.TempsReel.DiffusionSignalR>(sp);
+
+                return Diffusions;
+            });
         });
     }
 
@@ -120,6 +130,15 @@ public sealed class DiffusionEnregistree : IDiffusionEvenement
 {
     private readonly List<(Guid Evenement, string Message, object Charge)> _publications = [];
 
+    /// <summary>
+    /// Diffusion réelle, vers laquelle relayer après enregistrement.
+    /// <para>
+    /// Posée par la fabrique au premier accès plutôt qu'au constructeur : la fixture est
+    /// créée avant l'hôte, donc avant qu'un <c>IHubContext</c> existe.
+    /// </para>
+    /// </summary>
+    public IDiffusionEvenement? Interne { get; set; }
+
     public IReadOnlyList<(Guid Evenement, string Message, object Charge)> Publications
     {
         get
@@ -150,7 +169,8 @@ public sealed class DiffusionEnregistree : IDiffusionEvenement
             _publications.Add((eventId, message, charge));
         }
 
-        return Task.CompletedTask;
+        return Interne?.PublierAsync(eventId, message, charge, cancellationToken)
+            ?? Task.CompletedTask;
     }
 }
 
