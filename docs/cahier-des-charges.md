@@ -628,8 +628,14 @@ constitue une anomalie à journaliser.
 | EF-MSG-05 | P1 | Supprimer son propre message. |
 
 **RG-FIL-01** — Le fil d'activité enregistre au minimum : arrivée d'un membre,
-changement de statut, ajout ou suppression d'article, attribution, achat, création et
-modification de dépense, marquage de remboursement, modification de la date ou du lieu.
+changement de statut, ajout ou suppression d'article, attribution et libération, achat,
+création, modification et suppression de dépense, marquage et annulation de
+remboursement, modification de la date ou du lieu.
+
+Les actions d'annulation sont consignées au même titre que les actions qu'elles défont.
+Un fil qui enregistre l'attribution d'un article mais pas sa libération, ou le marquage
+d'un remboursement mais pas son annulation, est trompeur là où il prétend faire preuve —
+et c'est exactement la situation où deux membres se contredisent.
 
 **RG-FIL-02** — Le fil est en lecture seule et ne peut pas être modifié, y compris par
 le propriétaire. Il constitue la trace de référence en cas de litige entre membres sur

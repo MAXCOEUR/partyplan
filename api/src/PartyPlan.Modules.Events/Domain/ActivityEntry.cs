@@ -31,7 +31,7 @@ public sealed class ActivityEntry : IEventScoped
 }
 
 /// <summary>
-/// Catégories du fil d'activité. Les dix catégories exigées par RG-FIL-01 sont
+/// Catégories du fil d'activité. Les treize catégories exigées par RG-FIL-01 sont
 /// couvertes ; ne jamais renommer une valeur déjà écrite en base.
 /// </summary>
 public static class ActivityKinds
@@ -41,10 +41,33 @@ public static class ActivityKinds
     public const string ItemCreated = "item.created";
     public const string ItemDeleted = "item.deleted";
     public const string ItemClaimed = "item.claimed";
+    public const string ItemUnclaimed = "item.unclaimed";
     public const string ItemPurchased = "item.purchased";
     public const string ExpenseCreated = "expense.created";
     public const string ExpenseUpdated = "expense.updated";
+    public const string ExpenseDeleted = "expense.deleted";
     public const string SettlementMarked = "settlement.marked";
-    public const string EventScheduleChanged = "event.schedule_changed";
+    public const string SettlementCancelled = "settlement.cancelled";
     public const string EventDateOrPlaceChanged = "event.date_or_place_changed";
+
+    /// <summary>
+    /// Toutes les catégories. Sert aux tests de couverture, et à l'application qui doit
+    /// savoir composer une phrase pour chacune.
+    /// </summary>
+    public static readonly IReadOnlyList<string> All =
+    [
+        MemberJoined,
+        MemberStatusChanged,
+        ItemCreated,
+        ItemDeleted,
+        ItemClaimed,
+        ItemUnclaimed,
+        ItemPurchased,
+        ExpenseCreated,
+        ExpenseUpdated,
+        ExpenseDeleted,
+        SettlementMarked,
+        SettlementCancelled,
+        EventDateOrPlaceChanged,
+    ];
 }
