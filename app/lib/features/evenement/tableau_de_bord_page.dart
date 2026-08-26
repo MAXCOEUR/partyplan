@@ -6,6 +6,7 @@ import '../../design/components/pp_bandeau_hors_ligne.dart';
 import '../../design/components/pp_states.dart';
 import '../../design/tokens.dart';
 import '../../l10n/generated/pp_localisations.dart';
+import 'sections/section_activite.dart';
 import 'sections/section_compte_a_rebours.dart';
 import 'sections/section_identite.dart';
 import 'sections/section_ma_presence.dart';
@@ -65,6 +66,9 @@ class TableauDeBordPage extends ConsumerWidget {
             SectionCompteARebours(resume: resume),
             SectionMaPresence(evenementId: evenementId),
             SectionSynthesePresences(evenementId: evenementId, resume: resume),
+            // Après les présences, avant le partage : ce qui a bougé compte plus qu'un
+            // lien d'invitation déjà connu de ceux qui sont là.
+            SectionActivite(evenementId: evenementId),
             SectionPartage(evenementId: evenementId),
             SectionSansReponse(evenementId: evenementId),
             // --- Emplacements réservés ---------------------------------------

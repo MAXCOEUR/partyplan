@@ -9,6 +9,7 @@ import 'package:partyplan/core/models/evenement.dart';
 import 'package:partyplan/core/models/message.dart';
 import 'package:partyplan/core/models/sondage.dart';
 import 'package:partyplan/core/network/evenements_api.dart';
+import 'package:partyplan/core/models/activite.dart';
 import 'package:partyplan/core/providers.dart';
 
 import '../aide/fabriques.dart';
@@ -44,6 +45,11 @@ ProviderContainer _conteneur() {
       ),
       evenementProvider(_evenement).overrideWith((ref) async => resume()),
       membresProvider(_evenement).overrideWith((ref) async => []),
+      // Le tableau de bord porte désormais un aperçu du fil d'activité : sans
+      // cette substitution, il partirait chercher le réseau.
+      filActiviteProvider(
+        _evenement,
+      ).overrideWith((ref) async => PageActivite.vide),
       listeCoursesProvider(_evenement).overrideWith(
         (ref) async => const ListeCourses(
           avancement: AvancementCourses(total: 0, pris: 0, achetes: 0),

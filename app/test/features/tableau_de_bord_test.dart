@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:partyplan/core/models/evenement.dart';
 import 'package:partyplan/core/models/membre.dart';
+import 'package:partyplan/core/models/activite.dart';
 import 'package:partyplan/core/providers.dart';
 import 'package:partyplan/features/evenement/tableau_de_bord_page.dart';
 
@@ -170,6 +171,9 @@ void main() {
       final conteneur = ProviderContainer(
         overrides: [
           sessionStoreProvider.overrideWithValue(SessionStoreDouble()),
+          // Le tableau de bord porte désormais un aperçu du fil d'activité : sans
+          // cette substitution, il partirait chercher le réseau.
+          filActiviteProvider.overrideWith((ref, id) async => PageActivite.vide),
           evenementProvider.overrideWith(
             (ref, id) async => throw Exception('404'),
           ),
@@ -201,6 +205,9 @@ Future<void> _monter(
     overrides: [
       sessionStoreProvider.overrideWithValue(SessionStoreDouble()),
       evenementProvider.overrideWith((ref, id) async => evenement ?? resume()),
+      // Le tableau de bord porte désormais un aperçu du fil d'activité : sans
+      // cette substitution, il partirait chercher le réseau.
+      filActiviteProvider.overrideWith((ref, id) async => PageActivite.vide),
       membresProvider.overrideWith(
         (ref, id) async => membres ?? [membre(nom: 'Moi', cestMoi: true)],
       ),
