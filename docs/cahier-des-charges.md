@@ -204,10 +204,17 @@ Cette section couvre l'identité : elle est développée avant toute fonctionnal
 | ~~EF-AUTH-12~~ | — | ~~Activer une double authentification par code temporel (TOTP).~~ **Abrogé le 24/08/2026 — ADR 0007.** |
 | ~~EF-AUTH-13~~ | — | ~~Recevoir huit codes de secours à l'activation.~~ **Abrogé le 24/08/2026 — ADR 0007.** |
 
-**RG-AUTH-01** — Le mot de passe comporte 12 caractères au minimum, sans autre règle de
-composition, et est refusé s'il figure dans une liste de mots de passe compromis. Aucune
-expiration périodique n'est imposée : ces choix suivent les recommandations de l'ANSSI
-et de la CNIL.
+**RG-AUTH-01** — Le mot de passe comporte de 8 à 30 caractères, dont au moins une
+majuscule, une minuscule, un chiffre et un caractère spécial, et est refusé s'il figure
+dans une liste de mots de passe compromis. Aucune expiration périodique n'est imposée.
+
+Règle modifiée le 25/08/2026 sur décision du produit. La précédente — 12 caractères sans
+exigence de composition — suivait les recommandations de l'ANSSI et de la CNIL. Ce que le
+changement coûte, pour mémoire : huit caractères complexes offrent moins de résistance que
+douze quelconques, et le plafond à 30 interdit les phrases de passe. Le refus des mots de
+passe divulgués reste donc la protection la plus efficace de cette règle, et il est
+contrôlé **avant** la composition : dire « ajoute un caractère spécial » à quelqu'un dont
+le mot de passe figure dans une fuite le pousse vers une variante de ce même mot de passe.
 
 **RG-AUTH-02** — Le mot de passe est haché avec Argon2id. Aucun mot de passe n'est
 journalisé, transmis par courriel, ni consultable par qui que ce soit, administrateur
@@ -621,8 +628,14 @@ constitue une anomalie à journaliser.
 | EF-MSG-05 | P1 | Supprimer son propre message. |
 
 **RG-FIL-01** — Le fil d'activité enregistre au minimum : arrivée d'un membre,
-changement de statut, ajout ou suppression d'article, attribution, achat, création et
-modification de dépense, marquage de remboursement, modification de la date ou du lieu.
+changement de statut, ajout ou suppression d'article, attribution et libération, achat,
+création, modification et suppression de dépense, marquage et annulation de
+remboursement, modification de la date ou du lieu.
+
+Les actions d'annulation sont consignées au même titre que les actions qu'elles défont.
+Un fil qui enregistre l'attribution d'un article mais pas sa libération, ou le marquage
+d'un remboursement mais pas son annulation, est trompeur là où il prétend faire preuve —
+et c'est exactement la situation où deux membres se contredisent.
 
 **RG-FIL-02** — Le fil est en lecture seule et ne peut pas être modifié, y compris par
 le propriétaire. Il constitue la trace de référence en cas de litige entre membres sur
@@ -645,12 +658,15 @@ bout, groupes hors événement) n'entre dans le périmètre.
 | EF-NOT-07 | P0 | Permettre la désactivation individuelle de chaque catégorie de notification. |
 | EF-NOT-08 | P0 | Permettre la mise en sourdine d'un événement. |
 | EF-NOT-09 | P1 | Notifications par courriel en repli lorsque les notifications poussées sont indisponibles. |
+| EF-NOT-10 | P0 | Notifier l'activité de l'événement : article pris en charge, message posté. Regroupée par RG-NOT-02. |
 
 **RG-NOT-01** — Aucune notification n'est envoyée entre 22 h et 8 h heure locale du
 destinataire, sauf le rappel de début d'événement.
 
-**RG-NOT-02** — Les notifications d'activité (article pris, message) sont regroupées :
-au maximum une notification par événement et par tranche de 15 minutes.
+**RG-NOT-02** — Les notifications d'activité (`EF-NOT-10` : article pris, message) sont
+regroupées : au maximum une notification par événement, par destinataire et par tranche
+de 15 minutes. Sans ce plafond, une liste de courses remplie à plusieurs produirait une
+notification par article.
 
 **RG-NOT-03** — Le consentement aux notifications poussées est demandé au moment où
 il devient utile, jamais au premier lancement.
@@ -1132,11 +1148,25 @@ item.created             item.updated              item.claimed
 item.unclaimed           item.purchased            item.deleted
 expense.created          expense.updated           expense.deleted
 balances.changed         settlement.marked         settlement.cancelled
-schedule.changed         event.updated             activity.appended
+event.updated            activity.appended
+message.created          message.updated           message.deleted
+poll.created             poll.voted
 ```
+
+`schedule.changed` a disparu avec le planning, abandonné. Les cinq messages
+`message.*` et `poll.*` ont été ajoutés le 25/08/2026 : la discussion et les sondages
+sont livrés depuis la V1.0, et `activity.appended` ne les couvrait pas — une ligne de fil
+d'activité n'est pas un message de discussion. C'est cette omission qui rendait la
+discussion muette jusqu'à un rechargement manuel.
 
 **RG-RT-02** — Chaque message contient l'état résultant de la ressource concernée, pas
 seulement son identifiant, afin d'éviter une requête de relecture par le client.
+
+Le client de la V1 relit néanmoins par REST à la réception d'un message, plutôt que de
+rapiécer son état local : rapiécer vingt et un messages dans autant de listes paginées,
+triées et filtrées crée autant d'occasions d'afficher autre chose que la base, sans
+qu'aucune erreur ne le signale. L'état est tout de même envoyé, ce qui laisse le
+rapiéçage possible plus tard sans toucher au serveur.
 
 **RG-RT-03** — Le temps réel est une optimisation, jamais la source de vérité :
 l'interface doit rester exacte après une simple relecture REST. Une reconnexion
@@ -1212,7 +1242,7 @@ en aucun cas applicatif d'entreprise.
 | NF-SEC-03 | Journalisation | aucun montant, aucune adresse, aucun jeton en clair dans les journaux |
 | NF-SEC-04 | Limitation de débit | par IP et par session sur les endpoints d'authentification et de résolution de code |
 | NF-SEC-05 | Dépendances | analyse de vulnérabilités en intégration continue, blocage sur criticité haute |
-| NF-SEC-06 | Mots de passe | Argon2id, 12 caractères minimum, refus des mots de passe compromis — `RG-AUTH-01`, `RG-AUTH-02` |
+| NF-SEC-06 | Mots de passe | Argon2id, 8 à 30 caractères avec les quatre classes exigées, refus des mots de passe compromis — `RG-AUTH-01`, `RG-AUTH-02` |
 | ~~NF-SEC-07~~ | ~~Rôles plateforme~~ | ~~double authentification obligatoire~~ — **sans objet depuis l'`ADR 0007`** |
 | NF-SEC-08 | Journal d'audit | ajout seul, sans droit `UPDATE` ni `DELETE` pour le rôle applicatif — `RG-ADM-06` |
 | NF-SEC-09 | Téléversements | type MIME vérifié par le contenu, métadonnées EXIF supprimées, taille plafonnée — `RG-USR-01` |

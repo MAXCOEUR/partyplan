@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../app/router.dart';
 import '../../core/network/api_exception.dart';
 import '../../core/providers.dart';
+import '../../design/components/pp_auth_shell.dart';
 import '../../design/components/pp_form.dart';
 import '../../design/tokens.dart';
 import '../../l10n/generated/pp_localisations.dart';
@@ -28,6 +29,7 @@ class _MotDePasseOubliePageState extends ConsumerState<MotDePasseOubliePage> {
   final _adresse = TextEditingController();
   final _code = TextEditingController();
   final _nouveau = TextEditingController();
+  final _confirmation = TextEditingController();
 
   bool _codeDemande = false;
   bool _enCours = false;
@@ -38,6 +40,7 @@ class _MotDePasseOubliePageState extends ConsumerState<MotDePasseOubliePage> {
     _adresse.dispose();
     _code.dispose();
     _nouveau.dispose();
+    _confirmation.dispose();
     super.dispose();
   }
 
@@ -115,87 +118,91 @@ class _MotDePasseOubliePageState extends ConsumerState<MotDePasseOubliePage> {
   }
 
   @override
-  Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(),
-    body: SafeArea(
-      child: Center(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(PpSpacing.xl),
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 420),
-            child: Form(
-              key: _formulaire,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  PpAuthHeader(
-                    titre: 'Mot de passe oublié',
-                    sousTitre: _codeDemande
-                        ? 'Si un compte existe avec cette adresse, un code vient de partir. '
-                              'Colle-le ci-dessous.'
-                        : 'Indique ton adresse : un code de réinitialisation te sera envoyé.',
-                  ),
-                  const SizedBox(height: PpSpacing.xxl),
-                  if (_erreur != null) ...[
-                    PpFormError(_erreur!),
-                    const SizedBox(height: PpSpacing.lg),
-                  ],
-                  PpField(
-                    label: 'Adresse e-mail',
-                    controller: _adresse,
-                    keyboardType: TextInputType.emailAddress,
-                    validator: Validateurs.adresse,
-                    enabled: !_enCours && !_codeDemande,
-                  ),
-                  if (!_codeDemande) ...[
-                    const SizedBox(height: PpSpacing.xl),
-                    PpPrimaryButton(
-                      label: 'Recevoir un code',
-                      enCours: _enCours,
-                      onPressed: _demanderCode,
-                    ),
-                  ] else ...[
-                    const SizedBox(height: PpSpacing.lg),
-                    PpField(
-                      label: 'Code reçu',
-                      controller: _code,
-                      validator: Validateurs.code,
-                      enabled: !_enCours,
-                      aide: 'Valable 15 minutes, utilisable une seule fois.',
-                    ),
-                    const SizedBox(height: PpSpacing.lg),
-                    PpField(
-                      label: 'Nouveau mot de passe',
-                      controller: _nouveau,
-                      obscure: true,
-                      validator: Validateurs.motDePasse,
-                      enabled: !_enCours,
-                      aide:
-                          '${Validateurs.longueurMotDePasse} caractères minimum.',
-                    ),
-                    const SizedBox(height: PpSpacing.xl),
-                    PpPrimaryButton(
-                      label: 'Changer mon mot de passe',
-                      enCours: _enCours,
-                      onPressed: _reinitialiser,
-                    ),
-                    const SizedBox(height: PpSpacing.md),
-                    Text(
-                      'Toutes tes sessions seront déconnectées.',
-                      textAlign: TextAlign.center,
-                      style: Theme.of(context).textTheme.bodySmall,
-                    ),
-                    TextButton(
-                      onPressed: _enCours ? null : _demanderCode,
-                      child: const Text('Renvoyer un code'),
-                    ),
-                  ],
-                ],
-              ),
-            ),
-          ),
-        ),
+  Widget build(BuildContext context) => PpAuthShell(
+    cleFormulaire: _formulaire,
+    barre: AppBar(),
+    autofill: false,
+    enfants: [
+      PpAuthHeader(
+        titre: 'Mot de passe oublié',
+        sousTitre: _codeDemande
+            ? 'Si un compte existe avec cette adresse, un code vient de partir. '
+                  'Colle-le ci-dessous.'
+            : 'Indique ton adresse : un code de réinitialisation te sera envoyé.',
       ),
-    ),
+      const SizedBox(height: PpSpacing.xxl),
+      if (_erreur != null) ...[
+        PpFormError(_erreur!),
+        const SizedBox(height: PpSpacing.lg),
+      ],
+      PpField(
+        label: 'Adresse e-mail',
+        controller: _adresse,
+        keyboardType: TextInputType.emailAddress,
+        validator: Validateurs.adresse,
+        enabled: !_enCours && !_codeDemande,
+      ),
+      if (!_codeDemande) ...[
+        const SizedBox(height: PpSpacing.xl),
+        PpPrimaryButton(
+          label: 'Recevoir un code',
+          enCours: _enCours,
+          onPressed: _demanderCode,
+        ),
+      ] else ...[
+        const SizedBox(height: PpSpacing.lg),
+        PpField(
+          label: 'Code reçu',
+          controller: _code,
+          validator: Validateurs.code,
+          enabled: !_enCours,
+          aide: 'Valable 15 minutes, utilisable une seule fois.',
+        ),
+        const SizedBox(height: PpSpacing.lg),
+        PpField(
+          label: 'Nouveau mot de passe',
+          controller: _nouveau,
+          obscure: true,
+          validator: Validateurs.motDePasse,
+          enabled: !_enCours,
+          aide:
+              'De ${Validateurs.longueurMotDePasse} à '
+              '${Validateurs.longueurMaximaleMotDePasse} caractères, avec une majuscule, '
+              'une minuscule, un chiffre et un caractère spécial.',
+        ),
+        const SizedBox(height: PpSpacing.lg),
+        PpField(
+          label: 'Confirme le mot de passe',
+          controller: _confirmation,
+          obscure: true,
+          enabled: !_enCours,
+          autofillHints: const [AutofillHints.newPassword],
+          textInputAction: TextInputAction.done,
+          validator: (valeur) =>
+              Validateurs.confirmation(_nouveau.text, valeur),
+          onSubmitted: (_) => _reinitialiser(),
+          // Une faute de frappe sur un champ masqué ne se voit pas : sans cette
+          // seconde saisie, la personne se retrouverait enfermée dehors avec un mot
+          // de passe qu'elle croit connaître.
+          aide: 'La même, pour écarter une faute de frappe.',
+        ),
+        const SizedBox(height: PpSpacing.xl),
+        PpPrimaryButton(
+          label: 'Changer mon mot de passe',
+          enCours: _enCours,
+          onPressed: _reinitialiser,
+        ),
+        const SizedBox(height: PpSpacing.md),
+        Text(
+          'Toutes tes sessions seront déconnectées.',
+          textAlign: TextAlign.center,
+          style: Theme.of(context).textTheme.bodySmall,
+        ),
+        TextButton(
+          onPressed: _enCours ? null : _demanderCode,
+          child: const Text('Renvoyer un code'),
+        ),
+      ],
+    ],
   );
 }

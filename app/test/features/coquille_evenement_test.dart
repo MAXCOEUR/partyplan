@@ -5,6 +5,7 @@ import 'package:partyplan/core/models/article_course.dart';
 import 'package:partyplan/core/models/depense.dart';
 import 'package:partyplan/core/models/message.dart';
 import 'package:partyplan/core/models/evenement.dart';
+import 'package:partyplan/core/models/activite.dart';
 import 'package:partyplan/core/providers.dart';
 import 'package:partyplan/features/evenement/coquille_evenement.dart';
 
@@ -31,6 +32,9 @@ Future<void> _monter(WidgetTester tester, {required Size taille}) async {
   final conteneur = ProviderContainer(
     overrides: [
       evenementProvider(_evenement).overrideWith((ref) async => _resume),
+      // Le tableau de bord porte désormais un aperçu du fil d'activité : sans
+      // cette substitution, il partirait chercher le réseau.
+      filActiviteProvider.overrideWith((ref, id) async => PageActivite.vide),
       membresProvider(_evenement).overrideWith((ref) async => []),
       // Chaque onglet de la coquille est construit d'emblée par l'IndexedStack : un
       // provider laissé au vrai réseau lance un appel dont le délai d'attente survit

@@ -40,7 +40,7 @@ Toute tâche non cochée d'une version publiée devient une anomalie, pas un rep
 |---|---|---|
 | V0 — socle technique | lots 0.2 à 0.6, dépôt GitHub et protection de branche | lot 0.1 (INPI, nom, logo, hébergeur, DNS), lot 0.7 (serveur) |
 | V0.5 — comptes et administration | lots 0.8 à 0.14 | connexion Google (identifiants Google Cloud requis) |
-| V1.0 — MVP événementiel | lots 1.2 à 1.5, 1.7, 1.8, le socle hors ligne du lot 1.12, plus la discussion et les sondages remontés de V1.1 | fil d'activité (1.10), temps réel (1.6), notifications (1.11), conformité (1.13), exploitation (1.14), légal (1.15), vitrine (1.16), recette et publication (1.17, 1.18) |
+| V1.0 — MVP événementiel | lots 1.2 à 1.5, 1.7, 1.8, le fil d'activité (1.10), les notifications (1.11), le temps réel (1.6) hors recette matérielle, le socle hors ligne du lot 1.12, plus la discussion et les sondages remontés de V1.1 | conformité (1.13), exploitation (1.14), légal (1.15), vitrine (1.16), recette et publication (1.17, 1.18) |
 
 Décisions d'architecture prises : `ADR 0001` monorepo, `ADR 0002` monolithe modulaire,
 `ADR 0003` domaines et certificats, `ADR 0004` chaîne de livraison, `ADR 0005` identité
@@ -538,14 +538,52 @@ place : la feuille de route avait pris du retard sur les commits.
 
 ## Lot 1.6 — Temps réel
 
-- [ ] Exposer le hub SignalR sur `/hubs/event` — `RG-RT-01`
-- [ ] Contrôler l'appartenance à l'événement à l'établissement de la connexion
-- [ ] Diffuser les 18 messages du `§9`
-- [ ] `RG-RT-02` Chaque message porte l'état résultant, pas seulement un identifiant
-- [ ] `RG-RT-03` Rechargement complet de l'écran actif à la reconnexion
-- [ ] Client Flutter : abonnement, reconnexion, application des messages à l'état local
+**En cours depuis le 25/08/2026** — voir
+`docs/superpowers/plans/2026-08-25-temps-reel-signalr.md`. Le `§9` du cahier des charges a
+été corrigé d'abord : `schedule.changed` était mort avec le planning, et la discussion
+comme les sondages n'étaient pas couverts alors qu'ils sont livrés. 21 messages au lieu
+de 18.
+
+- [x] Exposer le hub SignalR sur `/hubs/event` — `RG-RT-01`
+- [x] Contrôler l'appartenance à l'événement à l'établissement de la connexion
+  - → et non à chaque message : une vérification par message coûterait une requête à
+    chaque diffusion. L'identifiant voyage en chaîne de requête, sinon le client serait
+    connecté avant d'être filtré
+  - → un non-membre voit sa connexion abandonnée sans message distinctif (`RG-SEC-02`)
+- [x] Diffuser les messages du `§9` — 21 sur 22
+  - → présences et événement (4), courses (6), dépenses, soldes et remboursements (6),
+    discussion et sondages (5)
+  - → `message.updated` ajouté au `§9` en cours de route : la modification d'un message
+    diffusait `message.created`, ce qui était faux
+- [x] `RG-RT-02` Chaque message porte l'état résultant, pas seulement un identifiant
+  - → trois exceptions assumées, toutes des suppressions : `member.removed`,
+    `item.deleted` et `message.deleted` ne portent qu'un identifiant, la ressource ayant
+    disparu. `balances.changed` non plus : envoyer le tableau complet des soldes dans
+    chaque message le rendrait volumineux pour rien
+- [x] `RG-RT-03` Rechargement complet de l'écran actif à la reconnexion
+- [x] Client Flutter : abonnement, reconnexion
+- [x] `RG-RT-04` Rester en instance unique : tout ajout d'une seconde instance impose Redis et un ADR préalable
+  - → documenté dans `docs/exploitation.md` : deux instances sans backplane donneraient
+    un temps réel qui fonctionne pour la moitié des membres
+- [x] `activity.appended` — diffusé par les quatre modules qui journalisent, vérifié par
+      un test à deux clients SignalR (`TempsReelDeuxClientsTests`)
+  - → la diffusion est portée par `IJournalActivite.PublierEnAttenteAsync` et non
+    recopiée à chaque point d'écriture : la charge diffusée ne peut pas diverger de la
+    ligne écrite, et treize recopies auraient offert treize occasions d'oublier un champ
+  - → un message de discussion ne diffuse **pas** `activity.appended` : il n'entre pas
+    dans les catégories de `RG-FIL-01`, et le fil clignoterait sans ligne derrière
+- [ ] Rapiéçage de l'état local au lieu d'une relecture REST
+  - → reporté sciemment : rapiécer 22 messages dans autant de listes paginées, triées et
+    filtrées créerait autant d'occasions d'afficher autre chose que la base, sans erreur
+    visible. Le serveur envoie déjà l'état, donc ce sera possible sans y retoucher
 - [ ] Recette : propagation en moins d'une seconde — `NF-PERF-05`
-- [ ] `RG-RT-04` Rester en instance unique : tout ajout d'une seconde instance impose Redis et un ADR préalable
+  - → le test à deux clients couvre la **logique** de diffusion, pas la latence : deux
+    connexions dans le même processus ne mesurent ni un vrai réseau ni un vrai appareil.
+    La cocher ici ferait croire la performance vérifiée. **La mesure remonte au lot 1.17**
+- [ ] Recette : couper le réseau d'un appareil, changer trois choses sur l'autre,
+      rétablir, et vérifier que le premier revient **exactement** à jour
+  - → même motif : exige deux appareils. Le test automatisé vérifie que la reconnexion
+    relit l'écran, pas qu'un appareil réel revient exactement à jour
 
 ## Lot 1.7 — Dépenses
 
@@ -611,19 +649,40 @@ navigation : quatre onglets subsistent, et la place est prise par la discussion.
 
 ## Lot 1.10 — Fil d'activité
 
-- [ ] `EF-FIL-01` Fil horodaté des actions structurantes
-- [ ] `RG-FIL-01` Couvrir les 10 catégories d'événements listées
-- [ ] `RG-FIL-02` Lecture seule, non modifiable même par le propriétaire
-- [ ] Pagination par curseur — `§8.1`
-- [ ] Intégration au tableau de bord
+**Livré le 26/08/2026.** Alimenté par le contrat `IJournalActivite`, inscrit dans la
+transaction de l'action métier — voir
+`docs/superpowers/specs/2026-08-26-fil-activite-design.md`.
+
+- [x] `EF-FIL-01` Fil horodaté des actions structurantes
+- [x] `RG-FIL-01` Couvrir les catégories listées — **13 et non 10** : la règle a été
+      complétée d'abord, les trois actions d'annulation manquaient (libération d'un
+      article, suppression d'une dépense, annulation d'un remboursement)
+  - → un fil qui consigne l'attribution mais pas la libération trompe là où il prétend
+    faire preuve, et c'est exactement la situation où deux membres se contredisent
+  - → `event.schedule_changed` retiré, mort avec le planning abandonné le 21/08/2026
+  - → dix points d'écriture répartis sur quatre modules, aucun n'accédant à
+    `activity_entries` : le contrat vit dans le noyau partagé, comme `IDiffusionEvenement`
+- [x] `RG-FIL-02` Lecture seule, non modifiable même par le propriétaire
+  - → deux barrières : le déclencheur d'ajout seul en base, et un écran sans la moindre
+    interaction — ni appui, ni glissement, ni menu contextuel
+- [x] Pagination par curseur — `§8.1`, convention identique à celle de la discussion
+  - → le curseur porte sur l'horodatage, l'identifiant départageant les ex æquo : une
+    action consigne parfois plusieurs lignes dans la même milliseconde
+- [x] Intégration au tableau de bord — trois dernières lignes, section masquée si vide,
+      en chargement ou en erreur
+- [x] La phrase affichée est composée par l'application, jamais stockée : la ligne étant
+      inaltérable, une formulation maladroite y resterait pour toujours et le fil ne
+      serait jamais traduisible
+- [x] Vérifié de bout en bout contre une API réelle le 26/08/2026, `make verif` vert
+- [ ] Consultation hors ligne au-delà de la première page — exigerait de remplacer
+      `shared_preferences` (limite consignée au lot 1.12), reporté sciemment
+- [ ] Lien d'une ligne vers la ressource concernée — un article supprimé n'a plus d'écran
 
 ## Lot 1.11 — Notifications
 
-**Transport livré le 25/08/2026** — voir
-`docs/superpowers/plans/2026-08-24-notifications-transport.md`. Une notification part du
-serveur et arrive sur un appareil, Android comme Web. **Aucun déclencheur métier n'est
-branché : personne ne reçoit rien tant que les lignes `EF-NOT-` ci-dessous ne sont pas
-cochées.** C'est écrit ici parce qu'un transport livré donne l'impression d'un lot fait.
+**Livré le 26/08/2026.** Le transport datait du 25/08 ; les déclencheurs, l'ordonnanceur
+et les écrans arrivent avec ce lot — voir
+`docs/superpowers/specs/2026-08-26-notifications-declencheurs-design.md`.
 
 - [x] Configurer les notifications poussées FCM pour Android et Web — exclusivement pour les notifications, jamais pour les liens, l'authentification, les données ou le temps réel
   - → enregistrement des appareils, `POST`/`DELETE /v1/me/devices`, idempotent et réaffectant
@@ -634,23 +693,49 @@ cochées.** C'est écrit ici parce qu'un transport livré donne l'impression d'u
     configuration Firebase
   - → reste à faire par l'exploitant : déposer la clé de compte de service et poser les
     cinq variables web, voir `docs/comptes-externes.md` §2
-- [ ] `EF-NOT-01` Réponses aux invitations, à l'organisateur
-- [ ] `EF-NOT-02` Modification de date ou de lieu
-- [ ] `EF-NOT-03` Rappel de non-réponse à J-3 et J-1
-- [ ] `EF-NOT-04` Articles non attribués à J-1, à l'organisateur
-- [ ] `EF-NOT-05` Rappel de début d'événement à 2 heures
-- [ ] `EF-NOT-06` Montant dû, au lendemain de l'événement
-- [ ] `EF-NOT-07` Désactivation par catégorie
-- [ ] `EF-NOT-08` Mise en sourdine d'un événement
-- [ ] `RG-NOT-01` Silence entre 22 h et 8 h, hors rappel de début
-- [ ] `RG-NOT-02` Regroupement : une notification d'activité par événement et par quart d'heure
+- [x] `EF-NOT-01` Réponses aux invitations, à l'organisateur
+  - → la clé de déduplication porte le statut : répondre deux fois « oui » ne prévient
+    qu'une fois, changer d'avis prévient de nouveau
+- [x] `EF-NOT-02` Modification de date ou de lieu
+- [x] `EF-NOT-03` Rappel de non-réponse à J-3 et J-1
+- [x] `EF-NOT-04` Articles non attribués à J-1, à l'organisateur
+- [x] `EF-NOT-05` Rappel de début d'événement à 2 heures
+- [x] `EF-NOT-06` Montant dû, au lendemain de l'événement — le montant vient du calcul de
+      soldes qui fait foi, jamais d'une formule recopiée
+- [x] `EF-NOT-07` Désactivation par catégorie
+- [x] `EF-NOT-08` Mise en sourdine d'un événement
+- [x] **`EF-NOT-10` ajoutée au cahier des charges** — `RG-NOT-02` plafonnait une
+      notification d'activité qu'aucune exigence ne créait
+- [x] `RG-NOT-01` Silence entre 22 h et 8 h, hors rappel de début
+  - → appliqué à l'envoi et non à l'inscription : la file porte l'intention, et un
+    changement de fuseau ne rend pas un horaire déjà négocié faux
+  - → dans le fuseau du destinataire (`users.timezone`, `EF-USR-07`) ; un fuseau
+    introuvable retombe sur `Europe/Paris` plutôt que de priver la personne
+- [x] `RG-NOT-02` Regroupement : une notification d'activité par événement, par
+      destinataire et par quart d'heure
 - [x] `RG-NOT-03` Consentement demandé au moment utile, pas au premier lancement
-  - → demandé à l'entrée dans une soirée, jamais au lancement : un refus système ne se
-    redemande pas, et demander trop tôt fait refuser par réflexe
 - [x] Ouverture du lien profond au tap, application déjà lancée ou démarrée par la
-      notification — le second cas est celui qu'on oublie, et c'est le plus fréquent
-- [ ] Mettre en place l'ordonnanceur des tâches de fond
-- [ ] Écrans : notifications, préférences de notification
+      notification
+- [x] Mettre en place l'ordonnanceur des tâches de fond
+  - → `BackgroundService` unique, cadence à la minute, deux passes : planifier puis
+    envoyer. Chaque rappel est calculé par le module qui détient la donnée
+  - → **le doublon est refusé par la base** (`notifications.dedup_key`), ce qui rend le
+    balayage rejouable ; trois passes consécutives ne produisent qu'un rappel
+  - → le périmètre d'événements n'étant pas amorcé hors requête HTTP, l'ordonnanceur
+    l'ouvre événement par événement plutôt que de lever le filtre de cloisonnement
+  - → **impose l'instance unique** au même titre que le hub, et pour une raison
+    différente : la clé protège la planification, pas l'envoi. Consigné dans
+    `docs/exploitation.md` §1.2, avec son drapeau d'extinction
+- [x] Écrans : notifications, préférences de notification
+  - → la liste emploie des cartes, à l'inverse du fil d'activité : ce qui se touche est
+    une carte, ce qui se lit ne l'est pas
+  - → les catégories sont nommées par ce qu'elles apportent, jamais par leur identifiant
+- [x] Recette locale sans clé FCM, le 26/08/2026 : soirée à 90 minutes du début,
+      rappel produit et envoyé dans la minute, toujours un seul après une seconde passe
+- [ ] `EF-NOT-09` Repli par courriel — `P1`, hors périmètre de ce lot
+- [ ] **Recette sur un appareil réel, avec une vraie clé FCM** — la chaîne est vérifiée
+      avec l'émetteur en repli console (règle 5). Qu'une notification s'affiche sur un
+      téléphone reste à éprouver, et remonte au lot 1.17
 
 ## Lot 1.12 — Interface et navigation
 

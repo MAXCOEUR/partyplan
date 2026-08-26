@@ -17,6 +17,7 @@ public sealed record ShoppingItemView(
     string Category,
     Guid? AssignedMemberId,
     string? AssignedDisplayName,
+    string? AssignedAvatarUrl,
     bool AssignedToMe,
     bool IsPurchased,
     decimal? PurchasedQuantity,
@@ -56,7 +57,10 @@ public sealed class ShoppingService(
     IEventMembership membership,
     IExpenseFromPurchase depenses,
     IClock clock,
-    IIdGenerator ids)
+    IIdGenerator ids,
+    IDiffusionEvenement diffusion,
+    IJournalActivite journal,
+    IFileNotifications notifications)
 {
     public static readonly DomainError EventNotFound = DomainError.NotFound(
         "event.not_found",
@@ -105,7 +109,7 @@ public sealed class ShoppingService(
         }
 
         var membres = await membership.ListActiveAsync(eventId, cancellationToken).ConfigureAwait(false);
-        var noms = membres.ToDictionary(m => m.MemberId, m => m.DisplayName);
+        var noms = membres.ToDictionary(m => m.MemberId);
 
         var articles = await db.ShoppingItems
             .Where(i => i.EventId == eventId)
@@ -164,10 +168,26 @@ public sealed class ShoppingService(
         };
 
         db.ShoppingItems.Add(article);
+
+        journal.Consigner(
+            eventId,
+            moi.MemberId,
+            moi.DisplayName,
+            ActivityKinds.ItemCreated,
+            new { libelle = article.Name });
+
         await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
-        return await RelireAsync(eventId, article.Id, moi.MemberId, cancellationToken)
+        await journal.PublierEnAttenteAsync(cancellationToken).ConfigureAwait(false);
+
+        var ajoute = await RelireAsync(eventId, article.Id, moi.MemberId, cancellationToken)
             .ConfigureAwait(false);
+
+        return await DiffuserAsync(
+            eventId,
+            MessagesTempsReel.ArticleCree,
+            ajoute,
+            cancellationToken).ConfigureAwait(false);
     }
 
     public async Task<Result<ShoppingItemView>> ModifierAsync(
@@ -201,8 +221,14 @@ public sealed class ShoppingService(
 
         await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
-        return Result<ShoppingItemView>.Success(
-            Vue(article, contexte.MoiId, await NomsAsync(eventId, cancellationToken).ConfigureAwait(false)));
+        return await DiffuserAsync(
+            eventId,
+            MessagesTempsReel.ArticleModifie,
+            Result<ShoppingItemView>.Success(Vue(
+                article,
+                contexte.MoiId,
+                await NomsAsync(eventId, cancellationToken).ConfigureAwait(false))),
+            cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -226,7 +252,27 @@ public sealed class ShoppingService(
         }
 
         contexte.Article!.DeletedAt = clock.UtcNow;
+
+        journal.Consigner(
+            eventId,
+            contexte.MoiId,
+            contexte.MonNom,
+            ActivityKinds.ItemDeleted,
+            new { libelle = contexte.Article.Name });
+
         await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+
+        await journal.PublierEnAttenteAsync(cancellationToken).ConfigureAwait(false);
+
+        // Pas d'état : l'article a quitté la liste, son identifiant suffit à savoir
+        // quoi retirer.
+        await diffusion
+            .PublierAsync(
+                eventId,
+                MessagesTempsReel.ArticleSupprime,
+                new { itemId },
+                cancellationToken)
+            .ConfigureAwait(false);
 
         return Result.Success();
     }
@@ -270,8 +316,37 @@ public sealed class ShoppingService(
                 : AlreadyClaimed;
         }
 
-        return await RelireAsync(eventId, itemId, contexte.MoiId, cancellationToken)
+        // L'attribution passe par une écriture conditionnelle, déjà validée à ce
+        // point : la ligne de fil ne peut donc pas partager sa transaction. L'ordre est
+        // choisi — attribuer puis consigner — pour que le seul échec possible soit une
+        // attribution sans sa ligne, jamais une ligne sans attribution. Un fil qui
+        // annonce ce qui n'a pas eu lieu serait pire qu'un fil incomplet.
+        journal.Consigner(
+            eventId,
+            contexte.MoiId,
+            contexte.MonNom,
+            ActivityKinds.ItemClaimed,
+            new { libelle = contexte.Article!.Name });
+
+        await PrevenirDeLActiviteAsync(
+                eventId,
+                contexte.MoiId,
+                $"{contexte.MonNom} s'occupe de {contexte.Article.Name}.",
+                cancellationToken)
             .ConfigureAwait(false);
+
+        await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+
+        await journal.PublierEnAttenteAsync(cancellationToken).ConfigureAwait(false);
+
+        var vue = await RelireAsync(eventId, itemId, contexte.MoiId, cancellationToken)
+            .ConfigureAwait(false);
+
+        return await DiffuserAsync(
+            eventId,
+            MessagesTempsReel.ArticleAttribue,
+            vue,
+            cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>Retire son attribution (EF-CRS-04). Seul l'attributaire peut le faire.</summary>
@@ -297,10 +372,25 @@ public sealed class ShoppingService(
         article.AssignedAt = null;
         article.UpdatedAt = clock.UtcNow;
 
+        journal.Consigner(
+            eventId,
+            contexte.MoiId,
+            contexte.MonNom,
+            ActivityKinds.ItemUnclaimed,
+            new { libelle = article.Name });
+
         await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
-        return await RelireAsync(eventId, itemId, contexte.MoiId, cancellationToken)
+        await journal.PublierEnAttenteAsync(cancellationToken).ConfigureAwait(false);
+
+        var vue = await RelireAsync(eventId, itemId, contexte.MoiId, cancellationToken)
             .ConfigureAwait(false);
+
+        return await DiffuserAsync(
+            eventId,
+            MessagesTempsReel.ArticleLibere,
+            vue,
+            cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -356,7 +446,20 @@ public sealed class ShoppingService(
         article.ActualPrice = requete.ActualPrice;
         article.UpdatedAt = clock.UtcNow;
 
+        // Le montant n'est porté que s'il a été déclaré : un zéro serait lu comme un
+        // prix, alors qu'il n'y a pas eu de saisie.
+        journal.Consigner(
+            eventId,
+            contexte.MoiId,
+            contexte.MonNom,
+            ActivityKinds.ItemPurchased,
+            requete.ActualPrice is { } prixConsigne
+                ? new { libelle = article.Name, montant = prixConsigne }
+                : (object)new { libelle = article.Name });
+
         await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+
+        await journal.PublierEnAttenteAsync(cancellationToken).ConfigureAwait(false);
 
         if (requete.ActualPrice is { } prix)
         {
@@ -377,18 +480,61 @@ public sealed class ShoppingService(
                 .ConfigureAwait(false);
         }
 
-        return await RelireAsync(eventId, itemId, contexte.MoiId, cancellationToken)
+        var vue = await RelireAsync(eventId, itemId, contexte.MoiId, cancellationToken)
             .ConfigureAwait(false);
+
+        return await DiffuserAsync(
+            eventId,
+            MessagesTempsReel.ArticleAchete,
+            vue,
+            cancellationToken).ConfigureAwait(false);
     }
 
     // --------------------------------------------------------------- outils ----
+
+    /// <summary>
+    /// Prévient les autres membres d'une activité (<c>EF-NOT-10</c>).
+    /// <para>
+    /// Plafonnée par <c>RG-NOT-02</c>, dans la mise en file : une liste remplie à
+    /// plusieurs produirait sinon une notification par article.
+    /// </para>
+    /// </summary>
+    private async Task PrevenirDeLActiviteAsync(
+        Guid eventId,
+        Guid acteur,
+        string corps,
+        CancellationToken cancellationToken)
+    {
+        var autres = await membership.ListActiveAsync(eventId, cancellationToken)
+            .ConfigureAwait(false);
+
+        var instant = clock.UtcNow;
+
+        foreach (var membre in autres)
+        {
+            if (membre.MemberId == acteur || membre.UserId is not { } compte)
+            {
+                continue;
+            }
+
+            notifications.Enfiler(new NotificationAEnvoyer(
+                compte,
+                eventId,
+                NotificationCategories.Activity,
+                "Ça bouge dans la soirée",
+                corps,
+                $"/events/{eventId}/courses",
+                instant,
+                $"{eventId}:{NotificationCategories.Activity}:{compte}:{instant.ToUnixTimeMilliseconds()}"));
+        }
+    }
 
     /// <summary>
     /// Article visé, appelant, et droit de gestion. <c>JeGere</c> distingue une
     /// personne qui arbitre l'événement d'un simple participant : elle seule agit sur
     /// ce qui appartient à autrui.
     /// </summary>
-    private async Task<(ShoppingItem? Article, Guid MoiId, bool JeGere, DomainError? Erreur)>
+    private async Task<(ShoppingItem? Article, Guid MoiId, string MonNom, bool JeGere, DomainError? Erreur)>
         ContexteAsync(
             Guid eventId,
             Guid itemId,
@@ -397,7 +543,7 @@ public sealed class ShoppingService(
         var moi = await membership.FindCurrentAsync(eventId, cancellationToken).ConfigureAwait(false);
         if (moi is null)
         {
-            return (null, Guid.Empty, false, EventNotFound);
+            return (null, Guid.Empty, string.Empty, false, EventNotFound);
         }
 
         var article = await db.ShoppingItems
@@ -405,8 +551,8 @@ public sealed class ShoppingService(
             .ConfigureAwait(false);
 
         return article is null
-            ? (null, moi.MemberId, moi.CanManage, NotFound)
-            : (article, moi.MemberId, moi.CanManage, null);
+            ? (null, moi.MemberId, moi.DisplayName, moi.CanManage, NotFound)
+            : (article, moi.MemberId, moi.DisplayName, moi.CanManage, null);
     }
 
     private async Task<Result<ShoppingItemView>> RelireAsync(
@@ -428,19 +574,43 @@ public sealed class ShoppingService(
                 await NomsAsync(eventId, cancellationToken).ConfigureAwait(false)));
     }
 
-    private async Task<Dictionary<Guid, string>> NomsAsync(
+    private async Task<Dictionary<Guid, EventMemberRef>> NomsAsync(
         Guid eventId,
         CancellationToken cancellationToken)
     {
         var membres = await membership.ListActiveAsync(eventId, cancellationToken).ConfigureAwait(false);
 
-        return membres.ToDictionary(m => m.MemberId, m => m.DisplayName);
+        return membres.ToDictionary(m => m.MemberId);
+    }
+
+    /// <summary>
+    /// Diffuse le résultat d'une mutation, et le renvoie tel quel.
+    /// <para>
+    /// Une aide plutôt qu'un appel répété six fois : l'oubli d'une diffusion ne se voit
+    /// pas — l'endpoint répond correctement, seuls les autres écrans restent muets.
+    /// Ne diffuse rien sur un échec : il n'y a alors aucun état résultant.
+    /// </para>
+    /// </summary>
+    private async Task<Result<ShoppingItemView>> DiffuserAsync(
+        Guid eventId,
+        string message,
+        Result<ShoppingItemView> resultat,
+        CancellationToken cancellationToken)
+    {
+        if (resultat.IsSuccess)
+        {
+            await diffusion
+                .PublierAsync(eventId, message, resultat.Value!, cancellationToken)
+                .ConfigureAwait(false);
+        }
+
+        return resultat;
     }
 
     private static ShoppingItemView Vue(
         ShoppingItem article,
         Guid moiId,
-        IReadOnlyDictionary<Guid, string> noms) =>
+        IReadOnlyDictionary<Guid, EventMemberRef> noms) =>
         new(
             article.Id,
             article.Name,
@@ -449,7 +619,10 @@ public sealed class ShoppingService(
             article.Category.ToString(),
             article.AssignedMemberId,
             article.AssignedMemberId is { } assigne
-                ? noms.GetValueOrDefault(assigne)
+                ? noms.GetValueOrDefault(assigne)?.DisplayName
+                : null,
+            article.AssignedMemberId is { } avecPhoto
+                ? noms.GetValueOrDefault(avecPhoto)?.AvatarUrl
                 : null,
             article.AssignedMemberId == moiId,
             article.IsPurchased,

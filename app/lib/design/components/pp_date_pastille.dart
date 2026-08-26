@@ -52,7 +52,7 @@ class PpDatePastille extends StatelessWidget {
 
     final couleurTexte = estompee
         ? theme.colorScheme.onSurfaceVariant
-        : Colors.white;
+        : theme.colorScheme.onPrimary;
 
     return Semantics(
       label: valeur == null

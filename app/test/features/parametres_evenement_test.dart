@@ -142,6 +142,9 @@ Future<void> _monter(
   final conteneur = ProviderContainer(
     overrides: [
       sessionStoreProvider.overrideWithValue(SessionStoreDouble()),
+      // L'écran porte désormais la mise en sourdine : sans cette substitution, il
+      // partirait chercher le réseau.
+      sourdineProvider.overrideWith((ref, id) async => false),
       evenementProvider.overrideWith((ref, id) async => resume()),
       membresProvider.overrideWith(
         (ref, id) async =>

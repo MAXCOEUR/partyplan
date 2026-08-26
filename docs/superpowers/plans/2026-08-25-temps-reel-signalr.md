@@ -115,7 +115,7 @@ dans la feuille de route.
 Aucun code. Cette tâche existe parce que le §9 décrit aujourd'hui un produit qui n'est pas
 celui qu'on construit, et que les tâches suivantes s'y réfèrent.
 
-- [ ] **Étape 1 : remplacer la liste des messages**
+- [x] **Étape 1 : remplacer la liste des messages**
 
 Dans `docs/cahier-des-charges.md`, remplacer le bloc de 18 messages par les 21 ci-dessus,
 puis ajouter sous la liste :
@@ -127,7 +127,7 @@ sont livrés depuis la V1.0, et `activity.appended` ne les couvrait pas — une 
 d'activité n'est pas un message de discussion.
 ```
 
-- [ ] **Étape 2 : préciser RG-RT-02**
+- [x] **Étape 2 : préciser RG-RT-02**
 
 Ajouter à la suite de `RG-RT-02` :
 
@@ -138,7 +138,7 @@ autant d'occasions de désynchronisation silencieuse. L'état est tout de même 
 qui laisse le rapiéçage possible sans toucher au serveur.
 ```
 
-- [ ] **Étape 3 : commit**
+- [x] **Étape 3 : commit**
 
 ```bash
 git add docs/cahier-des-charges.md docs/roadmap.md
@@ -162,7 +162,7 @@ git commit -m "docs(temps-reel): acter les messages réellement diffusés"
 - Produit : `IDiffusionEvenement.PublierAsync(Guid eventId, string message, object charge, CancellationToken)`,
   `MessagesTempsReel` (constantes), `EventHub`
 
-- [ ] **Étape 1 : écrire le contrat**
+- [x] **Étape 1 : écrire le contrat**
 
 `api/src/PartyPlan.SharedKernel/Contracts/IDiffusionEvenement.cs`
 
@@ -232,7 +232,7 @@ public static class MessagesTempsReel
 }
 ```
 
-- [ ] **Étape 2 : écrire le test qui échoue**
+- [x] **Étape 2 : écrire le test qui échoue**
 
 `api/tests/PartyPlan.IntegrationTests/TempsReelTests.cs`
 
@@ -275,12 +275,12 @@ public sealed class TempsReelTests(PartyPlanApiFixture fixture)
 }
 ```
 
-- [ ] **Étape 3 : lancer le test, vérifier qu'il échoue**
+- [x] **Étape 3 : lancer le test, vérifier qu'il échoue**
 
 Commande : `dotnet test api/tests/PartyPlan.IntegrationTests/PartyPlan.IntegrationTests.csproj --filter "FullyQualifiedName~TempsReel"`
 Attendu : ÉCHEC, 404 au lieu de 401 — le hub n'est pas monté.
 
-- [ ] **Étape 4 : écrire le hub**
+- [x] **Étape 4 : écrire le hub**
 
 `api/src/PartyPlan.Infrastructure/TempsReel/EventHub.cs`
 
@@ -349,7 +349,7 @@ public sealed class EventHub(
 }
 ```
 
-- [ ] **Étape 5 : écrire l'implémentation de la diffusion**
+- [x] **Étape 5 : écrire l'implémentation de la diffusion**
 
 `api/src/PartyPlan.Infrastructure/TempsReel/DiffusionSignalR.cs`
 
@@ -400,7 +400,7 @@ public sealed class DiffusionSignalR(
 }
 ```
 
-- [ ] **Étape 6 : enregistrer et monter**
+- [x] **Étape 6 : enregistrer et monter**
 
 Dans `api/src/PartyPlan.Infrastructure/DependencyInjection.cs`, à la suite des autres
 contrats :
@@ -425,12 +425,12 @@ et après `app.UseAuthentication();` — l'ordre importe, le hub porte `[Authori
 app.MapHub<PartyPlan.Infrastructure.TempsReel.EventHub>("/hubs/event");
 ```
 
-- [ ] **Étape 7 : lancer le test, vérifier qu'il passe**
+- [x] **Étape 7 : lancer le test, vérifier qu'il passe**
 
 Commande : `dotnet test api/tests/PartyPlan.IntegrationTests/PartyPlan.IntegrationTests.csproj --filter "FullyQualifiedName~TempsReel"`
 Attendu : 1 test réussi.
 
-- [ ] **Étape 8 : frontières et ensemble**
+- [x] **Étape 8 : frontières et ensemble**
 
 ```bash
 make frontieres
@@ -438,7 +438,7 @@ make verif
 ```
 Attendu : 11 modules, aucune violation ; toute la suite verte.
 
-- [ ] **Étape 9 : commit**
+- [x] **Étape 9 : commit**
 
 ```bash
 git add api docs
@@ -458,7 +458,7 @@ git commit -m "feat(temps-reel): hub SignalR et contrat de diffusion"
 - Consomme : `IDiffusionEvenement`, `MessagesTempsReel`
 - Produit : rien de nouveau ; les services acquièrent une dépendance
 
-- [ ] **Étape 1 : écrire le test qui échoue**
+- [x] **Étape 1 : écrire le test qui échoue**
 
 `api/tests/PartyPlan.UnitTests/DiffusionPresencesTests.cs`
 
@@ -510,13 +510,13 @@ internal sealed class DiffusionDeTest : IDiffusionEvenement
 }
 ```
 
-- [ ] **Étape 2 : lancer le test, vérifier qu'il échoue**
+- [x] **Étape 2 : lancer le test, vérifier qu'il échoue**
 
 Commande : `dotnet test api/tests/PartyPlan.UnitTests/PartyPlan.UnitTests.csproj --filter "FullyQualifiedName~DiffusionPresences"`
 Attendu : ÉCHEC de compilation si la tâche 2 n'est pas faite ; sinon PASSE — c'est un test
 de garde, il n'a pas de phase rouge utile. Le rouge utile vient de l'étape 3.
 
-- [ ] **Étape 3 : écrire le test d'intégration qui échoue**
+- [x] **Étape 3 : écrire le test d'intégration qui échoue**
 
 Ajouter à `api/tests/PartyPlan.IntegrationTests/TempsReelTests.cs` :
 
@@ -549,11 +549,11 @@ et compléter la fixture avec une substitution de `IDiffusionEvenement` par
 `DiffusionDeTest`. Si la fixture n'a pas d'événement de référence, en créer un dans le
 test par les endpoints publics plutôt que d'en ajouter un à la fixture.
 
-- [ ] **Étape 4 : lancer, vérifier l'échec**
+- [x] **Étape 4 : lancer, vérifier l'échec**
 
 Attendu : ÉCHEC, aucune publication enregistrée.
 
-- [ ] **Étape 5 : diffuser depuis AttendanceService**
+- [x] **Étape 5 : diffuser depuis AttendanceService**
 
 Ajouter `IDiffusionEvenement diffusion` au constructeur principal du service, puis après
 chaque enregistrement réussi :
@@ -579,11 +579,11 @@ l'identifiant (`RG-RT-02`).
 Dans `EventService.ModifierAsync` (ou son nom réel, à vérifier), diffuser
 `MessagesTempsReel.EvenementModifie` avec le `EventSummary` renvoyé.
 
-- [ ] **Étape 6 : lancer, vérifier le vert**
+- [x] **Étape 6 : lancer, vérifier le vert**
 
 Attendu : les tests de la tâche 3 passent.
 
-- [ ] **Étape 7 : `make verif` puis commit**
+- [x] **Étape 7 : `make verif` puis commit**
 
 ```bash
 make verif
@@ -602,7 +602,7 @@ git commit -m "feat(temps-reel): diffuser les présences et les modifications d'
 **Interfaces :**
 - Consomme : `IDiffusionEvenement`, `MessagesTempsReel`
 
-- [ ] **Étape 1 : écrire le test qui échoue**
+- [x] **Étape 1 : écrire le test qui échoue**
 
 ```csharp
     [Fact]
@@ -627,11 +627,11 @@ git commit -m "feat(temps-reel): diffuser les présences et les modifications d'
     }
 ```
 
-- [ ] **Étape 2 : lancer, vérifier l'échec**
+- [x] **Étape 2 : lancer, vérifier l'échec**
 
 Attendu : ÉCHEC, aucune publication.
 
-- [ ] **Étape 3 : diffuser depuis ShoppingService**
+- [x] **Étape 3 : diffuser depuis ShoppingService**
 
 Ajouter `IDiffusionEvenement diffusion` au constructeur, puis une publication après chaque
 mutation réussie, avec la vue déjà construite pour la réponse :
@@ -650,9 +650,9 @@ mutation réussie, avec la vue déjà construite pour la réponse :
 Expenses**, pas depuis Shopping : c'est lui qui possède la dépense, et Shopping ne doit
 pas prétendre décrire l'état d'une ressource qui ne lui appartient pas (règle 6).
 
-- [ ] **Étape 4 : lancer, vérifier le vert**
+- [x] **Étape 4 : lancer, vérifier le vert**
 
-- [ ] **Étape 5 : `make verif` puis commit**
+- [x] **Étape 5 : `make verif` puis commit**
 
 ```bash
 make verif
@@ -672,7 +672,7 @@ git commit -m "feat(temps-reel): diffuser les changements de liste de courses"
 **Interfaces :**
 - Consomme : `IDiffusionEvenement`, `MessagesTempsReel`
 
-- [ ] **Étape 1 : écrire le test qui échoue**
+- [x] **Étape 1 : écrire le test qui échoue**
 
 ```csharp
     [Fact]
@@ -696,9 +696,9 @@ git commit -m "feat(temps-reel): diffuser les changements de liste de courses"
     }
 ```
 
-- [ ] **Étape 2 : lancer, vérifier l'échec**
+- [x] **Étape 2 : lancer, vérifier l'échec**
 
-- [ ] **Étape 3 : diffuser**
+- [x] **Étape 3 : diffuser**
 
 Dans le service de dépenses, après chaque mutation :
 
@@ -715,9 +715,9 @@ l'utilise — il invalide.
 Dans le service de règlements : `ReglementMarque` et `ReglementAnnule`, chacun suivi de
 `SoldesChanges`.
 
-- [ ] **Étape 4 : lancer, vérifier le vert**
+- [x] **Étape 4 : lancer, vérifier le vert**
 
-- [ ] **Étape 5 : `make verif` puis commit**
+- [x] **Étape 5 : `make verif` puis commit**
 
 ```bash
 make verif
@@ -734,7 +734,7 @@ git commit -m "feat(temps-reel): diffuser les dépenses, les soldes et les rembo
 - Modifier : `api/src/PartyPlan.Modules.Polls/Application/`
 - Test : ajouts à `TempsReelTests.cs`
 
-- [ ] **Étape 1 : écrire le test qui échoue**
+- [x] **Étape 1 : écrire le test qui échoue**
 
 ```csharp
     [Fact]
@@ -753,9 +753,9 @@ git commit -m "feat(temps-reel): diffuser les dépenses, les soldes et les rembo
     }
 ```
 
-- [ ] **Étape 2 : lancer, vérifier l'échec**
+- [x] **Étape 2 : lancer, vérifier l'échec**
 
-- [ ] **Étape 3 : diffuser**
+- [x] **Étape 3 : diffuser**
 
 | Service | Méthode | Message | Charge |
 |---|---|---|---|
@@ -768,9 +768,9 @@ git commit -m "feat(temps-reel): diffuser les dépenses, les soldes et les rembo
 et diffuser depuis ce point unique. S'il n'existe pas encore (lot 1.10 non fait), **ne pas
 l'implémenter** : cocher la ligne serait faux. Le noter dans la feuille de route.
 
-- [ ] **Étape 4 : lancer, vérifier le vert**
+- [x] **Étape 4 : lancer, vérifier le vert**
 
-- [ ] **Étape 5 : `make verif` puis commit**
+- [x] **Étape 5 : `make verif` puis commit**
 
 ```bash
 make verif
@@ -792,7 +792,7 @@ git commit -m "feat(temps-reel): diffuser la discussion et les sondages"
 - Produit : `MessageTempsReel(nom, charge)`, `ServiceTempsReel.connecter(eventId)`,
   `ServiceTempsReel.messages`, `ServiceTempsReel.deconnecter()`
 
-- [ ] **Étape 1 : ajouter la dépendance**
+- [x] **Étape 1 : ajouter la dépendance**
 
 Dans `app/pubspec.yaml`, section `dependencies` :
 
@@ -806,7 +806,7 @@ Puis `cd app && flutter pub get`. Si la résolution échoue avec Flutter 3.38, p
 dernière version compatible annoncée et **noter la version retenue dans le message de
 commit**.
 
-- [ ] **Étape 2 : écrire le message typé**
+- [x] **Étape 2 : écrire le message typé**
 
 `app/lib/core/temps_reel/message_temps_reel.dart`
 
@@ -837,7 +837,7 @@ class MessageTempsReel {
 }
 ```
 
-- [ ] **Étape 3 : écrire le test qui échoue**
+- [x] **Étape 3 : écrire le test qui échoue**
 
 `app/test/core/temps_reel_test.dart`
 
@@ -890,13 +890,13 @@ void main() {
 }
 ```
 
-- [ ] **Étape 4 : lancer, vérifier le rouge puis le vert**
+- [x] **Étape 4 : lancer, vérifier le rouge puis le vert**
 
 Commande : `cd app && flutter test test/core/temps_reel_test.dart`
 Le rouge vient de l'absence du fichier si l'étape 2 n'est pas encore faite ; sinon
 constater le vert directement et le noter.
 
-- [ ] **Étape 5 : écrire le service**
+- [x] **Étape 5 : écrire le service**
 
 `app/lib/core/temps_reel/service_temps_reel.dart`
 
@@ -1034,7 +1034,7 @@ Vérifier la signature réelle de `SessionStore` pour la lecture du jeton :
 `grep -n "jetonAcces\|Future<String?>" app/lib/core/storage/session_store.dart`, et
 adapter l'appel.
 
-- [ ] **Étape 6 : `make verif` puis commit**
+- [x] **Étape 6 : `make verif` puis commit**
 
 ```bash
 make verif
@@ -1056,7 +1056,7 @@ git commit -m "feat(temps-reel): client SignalR et classement des messages"
 - Consomme : `ServiceTempsReel`, les providers d'événement
 - Produit : `serviceTempsReelProvider`, `EcouteEvenement`
 
-- [ ] **Étape 1 : écrire le test qui échoue**
+- [x] **Étape 1 : écrire le test qui échoue**
 
 `app/test/features/temps_reel_ecran_test.dart`
 
@@ -1125,11 +1125,11 @@ class _ServiceDouble implements ServiceTempsReel {
 }
 ```
 
-- [ ] **Étape 2 : lancer, vérifier l'échec**
+- [x] **Étape 2 : lancer, vérifier l'échec**
 
 Attendu : `EcouteEvenement` et `serviceTempsReelProvider` introuvables.
 
-- [ ] **Étape 3 : écrire l'écoute**
+- [x] **Étape 3 : écrire l'écoute**
 
 `app/lib/core/temps_reel/ecoute_evenement.dart`
 
@@ -1180,7 +1180,7 @@ classement par famille de la tâche 7. C'est volontaire pour cette étape : une 
 vingt personnes produit peu de messages, et un seul chemin est plus sûr que sept. Le
 classement sert à affiner ensuite, et il est déjà testé.
 
-- [ ] **Étape 4 : ajouter le provider**
+- [x] **Étape 4 : ajouter le provider**
 
 Dans `app/lib/core/providers.dart` :
 
@@ -1198,7 +1198,7 @@ final serviceTempsReelProvider = Provider<ServiceTempsReel>(
 Reprendre le nom réel de la constante d'adresse de l'API :
 `grep -n "API_BASE_URL" app/lib/core/providers.dart app/lib/core/network/api_client.dart`.
 
-- [ ] **Étape 5 : brancher la coquille d'événement**
+- [x] **Étape 5 : brancher la coquille d'événement**
 
 Dans `app/lib/features/evenement/coquille_evenement.dart`, `initState` invalide déjà à
 l'ouverture. Y ajouter la connexion, et la fermer dans `dispose` :
@@ -1223,9 +1223,9 @@ et dans `dispose` :
     ref.read(serviceTempsReelProvider).deconnecter();
 ```
 
-- [ ] **Étape 6 : lancer, vérifier le vert**
+- [x] **Étape 6 : lancer, vérifier le vert**
 
-- [ ] **Étape 7 : `make verif` puis commit**
+- [x] **Étape 7 : `make verif` puis commit**
 
 ```bash
 make verif
@@ -1242,7 +1242,7 @@ git commit -m "feat(temps-reel): relire l'écran d'événement à chaque changem
 - Modifier : `docs/exploitation.md`
 - Modifier : `docs/roadmap.md`
 
-- [ ] **Étape 1 : documenter l'exigence de proxy**
+- [x] **Étape 1 : documenter l'exigence de proxy**
 
 Dans `docs/exploitation.md`, ajouter à la section de mise en service :
 
@@ -1256,7 +1256,7 @@ temps réel fonctionne, plus lentement et en consommant davantage. Aucune erreur
 n'apparaît, ce qui rend l'oubli difficile à repérer.
 ```
 
-- [ ] **Étape 2 : cocher le lot 1.6**
+- [x] **Étape 2 : cocher le lot 1.6**
 
 Dans `docs/roadmap.md`, lot 1.6, cocher ce qui est fait et laisser explicitement ouvert :
 
@@ -1265,7 +1265,7 @@ Dans `docs/roadmap.md`, lot 1.6, cocher ce qui est fait et laisser explicitement
 - la recette de propagation en moins d'une seconde (`NF-PERF-05`), qui demande deux
   appareils réels.
 
-- [ ] **Étape 3 : `make verif` puis commit**
+- [x] **Étape 3 : `make verif` puis commit**
 
 ```bash
 make verif

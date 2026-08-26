@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using PartyPlan.Modules.Events.Domain;
 using PartyPlan.Modules.Events.Persistence;
 using PartyPlan.SharedKernel.Abstractions;
+using PartyPlan.SharedKernel.Contracts;
 using PartyPlan.SharedKernel.Enums;
 using PartyPlan.SharedKernel.Primitives;
 
@@ -53,7 +54,10 @@ public sealed class EventService(
     ICurrentUser currentUser,
     IEventScope scope,
     IClock clock,
-    IIdGenerator ids)
+    IIdGenerator ids,
+    IDiffusionEvenement diffusion,
+    IJournalActivite journal,
+    IFileNotifications notifications)
 {
     /// <summary>Nombre de tentatives de tirage d'un code court avant abandon.</summary>
     private const int ShortCodeAttempts = 5;
@@ -278,10 +282,13 @@ public sealed class EventService(
 
         // EF-EVT-03 : un changement de date ou de lieu doit être signalé aux membres qui
         // ont déjà répondu. La détection a lieu ici, avant écrasement des valeurs.
-        var dateOuLieuChange = debut != evenement.StartsAt
-                               || fin != evenement.EndsAt
-                               || (requete.Address is not null
-                                   && requete.Address.Trim() != evenement.Address);
+        // Les deux champs sont distingués : sans cela, l'application ne peut pas dire
+        // si c'est la date ou le lieu qui a bougé, et les deux cas n'en font qu'un à
+        // l'affichage.
+        var dateChange = debut != evenement.StartsAt || fin != evenement.EndsAt;
+        var lieuChange = requete.Address is not null
+                         && requete.Address.Trim() != evenement.Address;
+        var dateOuLieuChange = dateChange || lieuChange;
 
         evenement.Name = nom;
         evenement.StartsAt = debut;
@@ -299,20 +306,50 @@ public sealed class EventService(
 
         if (dateOuLieuChange)
         {
-            db.ActivityEntries.Add(new ActivityEntry
+            List<string> champs = [];
+            if (dateChange)
             {
-                Id = ids.NewId(),
-                EventId = evenement.Id,
-                MemberId = acteur.Id,
-                ActorName = acteur.DisplayName,
-                Kind = ActivityKinds.EventDateOrPlaceChanged,
-                CreatedAt = clock.UtcNow,
-            });
+                champs.Add("date");
+            }
+
+            if (lieuChange)
+            {
+                champs.Add("lieu");
+            }
+
+            journal.Consigner(
+                evenement.Id,
+                acteur.Id,
+                acteur.DisplayName,
+                ActivityKinds.EventDateOrPlaceChanged,
+                new { champs });
+
+            await PrevenirDuChangementAsync(
+                    evenement, acteur, champs, cancellationToken)
+                .ConfigureAwait(false);
         }
 
         await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
-        return await LireAsync(eventId, cancellationToken).ConfigureAwait(false);
+        await journal.PublierEnAttenteAsync(cancellationToken).ConfigureAwait(false);
+
+        var resume = await LireAsync(eventId, cancellationToken).ConfigureAwait(false);
+
+        if (resume.IsSuccess)
+        {
+            // Un changement de date ou de lieu est ce qui compte le plus pour les
+            // invités : le leur montrer sans qu'ils rechargent est le premier usage du
+            // temps réel.
+            await diffusion
+                .PublierAsync(
+                    eventId,
+                    MessagesTempsReel.EvenementModifie,
+                    resume.Value!,
+                    cancellationToken)
+                .ConfigureAwait(false);
+        }
+
+        return resume;
     }
 
     public async Task<Result> DefinirOuvertureAsync(
@@ -441,6 +478,50 @@ public sealed class EventService(
     }
 
     // ---------------------------------------------------------------- outils ----
+
+    /// <summary>
+    /// Prévient les membres d'un changement de date ou de lieu (EF-NOT-02).
+    /// <para>
+    /// Tous sauf l'auteur : il vient de le faire. La clé de déduplication porte
+    /// l'horodatage du changement, si bien qu'un second déplacement de date prévient de
+    /// nouveau — c'est précisément ce qui doit remonter.
+    /// </para>
+    /// </summary>
+    private async Task PrevenirDuChangementAsync(
+        Event evenement,
+        EventMember acteur,
+        List<string> champs,
+        CancellationToken cancellationToken)
+    {
+        var destinataires = await db.EventMembers
+            .Where(m => m.EventId == evenement.Id
+                        && m.UserId != null
+                        && m.Id != acteur.Id
+                        && m.RemovedAt == null)
+            .Select(m => m.UserId!.Value)
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        var quoi = champs.Count == 2
+            ? "la date et le lieu"
+            : champs[0] == "date" ? "la date" : "le lieu";
+
+        var instant = clock.UtcNow;
+
+        foreach (var destinataire in destinataires)
+        {
+            notifications.Enfiler(new NotificationAEnvoyer(
+                destinataire,
+                evenement.Id,
+                NotificationCategories.EventChanged,
+                evenement.Name,
+                $"{acteur.DisplayName} a modifié {quoi}.",
+                $"/events/{evenement.Id}",
+                instant,
+                $"{evenement.Id}:{NotificationCategories.EventChanged}:"
+                + $"{destinataire}:{instant.ToUnixTimeSeconds()}"));
+        }
+    }
 
     private static Result Valider(string? nom, DateTimeOffset debut, DateTimeOffset? fin)
     {

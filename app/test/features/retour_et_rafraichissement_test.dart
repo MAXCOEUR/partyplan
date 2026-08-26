@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:partyplan/app/app.dart';
 import 'package:partyplan/app/router.dart';
 import 'package:partyplan/core/network/api_client.dart';
+import 'package:partyplan/core/models/activite.dart';
 import 'package:partyplan/core/providers.dart';
 import 'package:partyplan/features/accueil/accueil_page.dart';
 import 'package:partyplan/features/evenement/coquille_evenement.dart';
@@ -101,6 +102,9 @@ Future<void> _monter(
   final conteneur = ProviderContainer(
     overrides: [
       sessionStoreProvider.overrideWithValue(stockage),
+      // Le tableau de bord porte désormais un aperçu du fil d'activité : sans
+      // cette substitution, il partirait chercher le réseau.
+      filActiviteProvider.overrideWith((ref, id) async => PageActivite.vide),
       apiClientProvider.overrideWithValue(ApiClient(stockage, dio: dio)),
     ],
   );

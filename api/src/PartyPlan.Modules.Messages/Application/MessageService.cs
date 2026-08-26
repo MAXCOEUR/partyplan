@@ -27,6 +27,9 @@ public sealed record MessageView(
     Guid Id,
     Guid AuthorMemberId,
     string AuthorDisplayName,
+
+    // Photo de l'auteur, ou null : l'écran affiche alors ses initiales.
+    string? AuthorAvatarUrl,
     string? Body,
     string? AttachmentUrl,
     Guid? PollId,
@@ -95,7 +98,8 @@ public sealed class MessageService(
     IEventMembership membership,
     IEventImageStorage images,
     IClock clock,
-    IIdGenerator ids) : IPollAnnouncement
+    IIdGenerator ids,
+    IDiffusionEvenement diffusion) : IPollAnnouncement
 {
     /// <summary>Longueur du corps d'un message cité, au-delà de laquelle il est coupé.</summary>
     private const int LongueurCitation = 120;
@@ -155,6 +159,30 @@ public sealed class MessageService(
 
     // --------------------------------------------------------------------- fil ----
 
+    /// <summary>
+    /// Diffuse un message de discussion et renvoie le résultat.
+    /// <para>
+    /// Une conversation qui n'arrive qu'au rechargement n'est pas une conversation.
+    /// C'est le cas où l'absence de temps réel se remarque le plus vite, et celui que le
+    /// §9 du cahier des charges avait omis jusqu'au 25/08/2026.
+    /// </para>
+    /// </summary>
+    private async Task<Result<MessageView>> DiffuserAsync(
+        Guid eventId,
+        string message,
+        Result<MessageView> resultat,
+        CancellationToken cancellationToken)
+    {
+        if (resultat.IsSuccess)
+        {
+            await diffusion
+                .PublierAsync(eventId, message, resultat.Value!, cancellationToken)
+                .ConfigureAwait(false);
+        }
+
+        return resultat;
+    }
+
     public async Task<Result<MessagePage>> ListerAsync(
         Guid eventId,
         Guid? before,
@@ -169,7 +197,7 @@ public sealed class MessageService(
             return EventNotFound;
         }
 
-        var noms = await NomsAsync(eventId, cancellationToken).ConfigureAwait(false);
+        var noms = await MembresAsync(eventId, cancellationToken).ConfigureAwait(false);
 
         var taille = Math.Clamp(limit ?? TaillePageParDefaut, 1, TaillePageMaximale);
 
@@ -434,8 +462,14 @@ public sealed class MessageService(
         db.Messages.Add(message);
         await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
-        return await VueSeuleAsync(eventId, message.Id, moi.MemberId, cancellationToken)
+        var vue = await VueSeuleAsync(eventId, message.Id, moi.MemberId, cancellationToken)
             .ConfigureAwait(false);
+
+        return await DiffuserAsync(
+            eventId,
+            MessagesTempsReel.MessageCree,
+            vue,
+            cancellationToken).ConfigureAwait(false);
     }
 
     public async Task<Result<MessageView>> ModifierAsync(
@@ -484,8 +518,14 @@ public sealed class MessageService(
 
         await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
-        return await VueSeuleAsync(eventId, message.Id, moi.MemberId, cancellationToken)
+        var vue = await VueSeuleAsync(eventId, message.Id, moi.MemberId, cancellationToken)
             .ConfigureAwait(false);
+
+        return await DiffuserAsync(
+            eventId,
+            MessagesTempsReel.MessageModifie,
+            vue,
+            cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -529,6 +569,14 @@ public sealed class MessageService(
         message.AttachmentUrl = null;
 
         await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+
+        await diffusion
+            .PublierAsync(
+                eventId,
+                MessagesTempsReel.MessageSupprime,
+                new { messageId },
+                cancellationToken)
+            .ConfigureAwait(false);
 
         return Result.Success();
     }
@@ -676,7 +724,7 @@ public sealed class MessageService(
             return EventNotFound;
         }
 
-        var noms = await NomsAsync(eventId, cancellationToken).ConfigureAwait(false);
+        var noms = await MembresAsync(eventId, cancellationToken).ConfigureAwait(false);
 
         var dossiers = await db.PinFolders
             .Where(f => f.EventId == eventId)
@@ -902,7 +950,7 @@ public sealed class MessageService(
 
         await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
-        var noms = await NomsAsync(eventId, cancellationToken).ConfigureAwait(false);
+        var noms = await MembresAsync(eventId, cancellationToken).ConfigureAwait(false);
 
         return Result<PinView>.Success(new PinView(
             epingle.Id,
@@ -944,15 +992,31 @@ public sealed class MessageService(
 
     // ------------------------------------------------------------------ aides ----
 
-    private async Task<Dictionary<Guid, string>> NomsAsync(
+    /// <summary>
+    /// Membres de l'événement, par identifiant.
+    /// <para>
+    /// Le membre entier et non son seul nom : la photo de profil vient de la même
+    /// requête, et la chercher séparément ferait un second aller-retour pour une donnée
+    /// déjà chargée.
+    /// </para>
+    /// </summary>
+    private async Task<Dictionary<Guid, EventMemberRef>> MembresAsync(
         Guid eventId,
         CancellationToken cancellationToken)
     {
         var membres = await membership.ListActiveAsync(eventId, cancellationToken)
             .ConfigureAwait(false);
 
-        return membres.ToDictionary(m => m.MemberId, m => m.DisplayName);
+        return membres.ToDictionary(m => m.MemberId);
     }
+
+    /// <summary>Nom d'affichage d'un membre, ou un substitut s'il a quitté l'événement.</summary>
+    private static string Nom(Dictionary<Guid, EventMemberRef> membres, Guid memberId) =>
+        membres.TryGetValue(memberId, out var membre) ? membre.DisplayName : "Quelqu'un";
+
+    /// <summary>Photo d'un membre, ou <c>null</c> — l'écran affiche alors ses initiales.</summary>
+    private static string? Photo(Dictionary<Guid, EventMemberRef> membres, Guid memberId) =>
+        membres.TryGetValue(memberId, out var membre) ? membre.AvatarUrl : null;
 
     private async Task<Result<MessageView>> VueSeuleAsync(
         Guid eventId,
@@ -968,7 +1032,7 @@ public sealed class MessageService(
             .FirstAsync(m => m.Id == messageId, cancellationToken)
             .ConfigureAwait(false);
 
-        var noms = await NomsAsync(eventId, cancellationToken).ConfigureAwait(false);
+        var noms = await MembresAsync(eventId, cancellationToken).ConfigureAwait(false);
 
         var cites = new Dictionary<Guid, Message>();
 
@@ -995,7 +1059,7 @@ public sealed class MessageService(
     private static MessageView Vue(
         Message message,
         Guid moi,
-        Dictionary<Guid, string> noms,
+        Dictionary<Guid, EventMemberRef> noms,
         Dictionary<Guid, Message> parIdentifiant,
         bool pinned)
     {
@@ -1008,14 +1072,15 @@ public sealed class MessageService(
         {
             citation = new ReplyView(
                 origine.Id,
-                noms.GetValueOrDefault(origine.MemberId, "Quelqu'un"),
+                Nom(noms, origine.MemberId),
                 Tronquer(origine.DeletedAt is null ? origine.Body : null));
         }
 
         return new MessageView(
             message.Id,
             message.MemberId,
-            noms.GetValueOrDefault(message.MemberId, "Quelqu'un"),
+            Nom(noms, message.MemberId),
+            Photo(noms, message.MemberId),
             supprime ? null : message.Body,
             supprime ? null : message.AttachmentUrl,
             supprime ? null : message.PollId,
@@ -1032,7 +1097,7 @@ public sealed class MessageService(
             [
                 .. message.Mentions.Select(m => new MentionView(
                     m.MemberId,
-                    noms.GetValueOrDefault(m.MemberId, "Quelqu'un"))),
+                    Nom(noms, m.MemberId))),
             ],
             message.MemberId == moi,
             message.EditedAt is not null,

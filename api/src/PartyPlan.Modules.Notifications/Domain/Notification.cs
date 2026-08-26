@@ -30,32 +30,20 @@ public sealed class Notification
     public DateTimeOffset? ReadAt { get; set; }
 
     public DateTimeOffset CreatedAt { get; set; }
-}
 
-/// <summary>
-/// Catégories de notification. Chacune est désactivable individuellement (EF-NOT-07),
-/// ce qui suppose une valeur stable en base.
-/// </summary>
-public static class NotificationCategories
-{
-    public const string InvitationAnswer = "invitation.answer";
-    public const string EventChanged = "event.changed";
-    public const string InvitationPending = "invitation.pending";
-    public const string ShoppingUnclaimed = "shopping.unclaimed";
-    public const string EventStartingSoon = "event.starting_soon";
-    public const string BalanceDue = "balance.due";
-    public const string Activity = "activity";
-
-    public static readonly string[] All =
-    [
-        InvitationAnswer,
-        EventChanged,
-        InvitationPending,
-        ShoppingUnclaimed,
-        EventStartingSoon,
-        BalanceDue,
-        Activity,
-    ];
+    /// <summary>
+    /// Clé d'unicité. Forme : <c>{eventId}:{categorie}:{destinataire}:{occurrence}</c>,
+    /// où l'occurrence vaut <c>j-3</c>, <c>j-1</c>, <c>debut</c>, <c>lendemain</c> pour
+    /// un rappel temporel, et l'identifiant de l'action pour une notification née d'un
+    /// geste.
+    /// <para>
+    /// Le doublon est refusé par la base et non par l'application : l'ordonnanceur
+    /// balaie toutes les minutes, et vérifier puis écrire laisserait ouverte exactement
+    /// la fenêtre qu'il exploiterait. C'est cette contrainte qui rend la planification
+    /// rejouable sans conséquence.
+    /// </para>
+    /// </summary>
+    public string DedupKey { get; set; } = string.Empty;
 }
 
 /// <summary>Préférence par destinataire et par catégorie (EF-NOT-07).</summary>

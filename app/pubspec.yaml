@@ -21,6 +21,10 @@ dependencies:
   # Appels HTTP
   dio: ^5.9.0
 
+  # Temps réel (§9). Client SignalR en Dart pur : la négociation, la reconnexion et le
+  # protocole de trame de SignalR ne se réécrivent pas à la main.
+  signalr_netcore: ^1.4.4
+
   # Connexion Google (EF-AUTH-06). Sans identifiant client injecté à la
   # compilation, le paquet est présent mais inerte : le bouton n'apparaît pas et
   # l'inscription par mot de passe suffit (NF-DEV-05, règle 5).
@@ -86,6 +90,11 @@ flutter:
 
   # Génère PpL10n depuis les fichiers ARB, selon l10n.yaml.
   generate: true
+
+  assets:
+    # Le logo, décliné par tools/ vers web/icons et android/.../mipmap-*. La source
+    # reste assets/brand/logo.svg : c'est elle qu'on modifie, jamais les PNG.
+    - assets/brand/logo.png
 
   # Polices embarquées : aucun téléchargement à l'exécution, le développement
   # fonctionne hors ligne (NF-DEV-02).

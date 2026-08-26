@@ -86,7 +86,7 @@ class PpAvatar extends StatelessWidget {
                   fontFamily: 'Poppins',
                   fontSize: taille * 0.38,
                   fontWeight: FontWeight.w600,
-                  color: Colors.white,
+                  color: Theme.of(context).colorScheme.onPrimary,
                 ),
               ),
       ),

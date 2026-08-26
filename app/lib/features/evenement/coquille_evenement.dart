@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/providers.dart';
+import '../../core/temps_reel/ecoute_evenement.dart';
+import '../../core/temps_reel/service_temps_reel.dart';
 
 import '../../app/router.dart';
 import '../../design/components/pp_barre_app.dart';
@@ -36,11 +38,31 @@ class CoquilleEvenement extends ConsumerStatefulWidget {
 }
 
 class _CoquilleEvenementState extends ConsumerState<CoquilleEvenement> {
+  /// Rang de l'onglet Discussion. Nommé parce qu'il sert à trois endroits, et qu'un 3
+  /// écrit trois fois se désynchronise le jour où l'ordre des onglets change.
+  static const _ongletDiscussion = 3;
+
   int _onglet = 0;
+
+  EcouteEvenement? _ecoute;
+
+  /// Le service est retenu dans un champ, et non relu dans dispose : Riverpod interdit
+  /// d'utiliser `ref` sur un widget démonté, parce qu'il s'appuie sur le BuildContext.
+  ServiceTempsReel? _tempsReel;
 
   @override
   void initState() {
     super.initState();
+
+    // Le temps réel est branché ici et nulle part ailleurs : c'est l'écran qui borne la
+    // durée de vie de la connexion, et une soirée qu'on quitte doit la fermer.
+    final tempsReel = ref.read(serviceTempsReelProvider);
+    _tempsReel = tempsReel;
+
+    // ignore: discarded_futures
+    tempsReel.connecter(widget.eventId);
+
+    _ecoute = EcouteEvenement(invalider: _relire)..demarrer(tempsReel);
     // Relire à chaque ouverture. Riverpod ne rejette pas un FutureProvider.family
     // quand plus personne ne l'écoute : sans cette invalidation, ressortir d'une
     // soirée puis y revenir réaffiche les données de la première visite,
@@ -50,6 +72,15 @@ class _CoquilleEvenementState extends ConsumerState<CoquilleEvenement> {
     // Posée dans initState et non dans build, qui est rappelé à chaque changement
     // d'onglet et rechargerait tout à chaque geste.
     WidgetsBinding.instance.addPostFrameCallback((_) => _relire());
+  }
+
+  @override
+  void dispose() {
+    // ignore: discarded_futures
+    _ecoute?.arreter();
+    // ignore: discarded_futures
+    _tempsReel?.deconnecter();
+    super.dispose();
   }
 
   /// Redemande au serveur tout ce que cet écran affiche.
@@ -63,7 +94,20 @@ class _CoquilleEvenementState extends ConsumerState<CoquilleEvenement> {
       ..invalidate(membresProvider(widget.eventId))
       ..invalidate(listeCoursesProvider(widget.eventId))
       ..invalidate(depensesProvider(widget.eventId))
-      ..invalidate(reglementsProvider(widget.eventId));
+      ..invalidate(reglementsProvider(widget.eventId))
+      ..invalidate(sondagesProvider(widget.eventId))
+      ..invalidate(epinglesProvider(widget.eventId))
+      ..invalidate(filActiviteProvider(widget.eventId));
+
+    // Le fil de discussion se rafraîchit au lieu d'être invalidé. C'est un notifier
+    // paginé : l'invalider le remettrait à sa première page, et les pages remontées
+    // comme la position de lecture disparaîtraient à chaque message reçu.
+    //
+    // Son absence de cette liste était la raison pour laquelle la discussion ne bougeait
+    // pas alors que le temps réel fonctionnait : le message arrivait, et rien ne
+    // demandait au fil de se relire.
+    // ignore: discarded_futures
+    ref.read(filDiscussionProvider(widget.eventId).notifier).rafraichir();
   }
 
   /// Retour à l'accueil.
@@ -124,6 +168,13 @@ class _CoquilleEvenementState extends ConsumerState<CoquilleEvenement> {
     final onglets = _onglets(context);
     final evenement = ref.watch(evenementProvider(widget.eventId)).value;
 
+    // Pastille de messages non lus sur l'onglet Discussion. Masquée quand on y est
+    // déjà : signaler du non-lu à quelqu'un en train de lire n'a pas de sens, et le
+    // repère de lecture avance de lui-même.
+    final nonLus = _onglet == _ongletDiscussion
+        ? 0
+        : ref.watch(filDiscussionProvider(widget.eventId)).value?.nonLus ?? 0;
+
     // Au-delà de ce seuil, une barre de navigation basse étalée sur toute la largeur
     // sépare le geste du regard : la place est alors sur le côté.
     final large = MediaQuery.sizeOf(context).width >= PpBreakpoints.large;
@@ -148,7 +199,7 @@ class _CoquilleEvenementState extends ConsumerState<CoquilleEvenement> {
             icon: const Icon(Icons.refresh_rounded),
             onPressed: _relire,
           ),
-          if (_onglet == 3) ...[
+          if (_onglet == _ongletDiscussion) ...[
             IconButton(
               key: const Key('acces-sondages'),
               tooltip: 'Sondages',
@@ -182,6 +233,8 @@ class _CoquilleEvenementState extends ConsumerState<CoquilleEvenement> {
         large: large,
         onglets: onglets,
         selection: _onglet,
+        ongletDePastille: _ongletDiscussion,
+        nonLus: nonLus,
         onSelection: (index) => setState(() => _onglet = index),
         child: IndexedStack(
           index: _onglet,
@@ -216,11 +269,13 @@ class _CoquilleEvenementState extends ConsumerState<CoquilleEvenement> {
               destinations: [
                 for (final onglet in onglets)
                   NavigationDestination(
-                    icon: Icon(onglet.icone),
-                    selectedIcon: Icon(
-                      onglet.icoineActive,
-                      color: PpColors.violet,
+                    icon: _AvecPastille(
+                      nombre: onglets.indexOf(onglet) == _ongletDiscussion
+                          ? nonLus
+                          : 0,
+                      child: Icon(onglet.icone),
                     ),
+                    selectedIcon: Icon(onglet.icoineActive),
                     label: onglet.libelle,
                   ),
               ],
@@ -261,6 +316,7 @@ class _SousTitreEvenement extends StatelessWidget
       ),
       child: Row(
         children: [
+          // Le nom de l'onglet ne se coupe pas : c'est le repère, et il est court.
           Text(
             onglet.toUpperCase(),
             style: theme.textTheme.labelSmall?.copyWith(
@@ -271,9 +327,20 @@ class _SousTitreEvenement extends StatelessWidget
           const SizedBox(width: PpSpacing.sm),
           Text('·', style: theme.textTheme.labelSmall),
           const SizedBox(width: PpSpacing.sm),
-          Text(
-            '$presents présents sur $membres',
-            style: theme.textTheme.labelSmall,
+          // La chaîne traduite, et non une concaténation : elle porte les règles
+          // d'accord des deux nombres. Construite à la main, elle affichait
+          // « 1 présents sur 1 invités ».
+          //
+          // Flexible et non Text nu : « Personne n'a encore confirmé » est bien plus
+          // longue que « 2 présents sur 2 », et la ligne débordait de soixante pixels
+          // sur un écran étroit.
+          Flexible(
+            child: Text(
+              PpL10n.of(context).presencesSurInvites(presents, membres),
+              style: theme.textTheme.labelSmall,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
           ),
         ],
       ),
@@ -290,6 +357,8 @@ class _Corps extends StatelessWidget {
     required this.large,
     required this.onglets,
     required this.selection,
+    required this.ongletDePastille,
+    required this.nonLus,
     required this.onSelection,
     required this.child,
   });
@@ -297,6 +366,11 @@ class _Corps extends StatelessWidget {
   final bool large;
   final List<({String libelle, IconData icone, IconData icoineActive})> onglets;
   final int selection;
+
+  /// Onglet portant la pastille de non-lus, et leur nombre.
+  final int ongletDePastille;
+  final int nonLus;
+
   final ValueChanged<int> onSelection;
   final Widget child;
 
@@ -315,10 +389,13 @@ class _Corps extends StatelessWidget {
           onDestinationSelected: onSelection,
           labelType: NavigationRailLabelType.all,
           destinations: [
-            for (final onglet in onglets)
+            for (final (rang, onglet) in onglets.indexed)
               NavigationRailDestination(
-                icon: Icon(onglet.icone),
-                selectedIcon: Icon(onglet.icoineActive, color: PpColors.violet),
+                icon: _AvecPastille(
+                  nombre: rang == ongletDePastille ? nonLus : 0,
+                  child: Icon(onglet.icone),
+                ),
+                selectedIcon: Icon(onglet.icoineActive),
                 label: Text(onglet.libelle),
               ),
           ],
@@ -363,6 +440,16 @@ class _MenuPlus extends StatelessWidget {
           onTap: () => context.push(PpRoutes.versReglements(evenementId)),
         ),
         ListTile(
+          leading: const Icon(Icons.history_rounded),
+          title: Text(l10n.filTitre),
+          onTap: () => context.push(PpRoutes.versActivite(evenementId)),
+        ),
+        ListTile(
+          leading: const Icon(Icons.notifications_none_rounded),
+          title: Text(l10n.avisTitre),
+          onTap: () => context.push(PpRoutes.notifications),
+        ),
+        ListTile(
           leading: const Icon(Icons.ios_share_rounded),
           title: Text(l10n.menuPlusInviter),
           onTap: () => context.push(PpRoutes.versInvitation(evenementId)),
@@ -373,6 +460,38 @@ class _MenuPlus extends StatelessWidget {
           onTap: () => context.push(PpRoutes.versParametres(evenementId)),
         ),
       ],
+    );
+  }
+}
+
+/// Icône surmontée d'une pastille de non-lus.
+///
+/// Le nombre plutôt qu'un simple point : « trois messages » et « quarante messages »
+/// ne se lisent pas de la même façon, et on décide d'ouvrir ou non en fonction. Au-delà
+/// de neuf, la pastille s'élargirait au point de déborder l'icône, d'où le « 9+ ».
+class _AvecPastille extends StatelessWidget {
+  const _AvecPastille({required this.nombre, required this.child});
+
+  final int nombre;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    if (nombre <= 0) {
+      return child;
+    }
+
+    // Le rose ici est délibéré et reste dans la charte : une pastille de non-lus est
+    // une sollicitation, pas un état d'avancement, et c'est le seul endroit de la
+    // navigation où l'accent secondaire a un rôle. Le contraste vient du rôle du thème,
+    // pas d'un blanc écrit en dur.
+    final schema = Theme.of(context).colorScheme;
+
+    return Badge(
+      label: Text(nombre > 9 ? '9+' : '$nombre'),
+      backgroundColor: schema.secondary,
+      textColor: schema.onSecondary,
+      child: child,
     );
   }
 }

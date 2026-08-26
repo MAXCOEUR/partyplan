@@ -128,6 +128,27 @@ internal static class EventsEndpoints
             .WithSummary("Lien, code court et état d'ouverture de l'événement.")
             .Produces<EventInvitation>();
 
+        groupe.MapGet("/{eventId:guid}/activity", async (
+                Guid eventId,
+                Guid? before,
+                int? limit,
+                ActivityService service,
+                CancellationToken cancellationToken) =>
+            Respond(await service
+                .ListerAsync(
+                    eventId,
+                    before,
+                    limit ?? ActivityService.LimiteParDefaut,
+                    cancellationToken)
+                .ConfigureAwait(false)))
+            .WithName("ListActivity")
+            .WithSummary("Fil d'activité de l'événement.")
+            .WithDescription(
+                "Trié du plus récent au plus ancien ; `before` remonte vers le passé. "
+                + "Lecture seule : le fil ne se modifie pas, y compris pour le "
+                + "propriétaire (RG-FIL-02).")
+            .Produces<ActivityPage>();
+
         groupe.MapPost("/{eventId:guid}/invitation/rotate", async (
                 Guid eventId,
                 EventService service,

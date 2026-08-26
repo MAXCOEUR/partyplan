@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:partyplan/core/notifications/service_notifications.dart';
+import 'package:partyplan/core/models/activite.dart';
 import 'package:partyplan/core/providers.dart';
 import 'package:partyplan/features/evenement/sections/section_notifications.dart';
 
@@ -56,7 +57,12 @@ void main() {
 
 Future<void> _monter(WidgetTester tester, ServiceNotifications service) async {
   final conteneur = ProviderContainer(
-    overrides: [serviceNotificationsProvider.overrideWithValue(service)],
+    overrides: [
+      serviceNotificationsProvider.overrideWithValue(service),
+      // Le tableau de bord porte désormais un aperçu du fil d'activité :
+      // sans cette substitution, il partirait chercher le réseau.
+      filActiviteProvider.overrideWith((ref, id) async => PageActivite.vide),
+    ],
   );
   addTearDown(conteneur.dispose);
 

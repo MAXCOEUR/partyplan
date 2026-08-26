@@ -19,6 +19,7 @@ public sealed class EventsModule : IModule
         services.AddScoped<EventService>();
         services.AddScoped<JoinService>();
         services.AddScoped<AttendanceService>();
+        services.AddScoped<ActivityService>();
 
         // Contrat public consommé par l'administration : des décomptes, jamais de
         // contenu (RG-ADM-01).
@@ -28,6 +29,14 @@ public sealed class EventsModule : IModule
         // Appartenance, consommée par Shopping, Expenses et Settlements : aucun de ces
         // modules n'accède à event_members.
         services.AddScoped<IEventMembership, EventMembership>();
+
+        // Événements à venir, consommés par l'ordonnanceur de notifications : des dates
+        // et un propriétaire, jamais le contenu de la soirée.
+        services.AddScoped<IEvenementsAVenir, EvenementsAVenir>();
+
+        // Rappels temporels calculés ici, où vivent les présences (EF-NOT-03, EF-NOT-05).
+        services.AddScoped<IPlanificateurRappels, RappelsDeReponse>();
+        services.AddScoped<IPlanificateurRappels, RappelsDeDebut>();
     }
 
     public void MapEndpoints(IEndpointRouteBuilder routes) => EventsEndpoints.Map(routes);

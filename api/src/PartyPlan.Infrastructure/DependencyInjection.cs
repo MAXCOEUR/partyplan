@@ -66,6 +66,17 @@ public static class DependencyInjection
         services.AddSingleton<PartyPlan.SharedKernel.Contracts.IAvatarStorage, AvatarStorage>();
         services.AddSingleton<PartyPlan.SharedKernel.Contracts.IEventImageStorage, EventImageStorage>();
 
+        // Temps réel. Aucun backplane : une seule instance d'API (RG-RT-04), et en
+        // ajouter une seconde impose Redis et un ADR préalable.
+        services.AddSingleton<PartyPlan.SharedKernel.Contracts.IDiffusionEvenement,
+            TempsReel.DiffusionSignalR>();
+
+        // Fil d'activité. À portée requête et non singleton, à l'inverse de la
+        // diffusion : l'implémentation inscrit dans le DbContext de la requête en
+        // cours, afin que la ligne soit validée par la transaction de l'action métier.
+        services.AddScoped<PartyPlan.SharedKernel.Contracts.IJournalActivite,
+            Journal.JournalActivite>();
+
         // Notifications poussées. L'émetteur réel n'est choisi que si une clé de compte de
         // service est lisible ; sinon les notifications sont journalisées (NF-DEV-04,
         // règle 5). Le choix est fait à chaque portée, sur une clé déjà validée.
@@ -144,6 +155,16 @@ public static class DependencyInjection
         services.Add(Microsoft.Extensions.DependencyInjection.ServiceDescriptor.Singleton<
             Microsoft.Extensions.Hosting.IHostedService,
             Persistence.DatabaseInitializer>());
+
+        // Ordonnanceur des notifications. Une seule instance d'API (RG-RT-04) : la clé
+        // de déduplication protège la planification, pas l'envoi.
+        services.AddOptions<Notifications.OrdonnanceurOptions>()
+            .Bind(configuration.GetSection(Notifications.OrdonnanceurOptions.SectionName));
+        // Enregistré comme service à part entière, puis exposé en service hébergé :
+        // les tests le résolvent pour déclencher une passe sans attendre la cadence.
+        services.AddSingleton<Notifications.OrdonnanceurNotifications>();
+        services.AddHostedService(sp =>
+            sp.GetRequiredService<Notifications.OrdonnanceurNotifications>());
 
         services.AddHealthChecks()
             .AddDbContextCheck<PartyPlanDbContext>("database", tags: ["ready"]);

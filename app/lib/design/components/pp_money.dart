@@ -49,6 +49,23 @@ class PpMoney extends StatelessWidget {
   /// française. Une espace ordinaire laisserait le « € » passer seul à la ligne.
   static const espaceInsecable = '\u00A0';
 
+  /// Le même montant, en texte.
+  ///
+  /// Exposé parce que le fil d'activité compose des phrases : « a acheté Glaçons pour
+  /// 4,50 € ». Écrire un second formateur ailleurs le ferait diverger de celui-ci au
+  /// premier ajustement, et deux mises en forme de montant dans la même application se
+  /// remarquent.
+  static String enTexte(double montant) {
+    final valeurAbsolue = montant.abs();
+    final centimes = ((valeurAbsolue * 100).round() % 100).toString().padLeft(
+      2,
+      '0',
+    );
+    final euros = _entier.format(valeurAbsolue.truncate());
+
+    return '$euros,$centimes$espaceInsecable€';
+  }
+
   @override
   Widget build(BuildContext context) {
     final base = (style ?? Theme.of(context).textTheme.titleLarge)!.copyWith(

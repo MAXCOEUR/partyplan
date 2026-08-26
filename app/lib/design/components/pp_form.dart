@@ -99,12 +99,14 @@ class PpPrimaryButton extends StatelessWidget {
     child: FilledButton(
       onPressed: enCours ? null : onPressed,
       child: enCours
-          ? const SizedBox(
+          ? SizedBox(
               height: 20,
               width: 20,
               child: CircularProgressIndicator(
                 strokeWidth: 2.5,
-                color: Colors.white,
+                // Le bouton est un aplat de la couleur primaire : c'est onPrimary qui
+                // garantit le contraste, pas un blanc écrit en dur.
+                color: Theme.of(context).colorScheme.onPrimary,
               ),
             )
           : Row(
@@ -184,19 +186,17 @@ class PpAuthHeader extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Container(
-          width: 56,
-          height: 56,
-          decoration: BoxDecoration(
-            gradient: PpColors.degradeMarque,
-            borderRadius: BorderRadius.circular(PpRadius.card),
-          ),
-          alignment: Alignment.center,
-          child: const Icon(
-            Icons.celebration_rounded,
-            color: Colors.white,
-            size: 28,
-          ),
+        // Le logo de la marque, et non une icône générique : le premier écran est celui
+        // où l'identité doit être reconnaissable. Le pictogramme seul, jamais le lockup
+        // avec le mot : celui-ci porte « Party » en bleu nuit et disparaîtrait sur le
+        // thème sombre.
+        Image.asset(
+          'assets/brand/logo.png',
+          // 80 et non 64 : le pictogramme est haut et étroit, et sa toile carrée le
+          // fait paraître plus petit que sa boîte. À 64 il ne tenait pas face au titre.
+          width: 80,
+          height: 80,
+          filterQuality: FilterQuality.medium,
         ),
         const SizedBox(height: PpSpacing.lg),
         Text(titre, style: theme.textTheme.displayMedium),

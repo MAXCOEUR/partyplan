@@ -139,6 +139,7 @@ Message _message({
   id: id,
   auteurMembreId: auteurId,
   auteur: auteur,
+  auteurPhoto: null,
   corps: corps,
   urlPieceJointe: image,
   sondageId: null,

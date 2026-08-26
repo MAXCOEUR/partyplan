@@ -3,6 +3,7 @@ using PartyPlan.Infrastructure.Persistence;
 using PartyPlan.Modules.Events.Domain;
 using PartyPlan.Modules.Shopping.Domain;
 using PartyPlan.Modules.Users.Domain;
+using PartyPlan.SharedKernel.Contracts;
 using PartyPlan.SharedKernel.Enums;
 
 // Jeu de données de démonstration pour le développement local (NF-DEV-07).

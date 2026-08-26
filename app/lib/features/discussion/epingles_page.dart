@@ -211,7 +211,11 @@ class _CarteEpingle extends ConsumerWidget {
         children: [
           Row(
             children: [
-              PpAvatar(nom: message.auteur, taille: 28),
+              PpAvatar(
+                nom: message.auteur,
+                urlPhoto: message.auteurPhoto,
+                taille: 28,
+              ),
               const SizedBox(width: PpSpacing.sm),
               Expanded(
                 child: Text(

@@ -835,6 +835,12 @@ namespace PartyPlan.Infrastructure.Persistence.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at");
 
+                    b.Property<string>("DedupKey")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("dedup_key");
+
                     b.Property<string>("DeepLink")
                         .HasMaxLength(300)
                         .HasColumnType("character varying(300)")
@@ -872,6 +878,10 @@ namespace PartyPlan.Infrastructure.Persistence.Migrations
 
                     b.HasKey("Id")
                         .HasName("pk_notifications");
+
+                    b.HasIndex("DedupKey")
+                        .IsUnique()
+                        .HasDatabaseName("ix_notifications_dedup_key");
 
                     b.HasIndex("ScheduledFor", "SentAt")
                         .HasDatabaseName("ix_notifications_scheduled_for_sent_at");

@@ -195,7 +195,7 @@ class _ConnexionsPageState extends ConsumerState<ConnexionsPage> {
             ],
           ],
         ),
-        _ => const PpLoadingState(),
+        _ => const PpLoadingIndicateur(),
       },
     );
   }

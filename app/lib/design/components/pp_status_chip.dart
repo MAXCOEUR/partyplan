@@ -13,23 +13,39 @@ enum PpPresence { inconnu, present, peutEtre, absent, arriveTard, partTot }
 /// seule réponse qui n'entre pas dans la répartition des dépenses (RG-PRES-03), et
 /// l'organisateur doit le voir.
 class PpStatusChip extends StatelessWidget {
-  const PpStatusChip({required this.presence, this.heure, super.key});
+  const PpStatusChip({
+    required this.presence,
+    this.heure,
+    this.neutre = false,
+    super.key,
+  });
 
   final PpPresence presence;
 
   /// Heure d'arrivée ou de départ annoncée, déjà formatée.
   final String? heure;
 
+  /// Rend la pastille sans sa couleur sémantique.
+  ///
+  /// Sert aux listes de choix : proposer cinq réponses avec cinq couleurs met cinq
+  /// accents sur un écran et rend la réponse retenue indiscernable des autres. Les
+  /// options restent neutres, seule celle qui est choisie porte sa couleur — c'est elle
+  /// qui répond à la question posée par la carte.
+  final bool neutre;
+
   @override
   Widget build(BuildContext context) {
-    final (couleurBrute, icone) = _apparence();
+    final (couleurSemantique, icone) = _apparence();
+    final schema = Theme.of(context).colorScheme;
     final libelle = _libelle(PpL10n.of(context));
+
+    final couleurBrute = neutre ? schema.onSurfaceVariant : couleurSemantique;
+
     // Le fond conserve la couleur de charte à 12 % ; le texte et l'icône prennent la
     // variante accessible (NF-A11Y-01).
-    final couleur = PpColors.texteSur(
-      couleurBrute,
-      Theme.of(context).brightness,
-    );
+    final couleur = neutre
+        ? schema.onSurfaceVariant
+        : PpColors.texteSur(couleurBrute, Theme.of(context).brightness);
     final texte = heure == null ? libelle : '$libelle · $heure';
 
     return Semantics(
@@ -42,7 +58,9 @@ class PpStatusChip extends StatelessWidget {
           vertical: PpSpacing.xs,
         ),
         decoration: BoxDecoration(
-          color: couleurBrute.withValues(alpha: 0.12),
+          color: neutre
+              ? schema.surfaceContainerHigh
+              : couleurBrute.withValues(alpha: 0.12),
           borderRadius: BorderRadius.circular(PpRadius.pill),
         ),
         child: Row(

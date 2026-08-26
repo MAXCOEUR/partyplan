@@ -6,13 +6,20 @@ namespace PartyPlan.SharedKernel.Contracts;
 /// Volontairement réduit : ni statut détaillé, ni horaires, ni accompagnants. Un module
 /// financier n'a besoin que de savoir qui existe, qui compte comme présent — pour
 /// l'assiette « tous les présents » — et qui peut gérer.
+/// <para>
+/// <c>UserId</c> s'y est ajouté pour les notifications : un avis doit atteindre un
+/// compte, et les lignes historiques sans compte n'en reçoivent donc aucun. Nul pour
+/// celles-là, ce qui est la bonne façon de les écarter.
+/// </para>
 /// </para>
 /// </summary>
 public sealed record EventMemberRef(
     Guid MemberId,
     string DisplayName,
+    string? AvatarUrl,
     bool CountsAsPresent,
-    bool CanManage);
+    bool CanManage,
+    Guid? UserId = null);
 
 /// <summary>
 /// Appartenance à un événement. Contrat public du module Events, consommé par Shopping,
@@ -32,4 +39,17 @@ public interface IEventMembership
     /// refusé » (RG-SEC-02).
     /// </summary>
     Task<EventMemberRef?> FindCurrentAsync(Guid eventId, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Appartenance d'un compte désigné explicitement, hors de toute requête HTTP.
+    /// <para>
+    /// Nécessaire au hub temps réel, et à lui seul. Les autres méthodes lisent l'appelant
+    /// dans le contexte HTTP et s'appuient sur le périmètre d'événements amorcé par
+    /// l'intergiciel — deux choses qui n'existent pas dans un <c>OnConnectedAsync</c> de
+    /// SignalR, qui s'exécute dans son propre périmètre d'injection et sans contexte de
+    /// requête. Les utiliser depuis le hub renvoyait « non membre » pour tout le monde :
+    /// personne ne rejoignait son groupe, et aucun changement n'était jamais reçu.
+    /// </para>
+    /// </summary>
+    Task<bool> IsMemberAsync(Guid eventId, Guid userId, CancellationToken cancellationToken);
 }

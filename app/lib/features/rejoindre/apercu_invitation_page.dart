@@ -127,7 +127,9 @@ class _ApercuInvitationPageState extends ConsumerState<ApercuInvitationPage> {
     }
 
     return session.when(
-      loading: () => const SizedBox(height: 64, child: PpLoadingState()),
+      // Indicateur et non squelette : soixante-quatre pixels de haut, il n'y a pas la
+      // place d'esquisser une carte.
+      loading: () => const SizedBox(height: 64, child: PpLoadingIndicateur()),
       error: (_, _) => PpErrorState(
         message: l10n.erreurReseau,
         onRetry: () => ref.invalidate(sessionProvider),

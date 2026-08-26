@@ -19,6 +19,9 @@ public sealed class SettlementsModule : IModule
 
         services.AddScoped<SettlementService>();
 
+        // EF-NOT-06 : le montant dû vient du calcul qui fait foi.
+        services.AddScoped<IPlanificateurRappels, RappelsDeDette>();
+
         // Contrat public consommé par Events pour RG-EVT-02 : un événement dont des
         // dettes restent en suspens ne se supprime pas sans confirmation renforcée.
         services.AddScoped<ISettlementStatus>(sp => sp.GetRequiredService<SettlementService>());

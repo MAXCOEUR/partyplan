@@ -12,6 +12,9 @@ import '../features/auth/connexion_page.dart';
 import '../features/auth/inscription_page.dart';
 import '../features/auth/mot_de_passe_a_changer_page.dart';
 import '../features/auth/mot_de_passe_oublie_page.dart';
+import '../features/activite/activite_page.dart';
+import '../features/notifications/notifications_page.dart';
+import '../features/profil/preferences_notifications_page.dart';
 import '../features/discussion/epingles_page.dart';
 import '../features/evenement/coquille_evenement.dart';
 import '../features/evenement/creation_evenement_page.dart';
@@ -77,6 +80,9 @@ abstract final class PpRoutes {
   static const evenementParametres = '/events/:eventId/parametres';
   static const evenementReglements = '/events/:eventId/reglements';
   static const evenementEpingles = '/events/:eventId/epingle';
+  static const evenementActivite = '/events/:eventId/activite';
+  static const notifications = '/notifications';
+  static const preferencesNotifications = '/profil/notifications';
   static const evenementSondages = '/events/:eventId/sondages';
   static const evenementImage = '/events/:eventId/image';
 
@@ -93,6 +99,10 @@ abstract final class PpRoutes {
   static String versReglements(String eventId) => '/events/$eventId/reglements';
 
   static String versEpingles(String eventId) => '/events/$eventId/epingle';
+
+  static String versActivite(String eventId) => '/events/$eventId/activite';
+
+  static String versNotifications() => notifications;
 
   static String versSondages(String eventId) => '/events/$eventId/sondages';
 
@@ -290,6 +300,19 @@ GoRouter creerRouteur(Ref ref) => GoRouter(
       path: PpRoutes.evenementEpingles,
       builder: (context, state) =>
           EpinglesPage(evenementId: state.pathParameters['eventId']!),
+    ),
+    GoRoute(
+      path: PpRoutes.evenementActivite,
+      builder: (context, state) =>
+          ActivitePage(evenementId: state.pathParameters['eventId']!),
+    ),
+    GoRoute(
+      path: PpRoutes.notifications,
+      builder: (context, state) => const NotificationsPage(),
+    ),
+    GoRoute(
+      path: PpRoutes.preferencesNotifications,
+      builder: (context, state) => const PreferencesNotificationsPage(),
     ),
     GoRoute(
       path: PpRoutes.evenementReglements,

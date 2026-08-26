@@ -29,22 +29,3 @@ public sealed class ActivityEntry : IEventScoped
 
     public DateTimeOffset CreatedAt { get; init; }
 }
-
-/// <summary>
-/// Catégories du fil d'activité. Les dix catégories exigées par RG-FIL-01 sont
-/// couvertes ; ne jamais renommer une valeur déjà écrite en base.
-/// </summary>
-public static class ActivityKinds
-{
-    public const string MemberJoined = "member.joined";
-    public const string MemberStatusChanged = "member.status_changed";
-    public const string ItemCreated = "item.created";
-    public const string ItemDeleted = "item.deleted";
-    public const string ItemClaimed = "item.claimed";
-    public const string ItemPurchased = "item.purchased";
-    public const string ExpenseCreated = "expense.created";
-    public const string ExpenseUpdated = "expense.updated";
-    public const string SettlementMarked = "settlement.marked";
-    public const string EventScheduleChanged = "event.schedule_changed";
-    public const string EventDateOrPlaceChanged = "event.date_or_place_changed";
-}

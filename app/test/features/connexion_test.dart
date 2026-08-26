@@ -138,8 +138,40 @@ void main() {
       await _monter(tester, route: PpRoutes.inscription);
 
       // La règle est visible d'emblée : la découvrir en message d'erreur est une
-      // mauvaise façon de la communiquer.
-      expect(find.textContaining('12 caractères minimum'), findsOneWidget);
+      // mauvaise façon de la communiquer. Les quatre exigences sont donc annoncées,
+      // pas seulement la longueur.
+      expect(find.textContaining('une majuscule'), findsOneWidget);
+      expect(find.textContaining('un caractère spécial'), findsOneWidget);
+    });
+
+    testWidgets('refuse deux saisies différentes sans appeler le serveur', (
+      tester,
+    ) async {
+      // Une faute de frappe sur un champ masqué ne se voit pas. Sans cette seconde
+      // saisie, la personne se retrouverait enfermée dehors avec un mot de passe
+      // qu'elle croit connaître, et aucun message ne le lui dirait.
+      await _monter(tester, route: PpRoutes.inscription);
+
+      await tester.enterText(find.byType(TextFormField).at(0), 'Maxence');
+      await tester.enterText(
+        find.byType(TextFormField).at(1),
+        'max@partyplan.local',
+      );
+      await tester.enterText(
+        find.byType(TextFormField).at(2),
+        'Trombone-Nuage-42x',
+      );
+      await tester.enterText(
+        find.byType(TextFormField).at(3),
+        'Trombone-Nuage-42y',
+      );
+      await _appuyer(tester, find.text('Créer mon compte'));
+
+      expect(
+        find.textContaining('ne correspondent pas'),
+        findsOneWidget,
+        reason: 'la faute doit être signalée sur place',
+      );
     });
 
     testWidgets('refuse un mot de passe trop court en local', (tester) async {
@@ -171,6 +203,12 @@ void main() {
       );
       await tester.enterText(
         find.byType(TextFormField).at(2),
+        'Trombone-Nuage-42x',
+      );
+      // La confirmation est obligatoire depuis le 25/08/2026 : sans elle, le
+      // formulaire ne se valide pas et l'inscription n'est jamais envoyée.
+      await tester.enterText(
+        find.byType(TextFormField).at(3),
         'Trombone-Nuage-42x',
       );
       await _appuyer(tester, find.text('Créer mon compte'));

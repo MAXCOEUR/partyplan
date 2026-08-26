@@ -330,9 +330,13 @@ class _Origine extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final couleur = issueDesCourses ? PpColors.rose : PpColors.violet;
+    final schema = Theme.of(context).colorScheme;
 
+    // Aucune couleur d'accent ici, et c'est un choix. L'origine d'une dépense est une
+    // précision, pas un état : la teinter mettait un accent par ligne, et une soirée
+    // dont toutes les dépenses viennent des courses affichait une liste entière en
+    // rose — couleur que la charte réserve à l'argent dû. Les deux glyphes suffisent à
+    // distinguer, et l'étiquette d'accessibilité dit le reste.
     return Semantics(
       label: issueDesCourses
           ? 'Issue de la liste de courses'
@@ -342,7 +346,7 @@ class _Origine extends StatelessWidget {
         width: 36,
         height: 36,
         decoration: BoxDecoration(
-          color: couleur.withValues(alpha: 0.12),
+          color: schema.surfaceContainerHigh,
           borderRadius: BorderRadius.circular(PpRadius.sm),
         ),
         child: Icon(
@@ -350,7 +354,7 @@ class _Origine extends StatelessWidget {
               ? Icons.shopping_cart_rounded
               : Icons.receipt_long_rounded,
           size: 18,
-          color: PpColors.texteSur(couleur, theme.brightness),
+          color: schema.onSurfaceVariant,
         ),
       ),
     );

@@ -117,6 +117,7 @@ Epingle _epingle({
     id: 'm-$id',
     auteurMembreId: 'x',
     auteur: auteur,
+    auteurPhoto: null,
     corps: corps,
     urlPieceJointe: null,
     sondageId: null,

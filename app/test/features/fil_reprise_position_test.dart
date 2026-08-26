@@ -40,6 +40,7 @@ class DiscussionApiHistorique implements DiscussionApi {
           id: 'm$i',
           auteurMembreId: 'lucas',
           auteur: 'Lucas',
+          auteurPhoto: null,
           corps: 'texte $i',
           urlPieceJointe: null,
           sondageId: null,

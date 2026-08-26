@@ -97,6 +97,10 @@ class _ParametresEvenementPageState
                   _modification(l10n),
                   const SizedBox(height: PpSpacing.xl),
                 ],
+                // La sourdine vit ici et non dans les préférences du compte : on la
+                // cherche là où l'on gère la soirée qui parle trop.
+                _Sourdine(evenementId: widget.evenementId),
+                const SizedBox(height: PpSpacing.md),
                 // Le transfert vient AVANT « quitter » : voir la note de classe.
                 if (role == RoleMembre.proprietaire) ...[
                   _transfert(l10n),
@@ -393,5 +397,40 @@ class _ParametresEvenementPageState
     if (mounted) {
       context.go(PpRoutes.accueil);
     }
+  }
+}
+
+/// Mise en sourdine d'un événement (`EF-NOT-08`).
+///
+/// Distincte des préférences par catégorie : on peut vouloir tout recevoir, sauf pour
+/// une soirée donnée — celle de vingt personnes qui remplissent la liste de courses.
+class _Sourdine extends ConsumerWidget {
+  const _Sourdine({required this.evenementId});
+
+  final String evenementId;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = PpL10n.of(context);
+    final sourdine = ref.watch(sourdineProvider(evenementId));
+
+    return PpCard(
+      child: SwitchListTile(
+        contentPadding: EdgeInsets.zero,
+        title: Text(l10n.sourdineTitre),
+        subtitle: Text(l10n.sourdineExplication),
+        // Faux tant que l'état n'est pas connu : un interrupteur qui bascule tout seul
+        // au chargement laisse croire qu'on l'a touché.
+        value: sourdine.value ?? false,
+        onChanged: sourdine.hasValue
+            ? (actif) async {
+                await ref
+                    .read(avisApiProvider)
+                    .definirSourdine(evenementId, enSourdine: actif);
+                ref.invalidate(sourdineProvider(evenementId));
+              }
+            : null,
+      ),
+    );
   }
 }

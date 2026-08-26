@@ -13,16 +13,47 @@ public sealed class PasswordPolicyTests
     private readonly PasswordPolicy _politique = new();
 
     [Theory]
-    [InlineData("court")]
-    [InlineData("onzecarac")]
+    [InlineData("Court1!")]
     [InlineData("")]
     [InlineData(null)]
-    public void Un_mot_de_passe_de_moins_de_douze_caracteres_est_refuse(string? mdp)
+    public void Un_mot_de_passe_de_moins_de_huit_caracteres_est_refuse(string? mdp)
     {
         var resultat = _politique.Validate(mdp);
 
         resultat.IsFailure.ShouldBeTrue();
         resultat.Error.ShouldBe(PasswordPolicy.TooShort);
+    }
+
+    [Theory]
+    [InlineData("minuscule1!", "majuscule absente")]
+    [InlineData("MAJUSCULE1!", "minuscule absente")]
+    [InlineData("MajusculeSansChiffre!", "chiffre absent")]
+    [InlineData("MajusculeChiffre1", "caractère spécial absent")]
+    public void Un_mot_de_passe_incomplet_est_refuse(string mdp, string raison)
+    {
+        // Les quatre classes sont exigées ensemble : refuser l'une d'elles ne suffit
+        // pas, il faut vérifier chacune séparément, sinon un défaut de la vérification
+        // ne se voit que sur un cas particulier.
+        var resultat = _politique.Validate(mdp);
+
+        resultat.IsFailure.ShouldBeTrue(raison);
+        resultat.Error.ShouldBe(PasswordPolicy.MissingComplexity);
+    }
+
+    [Fact]
+    public void Un_mot_de_passe_de_huit_caracteres_complet_est_accepte()
+    {
+        _politique.Validate("Kx7!vwqm").IsSuccess.ShouldBeTrue();
+    }
+
+    [Fact]
+    public void Une_phrase_de_passe_depassant_trente_caracteres_est_refusee()
+    {
+        // Conséquence assumée du plafond à 30 : une phrase de passe, pourtant la
+        // défense la plus solide, ne passe plus. Le test existe pour que ce soit une
+        // décision visible et non une découverte.
+        _politique.Validate("Trombone-Nuage-Cerf-Volant-42x!")
+            .Error.ShouldBe(PasswordPolicy.TooLong);
     }
 
     [Fact]
@@ -35,9 +66,9 @@ public sealed class PasswordPolicyTests
     }
 
     [Fact]
-    public void Un_mot_de_passe_de_douze_caracteres_inedit_est_accepte()
+    public void Un_mot_de_passe_inedit_et_complet_est_accepte()
     {
-        _politique.Validate("Vahn7-Quorlim.Dessac").IsSuccess.ShouldBeTrue();
+        _politique.Validate("Vahn7-Quorlim").IsSuccess.ShouldBeTrue();
     }
 
     [Theory]

@@ -3,6 +3,8 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 import 'models/article_course.dart';
 import 'models/depense.dart';
+import 'models/activite.dart';
+import 'models/avis.dart';
 import 'models/message.dart';
 import 'models/reglement.dart';
 import 'models/sondage.dart';
@@ -16,13 +18,17 @@ import 'network/api_client.dart';
 import 'network/comptes_api.dart';
 import 'network/courses_api.dart';
 import 'network/depenses_api.dart';
+import 'network/activite_api.dart';
+import 'network/avis_api.dart';
 import 'network/discussion_api.dart';
 import 'network/reglements_api.dart';
 import 'network/sondages_api.dart';
 import 'auth/service_google.dart';
+import 'config/app_config.dart';
 import 'network/appareils_api.dart';
 import 'network/evenements_api.dart';
 import 'notifications/service_notifications.dart';
+import 'temps_reel/service_temps_reel.dart';
 import 'offline/cache_lecture.dart';
 import 'offline/etat_reseau.dart';
 import 'offline/file_ecritures.dart';
@@ -349,6 +355,51 @@ final reglementsProvider = FutureProvider.family<PageReglements, String>(
   (ref, evenementId) => ref.watch(reglementsApiProvider).lire(evenementId),
 );
 
+// ------------------------------------------------------------------- avis ----
+
+final avisApiProvider = Provider<AvisApi>(
+  (ref) => AvisApi(ref.watch(apiClientProvider)),
+);
+
+/// Première page des notifications reçues (`§5.12`).
+final avisProvider = FutureProvider<PageAvis>(
+  (ref) => ref.watch(avisApiProvider).lire(),
+);
+
+/// Nombre de non-lus, pour la pastille.
+///
+/// Dérivé de [avisProvider] plutôt que d'un appel dédié : la page porte déjà le
+/// décompte, et un second appel doublerait les requêtes pour la même valeur.
+final avisNonLusProvider = Provider<int>(
+  (ref) => ref
+      .watch(avisProvider)
+      .maybeWhen(data: (page) => page.nonLus, orElse: () => 0),
+);
+
+/// Préférences par catégorie (`EF-NOT-07`).
+final preferencesAvisProvider = FutureProvider<List<PreferenceAvis>>(
+  (ref) => ref.watch(avisApiProvider).preferences(),
+);
+
+/// Mise en sourdine d'un événement (`EF-NOT-08`).
+final sourdineProvider = FutureProvider.family<bool, String>(
+  (ref, evenementId) => ref.watch(avisApiProvider).sourdine(evenementId),
+);
+
+// ---------------------------------------------------------------- activité ----
+
+final activiteApiProvider = Provider<ActiviteApi>(
+  (ref) => ActiviteApi(ref.watch(apiClientProvider)),
+);
+
+/// Première page du fil d'activité d'un événement (`EF-FIL-01`).
+///
+/// Invalidé par `EcouteEvenement` à chaque message diffusé : `activity.appended` n'a
+/// donc besoin d'aucun traitement particulier côté écran.
+final filActiviteProvider = FutureProvider.family<PageActivite, String>(
+  (ref, evenementId) => ref.watch(activiteApiProvider).lire(evenementId),
+);
+
 // -------------------------------------------------------------- discussion ----
 
 final discussionApiProvider = Provider<DiscussionApi>(
@@ -411,6 +462,58 @@ class FilDiscussionNotifier extends AsyncNotifier<FilDiscussion> {
     } finally {
       _enCoursDeRemontee = false;
     }
+  }
+
+  /// Relit la page la plus récente et la fusionne avec ce qui est déjà chargé.
+  ///
+  /// Appelée à chaque changement diffusé par le temps réel. Un `invalidate` aurait été
+  /// plus court, mais il aurait remis le fil à sa première page : les pages remontées et
+  /// la position de lecture disparaîtraient à chaque message reçu, ce qui est
+  /// exactement ce qu'il ne faut pas faire dans une conversation.
+  ///
+  /// La fusion se fait sur l'identifiant. Un message modifié, supprimé ou nouvellement
+  /// réagi garde le sien : le remplacer plutôt que l'ajouter évite de le voir deux fois,
+  /// une fois dans son ancienne version.
+  Future<void> rafraichir() async {
+    final actuel = state.value;
+
+    if (actuel == null) {
+      // Le fil n'a jamais été chargé : la construction ordinaire s'en charge, et la
+      // forcer ici doublerait la requête.
+      return;
+    }
+
+    final FilDiscussion recents;
+
+    try {
+      recents = await ref
+          .read(discussionApiProvider)
+          .lire(evenementId, limite: parPage);
+    } catch (_) {
+      // Un rafraîchissement raté ne doit rien casser. Il est déclenché par le temps
+      // réel, donc sans que personne l'ait demandé : lever ici produirait une exception
+      // asynchrone non capturée, et remplacer l'état par une erreur effacerait une
+      // conversation parfaitement lisible pour un incident réseau passager. L'écran
+      // garde ce qu'il a, et le prochain message ou une actualisation manuelle
+      // rattrapera.
+      return;
+    }
+
+    final frais = recents.messages.map((m) => m.id).toSet();
+
+    state = AsyncData(
+      recents.avec(
+        // Les messages plus anciens que la page fraîche sont conservés tels quels : ce
+        // sont les pages remontées, que le serveur ne renvoie pas ici.
+        messages: [
+          ...actuel.messages.where((m) => !frais.contains(m.id)),
+          ...recents.messages,
+        ],
+        // Le haut du fil n'a pas bougé : c'est l'état courant qui dit s'il reste des
+        // pages au-dessus, pas la page fraîche qui n'en sait rien.
+        encorePlusHaut: actuel.encorePlusHaut,
+      ),
+    );
   }
 
   /// Nombre maximal de pages chargées pour rejoindre le premier message non lu.
@@ -524,3 +627,14 @@ final fournisseursDisponiblesProvider = FutureProvider<Set<String>>((
     return const <String>{};
   }
 });
+
+// ---------------------------------------------------------------- temps réel ----
+
+/// Connexion temps réel. Une seule pour toute l'application : on ne consulte qu'une
+/// soirée à la fois, et deux connexions simultanées doubleraient les messages.
+final serviceTempsReelProvider = Provider<ServiceTempsReel>(
+  (ref) => ServiceTempsReelSignalR(
+    baseUrl: AppConfig.apiBaseUrl,
+    sessions: ref.watch(sessionStoreProvider),
+  ),
+);

@@ -55,6 +55,7 @@ class Message {
     required this.id,
     required this.auteurMembreId,
     required this.auteur,
+    required this.auteurPhoto,
     required this.corps,
     required this.urlPieceJointe,
     required this.sondageId,
@@ -72,6 +73,7 @@ class Message {
     id: json['id'] as String,
     auteurMembreId: json['authorMemberId'] as String? ?? '',
     auteur: json['authorDisplayName'] as String? ?? '',
+    auteurPhoto: json['authorAvatarUrl'] as String?,
     corps: json['body'] as String?,
     urlPieceJointe: json['attachmentUrl'] as String?,
     sondageId: json['pollId'] as String?,
@@ -96,6 +98,9 @@ class Message {
   final String id;
   final String auteurMembreId;
   final String auteur;
+
+  /// Photo de l'auteur. `null` : l'avatar affiche ses initiales.
+  final String? auteurPhoto;
 
   /// Nul si le message ne portait qu'une image, ou s'il a été supprimé.
   final String? corps;

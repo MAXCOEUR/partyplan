@@ -52,8 +52,10 @@ Reglement _reglement({
   id: id,
   deMembreId: de,
   deNom: deNom,
+  dePhoto: null,
   versMembreId: vers,
   versNom: versNom,
+  versPhoto: null,
   montant: montant,
   effectue: effectue,
   meConcerne: meConcerne,
@@ -209,7 +211,9 @@ void main() {
       await _monter(
         tester,
         monSolde: -10,
-        soldes: const [Solde(membreId: 'm1', nom: 'Moi', montant: -10)],
+        soldes: const [
+          Solde(membreId: 'm1', nom: 'Moi', photo: null, montant: -10),
+        ],
         proposes: [_reglement()],
         invariantRespecte: false,
       );
@@ -225,9 +229,9 @@ void main() {
         tester,
         monSolde: -18.30,
         soldes: const [
-          Solde(membreId: 'm1', nom: 'Moi', montant: -18.30),
-          Solde(membreId: 'm2', nom: 'Lucas', montant: 30),
-          Solde(membreId: 'm3', nom: 'Emma', montant: -11.70),
+          Solde(membreId: 'm1', nom: 'Moi', photo: null, montant: -18.30),
+          Solde(membreId: 'm2', nom: 'Lucas', photo: null, montant: 30),
+          Solde(membreId: 'm3', nom: 'Emma', photo: null, montant: -11.70),
         ],
       );
 

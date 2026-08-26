@@ -16,6 +16,15 @@ abstract final class PpTheme {
     bordure: PpColors.bordureClaire,
     texte: PpColors.texteClair,
     texteSecondaire: PpColors.texteSecondaireClair,
+    // En clair, une carte blanche se détache d'un fond gris très pâle : la carte est
+    // donc le cran le plus bas, et les crans suivants s'assombrissent.
+    echelle: (
+      creux: PpColors.surfaceClaire,
+      bas: PpColors.fondClair,
+      moyen: PpColors.claire2,
+      haut: PpColors.claire3,
+      sommet: PpColors.claire4,
+    ),
   );
 
   static ThemeData sombre() => _construire(
@@ -25,6 +34,14 @@ abstract final class PpTheme {
     bordure: PpColors.bordureSombre,
     texte: PpColors.texteSombre,
     texteSecondaire: PpColors.texteSecondaireSombre,
+    // En sombre, c'est l'inverse : plus un élément est haut, plus sa surface est claire.
+    echelle: (
+      creux: PpColors.sombre0,
+      bas: PpColors.fondSombre,
+      moyen: PpColors.surfaceSombre,
+      haut: PpColors.sombre3,
+      sommet: PpColors.sombre4,
+    ),
   );
 
   static ThemeData _construire({
@@ -34,6 +51,8 @@ abstract final class PpTheme {
     required Color bordure,
     required Color texte,
     required Color texteSecondaire,
+    required ({Color creux, Color bas, Color moyen, Color haut, Color sommet})
+    echelle,
   }) {
     final schema = ColorScheme(
       brightness: brightness,
@@ -52,9 +71,14 @@ abstract final class PpTheme {
       onSurfaceVariant: texteSecondaire,
       outline: bordure,
       outlineVariant: bordure,
-      surfaceContainerLowest: fond,
-      surfaceContainerLow: fond,
-      surfaceContainer: surface,
+      // L'échelle complète, et non deux niveaux repliés sur le fond. C'est elle qui
+      // porte la profondeur de l'interface : sans paliers intermédiaires, un encart posé
+      // dans une carte a exactement la couleur de la carte et l'écran devient plat.
+      surfaceContainerLowest: echelle.creux,
+      surfaceContainerLow: echelle.bas,
+      surfaceContainer: echelle.moyen,
+      surfaceContainerHigh: echelle.haut,
+      surfaceContainerHighest: echelle.sommet,
     );
 
     final textes = PpTypography.theme(texte, texteSecondaire);
@@ -83,7 +107,14 @@ abstract final class PpTheme {
         margin: EdgeInsets.zero,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(PpRadius.card),
-          side: BorderSide(color: bordure),
+          // Bordure en thème sombre seulement. En clair, une carte blanche sur fond gris
+          // pâle se détache déjà par sa couleur et son ombre : y ajouter un liseré gris
+          // donne une boîte de formulaire, et trois boîtes empilées donnent l'aspect
+          // d'un écran de saisie. En sombre, l'ombre n'existe pas et le liseré est ce
+          // qui dessine le bord.
+          side: brightness == Brightness.dark
+              ? BorderSide(color: bordure)
+              : BorderSide.none,
         ),
       ),
       filledButtonTheme: FilledButtonThemeData(
@@ -109,7 +140,13 @@ abstract final class PpTheme {
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: surface,
+        // Un cran creusé, et non la couleur de surface. Un champ posé sur une carte
+        // blanche avec un remplissage blanc n'existe que par son liseré : il ne se lit
+        // pas comme une zone où l'on écrit. En clair on descend d'un cran vers le gris,
+        // en sombre on descend vers le puits, sous le fond.
+        fillColor: brightness == Brightness.dark
+            ? echelle.creux
+            : echelle.moyen,
         contentPadding: const EdgeInsets.symmetric(
           horizontal: PpSpacing.lg,
           vertical: PpSpacing.md,
@@ -136,6 +173,26 @@ abstract final class PpTheme {
         elevation: 0,
         height: 68,
         labelTextStyle: WidgetStatePropertyAll(textes.labelMedium),
+      ),
+      // Le rail n'avait aucun thème et retombait sur les défauts de Material, dont
+      // l'indicateur prend `secondaryContainer` — c'est-à-dire le rose. La navigation
+      // latérale était donc magenta pendant que la barre basse était violette, sur le
+      // même écran. Une seule teinte d'accent, celle de la charte.
+      navigationRailTheme: NavigationRailThemeData(
+        backgroundColor: fond,
+        indicatorColor: PpColors.violet.withValues(alpha: 0.12),
+        elevation: 0,
+        // 80 par défaut, ce qui serre « Discussion » et « Dépenses » au point de les
+        // couper. La largeur suit le plus long libellé, pas l'icône.
+        minWidth: 96,
+        useIndicator: true,
+        selectedIconTheme: const IconThemeData(color: PpColors.violet),
+        unselectedIconTheme: IconThemeData(color: texteSecondaire),
+        selectedLabelTextStyle: textes.labelMedium?.copyWith(
+          color: texte,
+          fontWeight: FontWeight.w600,
+        ),
+        unselectedLabelTextStyle: textes.labelMedium,
       ),
       dividerTheme: DividerThemeData(color: bordure, thickness: 1, space: 1),
       chipTheme: ChipThemeData(

@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using PartyPlan.Modules.Events.Domain;
 using PartyPlan.Modules.Events.Persistence;
 using PartyPlan.SharedKernel.Abstractions;
+using PartyPlan.SharedKernel.Contracts;
 using PartyPlan.SharedKernel.Enums;
 using PartyPlan.SharedKernel.Primitives;
 
@@ -38,7 +39,10 @@ public sealed class AttendanceService(
     IEventsDbContext db,
     ICurrentUser currentUser,
     IClock clock,
-    IIdGenerator ids)
+    IDiffusionEvenement diffusion,
+    IUserIdentityLookup identites,
+    IJournalActivite journal,
+    IFileNotifications notifications)
 {
     /// <summary>Plafond d'accompagnants. Au-delà, il s'agit d'un autre événement.</summary>
     public const int MaxExtraGuests = 10;
@@ -72,12 +76,21 @@ public sealed class AttendanceService(
             .ToListAsync(cancellationToken)
             .ConfigureAwait(false);
 
+        // Une seule requête pour toutes les photos, plutôt qu'un appel par membre.
+        var photos = await identites
+            .FindManyAsync(
+                [.. membres.Where(m => m.UserId is not null).Select(m => m.UserId!.Value)],
+                cancellationToken)
+            .ConfigureAwait(false);
+
         return Result<IReadOnlyList<MemberView>>.Success(
         [
             .. membres.Select(m => new MemberView(
                 m.Id,
                 m.DisplayName,
-                null,
+                m.UserId is { } compte && photos.TryGetValue(compte, out var identite)
+                    ? identite.AvatarUrl
+                    : null,
                 m.Status.ToString(),
                 m.ArrivalTime?.ToString("HH\\hmm"),
                 m.DepartureTime?.ToString("HH\\hmm"),
@@ -126,24 +139,29 @@ public sealed class AttendanceService(
 
         if (ancien != statut)
         {
-            db.ActivityEntries.Add(new ActivityEntry
-            {
-                Id = ids.NewId(),
-                EventId = eventId,
-                MemberId = membre.Id,
-                ActorName = membre.DisplayName,
-                Kind = ActivityKinds.MemberStatusChanged,
-                Payload = $"{{\"de\":\"{ancien}\",\"vers\":\"{statut}\"}}",
-                CreatedAt = clock.UtcNow,
-            });
+            journal.Consigner(
+                eventId,
+                membre.Id,
+                membre.DisplayName,
+                ActivityKinds.MemberStatusChanged,
+                new { de = ancien.ToString(), vers = statut.ToString() });
+
+            await PrevenirOrganisateurAsync(eventId, membre, statut, cancellationToken)
+                .ConfigureAwait(false);
         }
 
         await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
-        return new MemberView(
+        await journal.PublierEnAttenteAsync(cancellationToken).ConfigureAwait(false);
+
+        var identite = membre.UserId is { } compte
+            ? await identites.FindAsync(compte, cancellationToken).ConfigureAwait(false)
+            : null;
+
+        var vue = new MemberView(
             membre.Id,
             membre.DisplayName,
-            null,
+            identite?.AvatarUrl,
             membre.Status.ToString(),
             membre.ArrivalTime?.ToString("HH\\hmm"),
             membre.DepartureTime?.ToString("HH\\hmm"),
@@ -151,6 +169,14 @@ public sealed class AttendanceService(
             membre.Role.ToString(),
             membre.UserId is not null,
             true);
+
+        // L'état résultant et non l'identifiant seul (RG-RT-02) : c'est exactement ce
+        // que l'endpoint renvoie, donc rien à construire en plus.
+        await diffusion
+            .PublierAsync(eventId, MessagesTempsReel.MembreStatutChange, vue, cancellationToken)
+            .ConfigureAwait(false);
+
+        return vue;
     }
 
     /// <summary>Exclusion d'un membre par le propriétaire ou un administrateur (RG-ROLE-01).</summary>
@@ -186,6 +212,16 @@ public sealed class AttendanceService(
         cible.RemovedAt = clock.UtcNow;
 
         await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+
+        // Pas d'état à envoyer : le membre a disparu de la liste, et son identifiant
+        // suffit à savoir quoi retirer.
+        await diffusion
+            .PublierAsync(
+                eventId,
+                MessagesTempsReel.MembreRetire,
+                new { memberId = cible.Id },
+                cancellationToken)
+            .ConfigureAwait(false);
 
         return Result.Success();
     }
@@ -254,10 +290,71 @@ public sealed class AttendanceService(
         membre.RemovedAt = clock.UtcNow;
         await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
+        await diffusion
+            .PublierAsync(
+                eventId,
+                MessagesTempsReel.MembreRetire,
+                new { memberId = membre.Id },
+                cancellationToken)
+            .ConfigureAwait(false);
+
         return Result.Success();
     }
 
     /// <summary>Membre correspondant au compte appelant.</summary>
+    /// <summary>
+    /// Prévient l'organisateur d'une réponse (EF-NOT-01).
+    /// <para>
+    /// La clé de déduplication porte le <b>statut</b> et pas seulement le membre :
+    /// répondre deux fois « oui » ne prévient qu'une fois, mais passer de « oui » à
+    /// « non » est exactement ce que l'organisateur doit savoir.
+    /// </para>
+    /// <para>
+    /// Rien n'est envoyé à celui qui vient de répondre : il sait ce qu'il a fait, et
+    /// recevoir l'écho de son propre geste est le défaut le plus sûr pour faire couper
+    /// les notifications.
+    /// </para>
+    /// </summary>
+    private async Task PrevenirOrganisateurAsync(
+        Guid eventId,
+        EventMember membre,
+        EventMemberStatus statut,
+        CancellationToken cancellationToken)
+    {
+        var organisateur = await db.EventMembers
+            .Where(m => m.EventId == eventId
+                        && m.Role == EventMemberRole.Owner
+                        && m.UserId != null)
+            .Select(m => m.UserId)
+            .FirstOrDefaultAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        if (organisateur is null || organisateur == membre.UserId)
+        {
+            return;
+        }
+
+        notifications.Enfiler(new NotificationAEnvoyer(
+            organisateur,
+            eventId,
+            NotificationCategories.InvitationAnswer,
+            "Une réponse est arrivée",
+            $"{membre.DisplayName} a répondu {Reponse(statut)}.",
+            $"/events/{eventId}/invites",
+            clock.UtcNow,
+            $"{eventId}:{NotificationCategories.InvitationAnswer}:{membre.Id}:{statut}"));
+    }
+
+    /// <summary>Statut tel qu'on le dit, et non tel qu'il est stocké.</summary>
+    private static string Reponse(EventMemberStatus statut) => statut switch
+    {
+        EventMemberStatus.Going => "oui",
+        EventMemberStatus.NotGoing => "non",
+        EventMemberStatus.Maybe => "peut-être",
+        EventMemberStatus.Late => "oui, en retard",
+        _ => "oui, en partant tôt",
+    };
+
     private Task<EventMember?> MembreCourantAsync(Guid eventId, CancellationToken cancellationToken)
     {
         if (currentUser.UserId is not { } compte)

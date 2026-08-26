@@ -9,6 +9,7 @@ import '../../core/models/evenement.dart';
 import '../../core/models/membre.dart';
 import '../../core/providers.dart';
 import '../../core/session/role_plateforme.dart';
+import '../../design/components/pp_apparition.dart';
 import '../../design/components/pp_bandeau_hors_ligne.dart';
 import '../../design/components/pp_barre_app.dart';
 import '../../design/components/pp_card.dart';
@@ -169,17 +170,32 @@ class _Liste extends ConsumerWidget {
         ),
         children: [
           if (aVenir.isNotEmpty) ...[
-            _ProchaineSoiree(evenement: aVenir.first, maintenant: maintenant),
+            PpApparition(
+              child: _ProchaineSoiree(
+                evenement: aVenir.first,
+                maintenant: maintenant,
+              ),
+            ),
             const SizedBox(height: PpSpacing.lg),
             PpEyebrow(l10n.evenementsAVenir),
             const SizedBox(height: PpSpacing.sm),
-            for (final e in aVenir) _Carte(evenement: e),
+            for (final (rang, e) in aVenir.indexed)
+              PpApparition(
+                rang: rang + 1,
+                child: _Carte(evenement: e),
+              ),
           ],
           if (passes.isNotEmpty) ...[
             const SizedBox(height: PpSpacing.lg),
             PpEyebrow(l10n.evenementsPasses),
             const SizedBox(height: PpSpacing.sm),
-            for (final e in passes) _Carte(evenement: e, estompee: true),
+            // Le rang repart de zéro : ces cartes sont plus bas, donc rarement visibles
+            // au premier écran, et prolonger le décalage les ferait arriver en retard.
+            for (final (rang, e) in passes.indexed)
+              PpApparition(
+                rang: rang,
+                child: _Carte(evenement: e, estompee: true),
+              ),
           ],
         ],
       ),
@@ -212,6 +228,9 @@ class _ProchaineSoiree extends StatelessWidget {
       decoration: BoxDecoration(
         gradient: PpColors.degradeMarque,
         borderRadius: BorderRadius.circular(PpRadius.card),
+        // Cette annonce est l'élément le plus haut de l'écran : sans ombre, un aplat de
+        // couleur posé à plat sur un fond pâle se lit comme un bloc collé.
+        boxShadow: PpElevation.flottant(theme.brightness == Brightness.dark),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -219,7 +238,7 @@ class _ProchaineSoiree extends StatelessWidget {
           Text(
             'PROCHAINE SOIRÉE',
             style: theme.textTheme.labelSmall?.copyWith(
-              color: Colors.white.withValues(alpha: 0.85),
+              color: theme.colorScheme.onPrimary.withValues(alpha: 0.85),
               letterSpacing: 1.4,
             ),
           ),
@@ -227,7 +246,7 @@ class _ProchaineSoiree extends StatelessWidget {
           Text(
             PpL10n.of(context).tdbDansNJours(jours),
             style: theme.textTheme.headlineSmall?.copyWith(
-              color: Colors.white,
+              color: theme.colorScheme.onPrimary,
               fontWeight: FontWeight.w700,
             ),
           ),
@@ -235,7 +254,7 @@ class _ProchaineSoiree extends StatelessWidget {
           Text(
             evenement.nom,
             style: theme.textTheme.bodyLarge?.copyWith(
-              color: Colors.white.withValues(alpha: 0.92),
+              color: theme.colorScheme.onPrimary.withValues(alpha: 0.92),
             ),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,

@@ -106,7 +106,7 @@ class _Avancement extends StatelessWidget {
           fait: avancement.pris,
           total: avancement.total,
           libelle: 'Pris en charge',
-          couleur: PpColors.rose,
+          couleur: PpColors.violet,
         ),
         const SizedBox(height: PpSpacing.md),
         PpProgress(
@@ -329,6 +329,7 @@ class _CarteArticleState extends ConsumerState<_CarteArticle> {
               PpClaimChip(
                 libelleLibre: 'À prendre',
                 nomAttributaire: article.nomAttributaire,
+                photoAttributaire: article.photoAttributaire,
                 enCours: _enCours,
                 onPressed: article.estPris && !article.prisParMoi
                     ? null

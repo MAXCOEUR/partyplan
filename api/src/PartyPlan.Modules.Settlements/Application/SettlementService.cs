@@ -10,15 +10,21 @@ using PartyPlan.SharedKernel.Contracts;
 using PartyPlan.SharedKernel.Primitives;
 
 /// <summary>Solde d'un membre, tel que l'interface l'affiche (EF-RMB-01).</summary>
-public sealed record BalanceView(Guid MemberId, string DisplayName, decimal Amount);
+public sealed record BalanceView(
+    Guid MemberId,
+    string DisplayName,
+    string? AvatarUrl,
+    decimal Amount);
 
 /// <summary>Règlement proposé (EF-RMB-02), ou déjà effectué (EF-RMB-03).</summary>
 public sealed record SettlementView(
     Guid? Id,
     Guid FromMemberId,
     string FromDisplayName,
+    string? FromAvatarUrl,
     Guid ToMemberId,
     string ToDisplayName,
+    string? ToAvatarUrl,
     decimal Amount,
     bool Done,
     bool InvolvesMe);
@@ -55,7 +61,9 @@ public sealed class SettlementService(
     IEventMembership membership,
     IClock clock,
     IIdGenerator ids,
-    ILogger<SettlementService> logger)
+    ILogger<SettlementService> logger,
+    IDiffusionEvenement diffusion,
+    IJournalActivite journal)
     : ISettlementStatus
 {
     public static readonly DomainError EventNotFound = DomainError.NotFound(
@@ -78,6 +86,38 @@ public sealed class SettlementService(
         "settlement.unknown_member",
         "Ce membre ne fait pas partie de l'événement.");
 
+    /// <summary>
+    /// Diffuse un règlement puis le changement de soldes, et renvoie le résultat.
+    /// <para>
+    /// Les deux messages partent ensemble : marquer un remboursement change les soldes
+    /// de deux personnes, et le taire laisserait l'une réclamer ce que l'autre a déjà
+    /// payé.
+    /// </para>
+    /// </summary>
+    private async Task<Result<SettlementsPage>> DiffuserAsync(
+        Guid eventId,
+        string message,
+        Result<SettlementsPage> resultat,
+        CancellationToken cancellationToken)
+    {
+        if (resultat.IsSuccess)
+        {
+            await diffusion
+                .PublierAsync(eventId, message, resultat.Value!, cancellationToken)
+                .ConfigureAwait(false);
+
+            await diffusion
+                .PublierAsync(
+                    eventId,
+                    MessagesTempsReel.SoldesChanges,
+                    new { eventId },
+                    cancellationToken)
+                .ConfigureAwait(false);
+        }
+
+        return resultat;
+    }
+
     public async Task<Result<SettlementsPage>> ConsulterAsync(
         Guid eventId,
         CancellationToken cancellationToken)
@@ -96,9 +136,11 @@ public sealed class SettlementService(
             .Select(s => new SettlementView(
                 s.Id,
                 s.FromMemberId,
-                noms.GetValueOrDefault(s.FromMemberId, "?"),
+                Nom(noms, s.FromMemberId),
+                Photo(noms, s.FromMemberId),
                 s.ToMemberId,
-                noms.GetValueOrDefault(s.ToMemberId, "?"),
+                Nom(noms, s.ToMemberId),
+                Photo(noms, s.ToMemberId),
                 s.Amount,
                 true,
                 s.FromMemberId == moi.MemberId || s.ToMemberId == moi.MemberId))
@@ -111,7 +153,8 @@ public sealed class SettlementService(
                     .OrderByDescending(s => s.Cents)
                     .Select(s => new BalanceView(
                         s.MemberId,
-                        noms.GetValueOrDefault(s.MemberId, "?"),
+                        Nom(noms, s.MemberId),
+                        Photo(noms, s.MemberId),
                         s.Cents / 100m)),
             ],
             [
@@ -119,9 +162,11 @@ public sealed class SettlementService(
                 .. etat.Proposes.Select(r => new SettlementView(
                     null,
                     r.FromMemberId,
-                    noms.GetValueOrDefault(r.FromMemberId, "?"),
+                    Nom(noms, r.FromMemberId),
+                    Photo(noms, r.FromMemberId),
                     r.ToMemberId,
-                    noms.GetValueOrDefault(r.ToMemberId, "?"),
+                    Nom(noms, r.ToMemberId),
+                    Photo(noms, r.ToMemberId),
                     r.Cents / 100m,
                     false,
                     r.FromMemberId == moi.MemberId || r.ToMemberId == moi.MemberId)),
@@ -174,9 +219,33 @@ public sealed class SettlementService(
             MarkedByMemberId = moi.MemberId,
         });
 
+        // Les deux parties, et non l'auteur seul : une personne qui gère l'événement
+        // peut marquer un remboursement entre deux autres, auquel cas ActorName ne dit
+        // pas qui a réglé qui.
+        journal.Consigner(
+            eventId,
+            moi.MemberId,
+            moi.DisplayName,
+            ActivityKinds.SettlementMarked,
+            new
+            {
+                de = NomDe(membres, requete.FromMemberId),
+                vers = NomDe(membres, requete.ToMemberId),
+                montant = requete.Amount,
+            });
+
         await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
-        return await ConsulterAsync(eventId, cancellationToken).ConfigureAwait(false);
+        await journal.PublierEnAttenteAsync(cancellationToken).ConfigureAwait(false);
+
+        var page = await ConsulterAsync(eventId, cancellationToken)
+            .ConfigureAwait(false);
+
+        return await DiffuserAsync(
+            eventId,
+            MessagesTempsReel.ReglementMarque,
+            page,
+            cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -206,9 +275,34 @@ public sealed class SettlementService(
         }
 
         reglement.CancelledAt = clock.UtcNow;
+
+        var parties = await membership.ListActiveAsync(eventId, cancellationToken)
+            .ConfigureAwait(false);
+
+        journal.Consigner(
+            eventId,
+            moi.MemberId,
+            moi.DisplayName,
+            ActivityKinds.SettlementCancelled,
+            new
+            {
+                de = NomDe(parties, reglement.FromMemberId),
+                vers = NomDe(parties, reglement.ToMemberId),
+                montant = reglement.Amount,
+            });
+
         await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
-        return await ConsulterAsync(eventId, cancellationToken).ConfigureAwait(false);
+        await journal.PublierEnAttenteAsync(cancellationToken).ConfigureAwait(false);
+
+        var page = await ConsulterAsync(eventId, cancellationToken)
+            .ConfigureAwait(false);
+
+        return await DiffuserAsync(
+            eventId,
+            MessagesTempsReel.ReglementAnnule,
+            page,
+            cancellationToken).ConfigureAwait(false);
     }
 
     /// <inheritdoc />
@@ -221,7 +315,23 @@ public sealed class SettlementService(
 
     // --------------------------------------------------------------- outils ----
 
-    private async Task<(IReadOnlyList<Solde> Soldes,
+    /// <summary>
+    /// Nom d'un membre au moment de l'action. Le fil le fige (RG-USR-04) : un
+    /// changement de nom ultérieur ne doit pas réécrire qui devait quoi à qui.
+    /// </summary>
+    private static string NomDe(IReadOnlyList<EventMemberRef> membres, Guid memberId) =>
+        membres.FirstOrDefault(m => m.MemberId == memberId)?.DisplayName ?? string.Empty;
+
+
+    /// <summary>
+    /// Soldes, règlements proposés et règlements effectués.
+    /// <para>
+    /// <c>internal</c> et non <c>private</c> : le planificateur de rappels de dette
+    /// (EF-NOT-06) doit connaître les mêmes soldes, et recopier le calcul le ferait
+    /// diverger de celui qui fait foi — le §6.5 n'en éprouve qu'un.
+    /// </para>
+    /// </summary>
+    internal async Task<(IReadOnlyList<Solde> Soldes,
                        IReadOnlyList<Reglement> Proposes,
                        List<Settlement> Effectues,
                        bool InvariantRespecte)>
@@ -260,20 +370,33 @@ public sealed class SettlementService(
         return (soldes, Soldes.Simplifier(soldes), effectues, respecte);
     }
 
-    private async Task<Dictionary<Guid, string>> NomsAsync(
+    /// <summary>Nom d'un membre, avec un substitut pour un participant disparu.</summary>
+    private static string Nom(Dictionary<Guid, EventMemberRef> membres, Guid memberId) =>
+        membres.TryGetValue(memberId, out var membre) ? membre.DisplayName : "?";
+
+    /// <summary>Photo d'un membre, ou <c>null</c> — l'écran affiche ses initiales.</summary>
+    private static string? Photo(Dictionary<Guid, EventMemberRef> membres, Guid memberId) =>
+        membres.TryGetValue(memberId, out var membre) ? membre.AvatarUrl : null;
+
+    private async Task<Dictionary<Guid, EventMemberRef>> NomsAsync(
         Guid eventId,
         IReadOnlyList<Solde> soldes,
         CancellationToken cancellationToken)
     {
         var membres = await membership.ListActiveAsync(eventId, cancellationToken).ConfigureAwait(false);
-        var noms = membres.ToDictionary(m => m.MemberId, m => m.DisplayName);
+        var noms = membres.ToDictionary(m => m.MemberId);
 
         // Un membre exclu conserve ses lignes financières (RG-ROLE-03) mais ne figure
         // plus dans la liste : lui donner un nom générique vaut mieux qu'un « ? » sur un
-        // écran d'argent.
+        // écran d'argent. Sans photo, forcément : le compte n'est plus accessible d'ici.
         foreach (var solde in soldes.Where(s => !noms.ContainsKey(s.MemberId)))
         {
-            noms[solde.MemberId] = "Ancien participant";
+            noms[solde.MemberId] = new EventMemberRef(
+                solde.MemberId,
+                "Ancien participant",
+                null,
+                CountsAsPresent: false,
+                CanManage: false);
         }
 
         return noms;

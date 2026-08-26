@@ -51,6 +51,10 @@ builder.Services.AddPartyPlanOpenApi();
 // Amorçage du premier administrateur, après les migrations (EF-ADM-01, RG-ADM-09).
 builder.Services.AddHostedService<AdminSeedStartupTask>();
 
+// Temps réel (§9). Aucun backplane : RG-RT-04 impose une instance unique tant qu'un ADR
+// n'a pas acté le contraire.
+builder.Services.AddSignalR();
+
 // Origines autorisées : l'application web et la vitrine, jamais « * ».
 var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? [];
 builder.Services.AddCors(options =>
@@ -81,6 +85,12 @@ app.UseRateLimiter();
 app.UseCors();
 app.UseAuthentication();
 app.UseAuthorization();
+
+// Le hub vit hors du groupe /v1 : ce n'est pas une ressource REST versionnée, et
+// RG-RT-01 fixe son adresse. Monté après l'autorisation, sans quoi son attribut
+// [Authorize] n'aurait aucune identité à examiner.
+app.MapHub<PartyPlan.Infrastructure.TempsReel.EventHub>(
+    PartyPlan.Api.Setup.AuthenticationSetup.CheminDuHub);
 
 // Placé après l'autorisation : la revendication n'existe qu'une fois l'identité
 // établie (RG-ADM-10).
