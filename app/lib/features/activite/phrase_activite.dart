@@ -77,7 +77,7 @@ String _reponse(PpL10n l10n, String? statut) => switch (statut) {
   'NotGoing' => l10n.presenceNon,
   'Maybe' => l10n.presencePeutEtre,
   'Late' => l10n.presenceEnRetard,
-  'Leaving' || 'LeavingEarly' => l10n.presencePartTot,
+  'EarlyLeave' => l10n.presencePartTot,
   _ => l10n.presenceSansReponse,
 };
 

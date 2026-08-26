@@ -74,6 +74,13 @@ class ProfilPage extends ConsumerWidget {
                         onTap: () => context.push(PpRoutes.securite),
                       ),
                       _Entree(
+                        icone: Icons.notifications_none_rounded,
+                        libelle: 'Préférences de notification',
+                        detail: 'Choisis ce que tu reçois',
+                        onTap: () =>
+                            context.push(PpRoutes.preferencesNotifications),
+                      ),
+                      _Entree(
                         icone: Icons.privacy_tip_outlined,
                         libelle: 'Mes données et confidentialité',
                         detail: 'Export, suppression du compte',

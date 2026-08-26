@@ -4,6 +4,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'models/article_course.dart';
 import 'models/depense.dart';
 import 'models/activite.dart';
+import 'models/avis.dart';
 import 'models/message.dart';
 import 'models/reglement.dart';
 import 'models/sondage.dart';
@@ -18,6 +19,7 @@ import 'network/comptes_api.dart';
 import 'network/courses_api.dart';
 import 'network/depenses_api.dart';
 import 'network/activite_api.dart';
+import 'network/avis_api.dart';
 import 'network/discussion_api.dart';
 import 'network/reglements_api.dart';
 import 'network/sondages_api.dart';
@@ -351,6 +353,38 @@ final reglementsApiProvider = Provider<ReglementsApi>(
 /// application (RG-RMB-02).
 final reglementsProvider = FutureProvider.family<PageReglements, String>(
   (ref, evenementId) => ref.watch(reglementsApiProvider).lire(evenementId),
+);
+
+// ------------------------------------------------------------------- avis ----
+
+final avisApiProvider = Provider<AvisApi>(
+  (ref) => AvisApi(ref.watch(apiClientProvider)),
+);
+
+/// Première page des notifications reçues (`§5.12`).
+final avisProvider = FutureProvider<PageAvis>(
+  (ref) => ref.watch(avisApiProvider).lire(),
+);
+
+/// Nombre de non-lus, pour la pastille.
+///
+/// Dérivé de [avisProvider] plutôt que d'un appel dédié : la page porte déjà le
+/// décompte, et un second appel doublerait les requêtes pour la même valeur.
+final avisNonLusProvider = Provider<int>(
+  (ref) => ref.watch(avisProvider).maybeWhen(
+    data: (page) => page.nonLus,
+    orElse: () => 0,
+  ),
+);
+
+/// Préférences par catégorie (`EF-NOT-07`).
+final preferencesAvisProvider = FutureProvider<List<PreferenceAvis>>(
+  (ref) => ref.watch(avisApiProvider).preferences(),
+);
+
+/// Mise en sourdine d'un événement (`EF-NOT-08`).
+final sourdineProvider = FutureProvider.family<bool, String>(
+  (ref, evenementId) => ref.watch(avisApiProvider).sourdine(evenementId),
 );
 
 // ---------------------------------------------------------------- activité ----

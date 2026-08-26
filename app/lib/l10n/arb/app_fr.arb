@@ -403,5 +403,25 @@
   "presencePeutEtre": "peut-être",
   "presenceEnRetard": "en retard",
   "presencePartTot": "part tôt",
-  "presenceSansReponse": "sans réponse"
+  "presenceSansReponse": "sans réponse",
+  "avisTitre": "Notifications",
+  "@avisTitre": {
+    "description": "Écran des notifications reçues (§5.12)."
+  },
+  "avisVideTitre": "Aucune notification",
+  "avisVideExplication": "Les rappels et les réponses de tes invités arriveront ici.",
+  "avisErreurTitre": "Impossible de charger les notifications",
+  "avisToutMarquerLu": "Tout marquer comme lu",
+  "preferencesAvisTitre": "Préférences de notification",
+  "preferencesAvisExplication": "Coupe ce que tu ne veux pas recevoir. Les autres continuent d’arriver.",
+  "preferencesAvisSilence": "Rien n’est envoyé entre 22 h et 8 h, sauf le rappel de début de soirée.",
+  "categorieReponses": "Réponses aux invitations",
+  "categorieChangements": "Changements de date ou de lieu",
+  "categorieRelances": "Rappels de réponse",
+  "categorieCourses": "Courses sans preneur",
+  "categorieDebut": "Début de soirée",
+  "categorieDettes": "Montants à rembourser",
+  "categorieActivite": "Activité de la soirée",
+  "sourdineTitre": "Mettre cette soirée en sourdine",
+  "sourdineExplication": "Tu ne reçois plus rien pour cette soirée. Les autres continuent."
 }
