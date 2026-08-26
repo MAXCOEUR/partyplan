@@ -81,7 +81,8 @@ public sealed class ExpenseService(
     IEventMembership membership,
     IClock clock,
     IIdGenerator ids,
-    IDiffusionEvenement diffusion)
+    IDiffusionEvenement diffusion,
+    IJournalActivite journal)
     : IExpenseLedger, IExpenseFromPurchase
 {
     public static readonly DomainError NotFound = DomainError.NotFound(
@@ -301,6 +302,14 @@ public sealed class ExpenseService(
         Repartir(depense, assiette!);
 
         db.Expenses.Add(depense);
+
+        journal.Consigner(
+            eventId,
+            moi.MemberId,
+            moi.DisplayName,
+            ActivityKinds.ExpenseCreated,
+            new { libelle = depense.Label, montant = depense.Amount });
+
         await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
         var creee = await DetailAsync(eventId, depense.Id, cancellationToken)
@@ -373,6 +382,10 @@ public sealed class ExpenseService(
             CreatedAt = clock.UtcNow,
         });
 
+        // Lu avant écrasement : après, « combien c'était avant » n'est plus lisible
+        // sans ouvrir la table des révisions.
+        var ancienMontant = depense.Amount;
+
         depense.Label = requete.Label.Trim();
         depense.Amount = requete.Amount;
         depense.PaidByMemberId = requete.PaidByMemberId ?? depense.PaidByMemberId;
@@ -381,6 +394,13 @@ public sealed class ExpenseService(
 
         depense.Participants.Clear();
         Repartir(depense, assiette!);
+
+        journal.Consigner(
+            eventId,
+            moi.MemberId,
+            moi.DisplayName,
+            ActivityKinds.ExpenseUpdated,
+            new { libelle = depense.Label, ancienMontant, montant = depense.Amount });
 
         await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
@@ -426,6 +446,14 @@ public sealed class ExpenseService(
         }
 
         depense.DeletedAt = clock.UtcNow;
+
+        journal.Consigner(
+            eventId,
+            moi.MemberId,
+            moi.DisplayName,
+            ActivityKinds.ExpenseDeleted,
+            new { libelle = depense.Label, montant = depense.Amount });
+
         await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
         // Une suppression change les soldes comme une création : les deux messages
