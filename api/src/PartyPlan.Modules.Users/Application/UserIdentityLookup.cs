@@ -10,7 +10,7 @@ public sealed class UserIdentityLookup(IUsersDbContext db) : IUserIdentityLookup
         db.Users
             .AsNoTracking()
             .Where(u => u.Id == userId && u.DeletedAt == null)
-            .Select(u => new UserIdentity(u.Id, u.DisplayName, u.AvatarUrl))
+            .Select(u => new UserIdentity(u.Id, u.DisplayName, u.AvatarUrl, u.Timezone))
             .FirstOrDefaultAsync(cancellationToken);
 
     public async Task<IReadOnlyDictionary<Guid, UserIdentity>> FindManyAsync(
@@ -27,7 +27,7 @@ public sealed class UserIdentityLookup(IUsersDbContext db) : IUserIdentityLookup
         var identites = await db.Users
             .AsNoTracking()
             .Where(u => userIds.Contains(u.Id) && u.DeletedAt == null)
-            .Select(u => new UserIdentity(u.Id, u.DisplayName, u.AvatarUrl))
+            .Select(u => new UserIdentity(u.Id, u.DisplayName, u.AvatarUrl, u.Timezone))
             .ToListAsync(cancellationToken)
             .ConfigureAwait(false);
 

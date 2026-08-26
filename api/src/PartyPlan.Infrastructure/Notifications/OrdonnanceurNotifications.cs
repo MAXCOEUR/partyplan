@@ -148,5 +148,12 @@ public sealed class OrdonnanceurNotifications(
         }
 
         await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+
+        // L'envoi vient après la planification, et dans la même passe : un rappel calculé
+        // à l'instant est dû à l'instant, et attendre le réveil suivant lui ferait perdre
+        // une minute pour rien.
+        await fournisseur.GetRequiredService<IEnvoiNotifications>()
+            .EnvoyerLesDuesAsync(maintenant, cancellationToken)
+            .ConfigureAwait(false);
     }
 }

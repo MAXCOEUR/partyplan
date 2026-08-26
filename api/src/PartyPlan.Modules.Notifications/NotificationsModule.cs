@@ -26,6 +26,9 @@ public sealed class NotificationsModule : IModule
         // n'accède à la table notifications (règle 6).
         services.AddScoped<IFileNotifications, FileNotifications>();
 
+        // Passe d'envoi, appelée par l'ordonnanceur.
+        services.AddScoped<IEnvoiNotifications, EnvoiNotifications>();
+
         // Contrat public consommé par l'émetteur de l'Infrastructure, qui ne doit pas
         // écrire dans push_devices lui-même (règle 6).
         services.AddScoped<IPushDeviceRegistry>(sp => sp.GetRequiredService<DeviceService>());
