@@ -37,6 +37,44 @@ public sealed class PlanificateursDeRappelsTests(PartyPlanApiFixture fixture)
     }
 
     [Fact]
+    public async Task EF_NOT_03_la_veille_le_rappel_est_bien_celui_de_J_1()
+    {
+        // Le rappel de la veille est celui qui sert. Sans échéance distincte, la clé de
+        // déduplication reste celle de J-3, déjà en base, et la relance la plus utile
+        // n'arrive jamais.
+        var soiree = await SoireeAsync(debutDansJours: 1);
+
+        await PasserAsync(soiree.Maintenant);
+
+        var avis = await fixture.NotificationsAsync(
+            soiree.EventId, NotificationCategories.InvitationPending);
+
+        avis.ShouldContain(n =>
+            n.UserId == soiree.CompteCamille
+            && n.DedupKey.EndsWith("j-1", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task EF_NOT_03_les_deux_echeances_partent_chacune_une_fois()
+    {
+        // La séquence réelle : la passe de J-3 relance, puis celle de la veille relance
+        // de nouveau. Deux rappels, pas un.
+        var soiree = await SoireeAsync(debutDansJours: 3);
+
+        await PasserAsync(soiree.Maintenant);
+        await PasserAsync(soiree.Maintenant.AddDays(2));
+
+        var siennes = (await fixture.NotificationsAsync(
+                soiree.EventId, NotificationCategories.InvitationPending))
+            .Where(n => n.UserId == soiree.CompteCamille)
+            .ToList();
+
+        siennes.Count.ShouldBe(2);
+        siennes.ShouldContain(n => n.DedupKey.EndsWith("j-3", StringComparison.Ordinal));
+        siennes.ShouldContain(n => n.DedupKey.EndsWith("j-1", StringComparison.Ordinal));
+    }
+
+    [Fact]
     public async Task EF_NOT_03_celui_qui_a_repondu_n_est_pas_relance()
     {
         var soiree = await SoireeAsync(debutDansJours: 3, statutCamille: EventMemberStatus.Going);

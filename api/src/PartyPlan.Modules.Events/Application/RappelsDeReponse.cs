@@ -42,8 +42,14 @@ public sealed class RappelsDeReponse(
 
         var restant = evenement.StartsAt - maintenant;
 
-        var echeance = Echeances.FirstOrDefault(e =>
-            restant <= TimeSpan.FromDays(e.Jours));
+        // La plus PROCHE des échéances atteintes, et non la première déclarée : à J-1,
+        // les deux conditions sont satisfaites, et retenir « j-3 » produirait une clé
+        // déjà en base. Le rappel de la veille — celui qui sert réellement — ne
+        // partirait jamais, sans que rien ne le signale.
+        var echeance = Echeances
+            .Where(e => restant <= TimeSpan.FromDays(e.Jours))
+            .OrderBy(e => e.Jours)
+            .FirstOrDefault();
 
         if (echeance.Occurrence is null)
         {
