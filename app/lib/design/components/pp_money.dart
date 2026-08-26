@@ -57,9 +57,10 @@ class PpMoney extends StatelessWidget {
   /// remarquent.
   static String enTexte(double montant) {
     final valeurAbsolue = montant.abs();
-    final centimes = ((valeurAbsolue * 100).round() % 100)
-        .toString()
-        .padLeft(2, '0');
+    final centimes = ((valeurAbsolue * 100).round() % 100).toString().padLeft(
+      2,
+      '0',
+    );
     final euros = _entier.format(valeurAbsolue.truncate());
 
     return '$euros,$centimes$espaceInsecable€';

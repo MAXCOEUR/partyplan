@@ -108,7 +108,10 @@ void main() {
     });
 
     test('accepte une page vide', () {
-      final page = PageActivite.depuisJson(const {'items': [], 'hasMore': false});
+      final page = PageActivite.depuisJson(const {
+        'items': [],
+        'hasMore': false,
+      });
 
       expect(page.lignes, isEmpty);
       expect(page.encore, isFalse);

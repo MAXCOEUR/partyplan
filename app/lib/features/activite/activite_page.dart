@@ -195,7 +195,8 @@ class _ActivitePageState extends ConsumerState<ActivitePage> {
             // Le jour change quand la ligne précédente appartenait à un autre
             // jour. En tête de liste, le marqueur est toujours posé.
             debuteUnJour:
-                precedente == null || !_memeJour(precedente.creeLe, activite.creeLe),
+                precedente == null ||
+                !_memeJour(precedente.creeLe, activite.creeLe),
             premiere: index == 0,
             derniere: index == lignes.length - 1 && !page.encore,
           );

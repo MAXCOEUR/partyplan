@@ -179,8 +179,10 @@ void main() {
 
       expect(phraseActivite(l10n, _ligne('item.created')).trim(), isNotEmpty);
       expect(
-        phraseActivite(l10n, _ligne('expense.created', {'libelle': 'Courses'}))
-            .trim(),
+        phraseActivite(
+          l10n,
+          _ligne('expense.created', {'libelle': 'Courses'}),
+        ).trim(),
         isNotEmpty,
       );
     });

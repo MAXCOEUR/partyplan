@@ -87,9 +87,7 @@ class LigneActivite extends StatelessWidget {
                       // Il s'arrête à la dernière ligne connue : le prolonger dans le
                       // vide annoncerait une suite qui n'existe pas.
                       if (!derniere)
-                        Expanded(
-                          child: Container(width: 1, color: filet),
-                        ),
+                        Expanded(child: Container(width: 1, color: filet)),
                     ],
                   ),
                 ),
@@ -176,7 +174,11 @@ class _MarqueurDeJour extends StatelessWidget {
         if (!premier)
           Padding(
             padding: EdgeInsets.only(left: decalage / 2),
-            child: Container(width: 1, height: PpSpacing.sm, color: couleurFilet),
+            child: Container(
+              width: 1,
+              height: PpSpacing.sm,
+              color: couleurFilet,
+            ),
           ),
         Padding(
           padding: const EdgeInsets.symmetric(vertical: PpSpacing.sm),
@@ -200,7 +202,11 @@ class _MarqueurDeJour extends StatelessWidget {
 
   String _libelle(PpL10n l10n) {
     final maintenant = DateTime.now();
-    final aujourdhui = DateTime(maintenant.year, maintenant.month, maintenant.day);
+    final aujourdhui = DateTime(
+      maintenant.year,
+      maintenant.month,
+      maintenant.day,
+    );
     final leJour = DateTime(jour.year, jour.month, jour.day);
     final ecart = aujourdhui.difference(leJour).inDays;
 

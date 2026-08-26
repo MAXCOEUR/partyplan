@@ -24,6 +24,7 @@ class ActiviteApi {
     '/events/$evenementId/activity?limit=$limite'
     '${avant == null ? '' : '&before=$avant'}',
     cacheable: avant == null,
-    analyser: (corps) => PageActivite.depuisJson(corps! as Map<String, dynamic>),
+    analyser: (corps) =>
+        PageActivite.depuisJson(corps! as Map<String, dynamic>),
   );
 }

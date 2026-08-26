@@ -75,7 +75,9 @@ void main() {
       expect(find.text('Tout voir'), findsNothing);
     });
 
-    testWidgets('reste muette tant que le fil n’est pas chargé', (tester) async {
+    testWidgets('reste muette tant que le fil n’est pas chargé', (
+      tester,
+    ) async {
       // Un squelette de plus sur un tableau de bord qui en porte déjà ferait clignoter
       // l'écran à chaque ouverture.
       final conteneur = ProviderContainer(

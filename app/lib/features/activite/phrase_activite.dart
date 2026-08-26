@@ -35,9 +35,10 @@ String phraseActivite(PpL10n l10n, Activite activite) {
     'item.unclaimed' => l10n.filLibereArticle(libelle()),
 
     // Sans prix déclaré, la phrase courte : « pour 0,00 € » annoncerait un prix.
-    'item.purchased' => activite.montant('montant') == null
-        ? l10n.filAcheteArticle(libelle())
-        : l10n.filAcheteArticleMontant(libelle(), montant('montant')),
+    'item.purchased' =>
+      activite.montant('montant') == null
+          ? l10n.filAcheteArticle(libelle())
+          : l10n.filAcheteArticleMontant(libelle(), montant('montant')),
 
     'expense.created' => l10n.filCreeDepense(libelle(), montant('montant')),
     'expense.updated' => l10n.filModifieDepense(
@@ -58,7 +59,10 @@ String phraseActivite(PpL10n l10n, Activite activite) {
       montant('montant'),
     ),
 
-    'event.date_or_place_changed' => _dateOuLieu(l10n, activite.liste('champs')),
+    'event.date_or_place_changed' => _dateOuLieu(
+      l10n,
+      activite.liste('champs'),
+    ),
 
     _ => l10n.filActionInconnue,
   };

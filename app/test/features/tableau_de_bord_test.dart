@@ -173,7 +173,9 @@ void main() {
           sessionStoreProvider.overrideWithValue(SessionStoreDouble()),
           // Le tableau de bord porte désormais un aperçu du fil d'activité : sans
           // cette substitution, il partirait chercher le réseau.
-          filActiviteProvider.overrideWith((ref, id) async => PageActivite.vide),
+          filActiviteProvider.overrideWith(
+            (ref, id) async => PageActivite.vide,
+          ),
           evenementProvider.overrideWith(
             (ref, id) async => throw Exception('404'),
           ),
