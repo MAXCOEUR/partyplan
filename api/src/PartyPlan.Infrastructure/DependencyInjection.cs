@@ -156,6 +156,12 @@ public static class DependencyInjection
             Microsoft.Extensions.Hosting.IHostedService,
             Persistence.DatabaseInitializer>());
 
+        // Ordonnanceur des notifications. Une seule instance d'API (RG-RT-04) : la clé
+        // de déduplication protège la planification, pas l'envoi.
+        services.AddOptions<Notifications.OrdonnanceurOptions>()
+            .Bind(configuration.GetSection(Notifications.OrdonnanceurOptions.SectionName));
+        services.AddHostedService<Notifications.OrdonnanceurNotifications>();
+
         services.AddHealthChecks()
             .AddDbContextCheck<PartyPlanDbContext>("database", tags: ["ready"]);
 

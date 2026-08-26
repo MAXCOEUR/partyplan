@@ -29,6 +29,10 @@ public sealed class EventsModule : IModule
         // Appartenance, consommée par Shopping, Expenses et Settlements : aucun de ces
         // modules n'accède à event_members.
         services.AddScoped<IEventMembership, EventMembership>();
+
+        // Événements à venir, consommés par l'ordonnanceur de notifications : des dates
+        // et un propriétaire, jamais le contenu de la soirée.
+        services.AddScoped<IEvenementsAVenir, EvenementsAVenir>();
     }
 
     public void MapEndpoints(IEndpointRouteBuilder routes) => EventsEndpoints.Map(routes);

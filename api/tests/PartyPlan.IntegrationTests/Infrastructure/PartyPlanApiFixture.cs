@@ -117,6 +117,10 @@ public sealed class PartyPlanApiFixture : WebApplicationFactory<Program>, IAsync
                 // utilisateur unique les ferait échouer les uns à cause des autres. La
                 // limitation est vérifiée par la recette, contre une API réelle.
                 ["RateLimiting:Enabled"] = "false",
+                // L'ordonnanceur est éteint : une passe déclenchée sous les tests
+                // planifierait ce qu'ils n'ont pas demandé, et les rendrait dépendants
+                // du moment où ils tournent. Ceux qui l'éprouvent appellent PasseAsync.
+                ["Notifications:Ordonnanceur:Enabled"] = "false",
                 ["Database:MigrateOnStartup"] = "true",
                 ["Database:SeedDemoData"] = "false",
             }));
