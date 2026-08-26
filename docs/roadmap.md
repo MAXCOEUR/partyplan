@@ -40,7 +40,7 @@ Toute tâche non cochée d'une version publiée devient une anomalie, pas un rep
 |---|---|---|
 | V0 — socle technique | lots 0.2 à 0.6, dépôt GitHub et protection de branche | lot 0.1 (INPI, nom, logo, hébergeur, DNS), lot 0.7 (serveur) |
 | V0.5 — comptes et administration | lots 0.8 à 0.14 | connexion Google (identifiants Google Cloud requis) |
-| V1.0 — MVP événementiel | lots 1.2 à 1.5, 1.7, 1.8, le fil d'activité (1.10), le temps réel (1.6) hors recette matérielle, le socle hors ligne du lot 1.12, plus la discussion et les sondages remontés de V1.1 | notifications (1.11), conformité (1.13), exploitation (1.14), légal (1.15), vitrine (1.16), recette et publication (1.17, 1.18) |
+| V1.0 — MVP événementiel | lots 1.2 à 1.5, 1.7, 1.8, le fil d'activité (1.10), les notifications (1.11), le temps réel (1.6) hors recette matérielle, le socle hors ligne du lot 1.12, plus la discussion et les sondages remontés de V1.1 | conformité (1.13), exploitation (1.14), légal (1.15), vitrine (1.16), recette et publication (1.17, 1.18) |
 
 Décisions d'architecture prises : `ADR 0001` monorepo, `ADR 0002` monolithe modulaire,
 `ADR 0003` domaines et certificats, `ADR 0004` chaîne de livraison, `ADR 0005` identité
@@ -680,11 +680,9 @@ transaction de l'action métier — voir
 
 ## Lot 1.11 — Notifications
 
-**Transport livré le 25/08/2026** — voir
-`docs/superpowers/plans/2026-08-24-notifications-transport.md`. Une notification part du
-serveur et arrive sur un appareil, Android comme Web. **Aucun déclencheur métier n'est
-branché : personne ne reçoit rien tant que les lignes `EF-NOT-` ci-dessous ne sont pas
-cochées.** C'est écrit ici parce qu'un transport livré donne l'impression d'un lot fait.
+**Livré le 26/08/2026.** Le transport datait du 25/08 ; les déclencheurs, l'ordonnanceur
+et les écrans arrivent avec ce lot — voir
+`docs/superpowers/specs/2026-08-26-notifications-declencheurs-design.md`.
 
 - [x] Configurer les notifications poussées FCM pour Android et Web — exclusivement pour les notifications, jamais pour les liens, l'authentification, les données ou le temps réel
   - → enregistrement des appareils, `POST`/`DELETE /v1/me/devices`, idempotent et réaffectant
@@ -695,23 +693,49 @@ cochées.** C'est écrit ici parce qu'un transport livré donne l'impression d'u
     configuration Firebase
   - → reste à faire par l'exploitant : déposer la clé de compte de service et poser les
     cinq variables web, voir `docs/comptes-externes.md` §2
-- [ ] `EF-NOT-01` Réponses aux invitations, à l'organisateur
-- [ ] `EF-NOT-02` Modification de date ou de lieu
-- [ ] `EF-NOT-03` Rappel de non-réponse à J-3 et J-1
-- [ ] `EF-NOT-04` Articles non attribués à J-1, à l'organisateur
-- [ ] `EF-NOT-05` Rappel de début d'événement à 2 heures
-- [ ] `EF-NOT-06` Montant dû, au lendemain de l'événement
-- [ ] `EF-NOT-07` Désactivation par catégorie
-- [ ] `EF-NOT-08` Mise en sourdine d'un événement
-- [ ] `RG-NOT-01` Silence entre 22 h et 8 h, hors rappel de début
-- [ ] `RG-NOT-02` Regroupement : une notification d'activité par événement et par quart d'heure
+- [x] `EF-NOT-01` Réponses aux invitations, à l'organisateur
+  - → la clé de déduplication porte le statut : répondre deux fois « oui » ne prévient
+    qu'une fois, changer d'avis prévient de nouveau
+- [x] `EF-NOT-02` Modification de date ou de lieu
+- [x] `EF-NOT-03` Rappel de non-réponse à J-3 et J-1
+- [x] `EF-NOT-04` Articles non attribués à J-1, à l'organisateur
+- [x] `EF-NOT-05` Rappel de début d'événement à 2 heures
+- [x] `EF-NOT-06` Montant dû, au lendemain de l'événement — le montant vient du calcul de
+      soldes qui fait foi, jamais d'une formule recopiée
+- [x] `EF-NOT-07` Désactivation par catégorie
+- [x] `EF-NOT-08` Mise en sourdine d'un événement
+- [x] **`EF-NOT-10` ajoutée au cahier des charges** — `RG-NOT-02` plafonnait une
+      notification d'activité qu'aucune exigence ne créait
+- [x] `RG-NOT-01` Silence entre 22 h et 8 h, hors rappel de début
+  - → appliqué à l'envoi et non à l'inscription : la file porte l'intention, et un
+    changement de fuseau ne rend pas un horaire déjà négocié faux
+  - → dans le fuseau du destinataire (`users.timezone`, `EF-USR-07`) ; un fuseau
+    introuvable retombe sur `Europe/Paris` plutôt que de priver la personne
+- [x] `RG-NOT-02` Regroupement : une notification d'activité par événement, par
+      destinataire et par quart d'heure
 - [x] `RG-NOT-03` Consentement demandé au moment utile, pas au premier lancement
-  - → demandé à l'entrée dans une soirée, jamais au lancement : un refus système ne se
-    redemande pas, et demander trop tôt fait refuser par réflexe
 - [x] Ouverture du lien profond au tap, application déjà lancée ou démarrée par la
-      notification — le second cas est celui qu'on oublie, et c'est le plus fréquent
-- [ ] Mettre en place l'ordonnanceur des tâches de fond
-- [ ] Écrans : notifications, préférences de notification
+      notification
+- [x] Mettre en place l'ordonnanceur des tâches de fond
+  - → `BackgroundService` unique, cadence à la minute, deux passes : planifier puis
+    envoyer. Chaque rappel est calculé par le module qui détient la donnée
+  - → **le doublon est refusé par la base** (`notifications.dedup_key`), ce qui rend le
+    balayage rejouable ; trois passes consécutives ne produisent qu'un rappel
+  - → le périmètre d'événements n'étant pas amorcé hors requête HTTP, l'ordonnanceur
+    l'ouvre événement par événement plutôt que de lever le filtre de cloisonnement
+  - → **impose l'instance unique** au même titre que le hub, et pour une raison
+    différente : la clé protège la planification, pas l'envoi. Consigné dans
+    `docs/exploitation.md` §1.2, avec son drapeau d'extinction
+- [x] Écrans : notifications, préférences de notification
+  - → la liste emploie des cartes, à l'inverse du fil d'activité : ce qui se touche est
+    une carte, ce qui se lit ne l'est pas
+  - → les catégories sont nommées par ce qu'elles apportent, jamais par leur identifiant
+- [x] Recette locale sans clé FCM, le 26/08/2026 : soirée à 90 minutes du début,
+      rappel produit et envoyé dans la minute, toujours un seul après une seconde passe
+- [ ] `EF-NOT-09` Repli par courriel — `P1`, hors périmètre de ce lot
+- [ ] **Recette sur un appareil réel, avec une vraie clé FCM** — la chaîne est vérifiée
+      avec l'émetteur en repli console (règle 5). Qu'une notification s'affiche sur un
+      téléphone reste à éprouver, et remonte au lot 1.17
 
 ## Lot 1.12 — Interface et navigation
 
