@@ -236,6 +236,12 @@ internal sealed class NotificationConfiguration : IEntityTypeConfiguration<Notif
         builder.Property(n => n.Body).HasMaxLength(1000).IsRequired();
         builder.Property(n => n.DeepLink).HasMaxLength(300);
 
+        builder.Property(n => n.DedupKey).HasMaxLength(200).IsRequired();
+
+        // Unicité de la clé de déduplication : c'est elle qui rend le balayage de
+        // l'ordonnanceur rejouable. Sans elle, un rappel J-3 partirait à chaque réveil.
+        builder.HasIndex(n => n.DedupKey).IsUnique();
+
         // File d'envoi : l'ordonnanceur lit les notifications dues et non encore parties.
         builder.HasIndex(n => new { n.ScheduledFor, n.SentAt });
         builder.HasIndex(n => new { n.UserId, n.ReadAt });

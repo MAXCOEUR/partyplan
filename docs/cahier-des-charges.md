@@ -658,12 +658,15 @@ bout, groupes hors événement) n'entre dans le périmètre.
 | EF-NOT-07 | P0 | Permettre la désactivation individuelle de chaque catégorie de notification. |
 | EF-NOT-08 | P0 | Permettre la mise en sourdine d'un événement. |
 | EF-NOT-09 | P1 | Notifications par courriel en repli lorsque les notifications poussées sont indisponibles. |
+| EF-NOT-10 | P0 | Notifier l'activité de l'événement : article pris en charge, message posté. Regroupée par RG-NOT-02. |
 
 **RG-NOT-01** — Aucune notification n'est envoyée entre 22 h et 8 h heure locale du
 destinataire, sauf le rappel de début d'événement.
 
-**RG-NOT-02** — Les notifications d'activité (article pris, message) sont regroupées :
-au maximum une notification par événement et par tranche de 15 minutes.
+**RG-NOT-02** — Les notifications d'activité (`EF-NOT-10` : article pris, message) sont
+regroupées : au maximum une notification par événement, par destinataire et par tranche
+de 15 minutes. Sans ce plafond, une liste de courses remplie à plusieurs produirait une
+notification par article.
 
 **RG-NOT-03** — Le consentement aux notifications poussées est demandé au moment où
 il devient utile, jamais au premier lancement.

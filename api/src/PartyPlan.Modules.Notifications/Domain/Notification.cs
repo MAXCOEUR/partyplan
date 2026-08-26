@@ -30,6 +30,20 @@ public sealed class Notification
     public DateTimeOffset? ReadAt { get; set; }
 
     public DateTimeOffset CreatedAt { get; set; }
+
+    /// <summary>
+    /// Clé d'unicité. Forme : <c>{eventId}:{categorie}:{destinataire}:{occurrence}</c>,
+    /// où l'occurrence vaut <c>j-3</c>, <c>j-1</c>, <c>debut</c>, <c>lendemain</c> pour
+    /// un rappel temporel, et l'identifiant de l'action pour une notification née d'un
+    /// geste.
+    /// <para>
+    /// Le doublon est refusé par la base et non par l'application : l'ordonnanceur
+    /// balaie toutes les minutes, et vérifier puis écrire laisserait ouverte exactement
+    /// la fenêtre qu'il exploiterait. C'est cette contrainte qui rend la planification
+    /// rejouable sans conséquence.
+    /// </para>
+    /// </summary>
+    public string DedupKey { get; set; } = string.Empty;
 }
 
 /// <summary>

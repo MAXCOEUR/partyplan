@@ -22,6 +22,10 @@ public sealed class NotificationsModule : IModule
 
         services.AddScoped<DeviceService>();
 
+        // Mise en file, consommée par Events, Shopping, Settlements et Messages : aucun
+        // n'accède à la table notifications (règle 6).
+        services.AddScoped<IFileNotifications, FileNotifications>();
+
         // Contrat public consommé par l'émetteur de l'Infrastructure, qui ne doit pas
         // écrire dans push_devices lui-même (règle 6).
         services.AddScoped<IPushDeviceRegistry>(sp => sp.GetRequiredService<DeviceService>());
