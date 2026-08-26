@@ -236,6 +236,8 @@ public sealed class SettlementService(
 
         await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
+        await journal.PublierEnAttenteAsync(cancellationToken).ConfigureAwait(false);
+
         var page = await ConsulterAsync(eventId, cancellationToken)
             .ConfigureAwait(false);
 
@@ -290,6 +292,8 @@ public sealed class SettlementService(
             });
 
         await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+
+        await journal.PublierEnAttenteAsync(cancellationToken).ConfigureAwait(false);
 
         var page = await ConsulterAsync(eventId, cancellationToken)
             .ConfigureAwait(false);

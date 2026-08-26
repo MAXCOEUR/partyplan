@@ -312,6 +312,8 @@ public sealed class ExpenseService(
 
         await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
+        await journal.PublierEnAttenteAsync(cancellationToken).ConfigureAwait(false);
+
         var creee = await DetailAsync(eventId, depense.Id, cancellationToken)
             .ConfigureAwait(false);
 
@@ -404,6 +406,8 @@ public sealed class ExpenseService(
 
         await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
+        await journal.PublierEnAttenteAsync(cancellationToken).ConfigureAwait(false);
+
         var modifiee = await DetailAsync(eventId, expenseId, cancellationToken)
             .ConfigureAwait(false);
 
@@ -455,6 +459,8 @@ public sealed class ExpenseService(
             new { libelle = depense.Label, montant = depense.Amount });
 
         await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+
+        await journal.PublierEnAttenteAsync(cancellationToken).ConfigureAwait(false);
 
         // Une suppression change les soldes comme une création : les deux messages
         // partent ensemble.

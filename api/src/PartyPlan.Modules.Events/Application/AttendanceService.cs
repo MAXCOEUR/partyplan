@@ -148,6 +148,8 @@ public sealed class AttendanceService(
 
         await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
+        await journal.PublierEnAttenteAsync(cancellationToken).ConfigureAwait(false);
+
         var identite = membre.UserId is { } compte
             ? await identites.FindAsync(compte, cancellationToken).ConfigureAwait(false)
             : null;

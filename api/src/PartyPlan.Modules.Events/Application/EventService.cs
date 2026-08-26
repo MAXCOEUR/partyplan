@@ -326,6 +326,8 @@ public sealed class EventService(
 
         await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
+        await journal.PublierEnAttenteAsync(cancellationToken).ConfigureAwait(false);
+
         var resume = await LireAsync(eventId, cancellationToken).ConfigureAwait(false);
 
         if (resume.IsSuccess)

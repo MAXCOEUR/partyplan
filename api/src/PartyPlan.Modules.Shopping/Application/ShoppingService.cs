@@ -177,6 +177,8 @@ public sealed class ShoppingService(
 
         await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
+        await journal.PublierEnAttenteAsync(cancellationToken).ConfigureAwait(false);
+
         var ajoute = await RelireAsync(eventId, article.Id, moi.MemberId, cancellationToken)
             .ConfigureAwait(false);
 
@@ -259,6 +261,8 @@ public sealed class ShoppingService(
 
         await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
+        await journal.PublierEnAttenteAsync(cancellationToken).ConfigureAwait(false);
+
         // Pas d'état : l'article a quitté la liste, son identifiant suffit à savoir
         // quoi retirer.
         await diffusion
@@ -325,6 +329,8 @@ public sealed class ShoppingService(
 
         await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
+        await journal.PublierEnAttenteAsync(cancellationToken).ConfigureAwait(false);
+
         var vue = await RelireAsync(eventId, itemId, contexte.MoiId, cancellationToken)
             .ConfigureAwait(false);
 
@@ -366,6 +372,8 @@ public sealed class ShoppingService(
             new { libelle = article.Name });
 
         await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+
+        await journal.PublierEnAttenteAsync(cancellationToken).ConfigureAwait(false);
 
         var vue = await RelireAsync(eventId, itemId, contexte.MoiId, cancellationToken)
             .ConfigureAwait(false);
@@ -442,6 +450,8 @@ public sealed class ShoppingService(
                 : (object)new { libelle = article.Name });
 
         await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+
+        await journal.PublierEnAttenteAsync(cancellationToken).ConfigureAwait(false);
 
         if (requete.ActualPrice is { } prix)
         {

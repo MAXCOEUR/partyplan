@@ -45,6 +45,26 @@ public interface IJournalActivite
         string actorName,
         string kind,
         object? donnees = null);
+
+    /// <summary>
+    /// Diffuse <c>activity.appended</c> pour les lignes consignées depuis le dernier
+    /// appel, puis vide la file. À appeler <b>après</b> le <c>SaveChangesAsync</c>.
+    /// <para>
+    /// La diffusion ne peut pas partir de <see cref="Consigner"/>, qui s'exécute avant
+    /// la validation : elle annoncerait une entrée que la transaction peut encore
+    /// annuler, et le fil afficherait ce qui n'a pas eu lieu.
+    /// </para>
+    /// <para>
+    /// Portée par le contrat plutôt que recopiée à chaque point d'écriture : la charge
+    /// diffusée ne peut alors pas diverger de la ligne réellement écrite, et treize
+    /// recopies auraient offert treize occasions d'oublier un champ.
+    /// </para>
+    /// <para>
+    /// Ne lève jamais, comme <see cref="IDiffusionEvenement"/> : une diffusion perdue ne
+    /// doit pas faire échouer l'action métier déjà validée.
+    /// </para>
+    /// </summary>
+    Task PublierEnAttenteAsync(CancellationToken cancellationToken);
 }
 
 /// <summary>

@@ -24,6 +24,18 @@ internal static class ScenarioFil
         this PartyPlanApiFixture fixture,
         string nomAffiche = "Camille")
     {
+        var (client, _) = await fixture.CompteAvecJetonAsync(nomAffiche);
+        return client;
+    }
+
+    /// <summary>
+    /// Crée un compte et rend le client <b>et</b> son jeton d'accès. Le jeton est
+    /// nécessaire au hub SignalR, qui l'attend en chaîne de requête et non en en-tête.
+    /// </summary>
+    internal static async Task<(HttpClient Client, string Jeton)> CompteAvecJetonAsync(
+        this PartyPlanApiFixture fixture,
+        string nomAffiche = "Camille")
+    {
         ArgumentNullException.ThrowIfNull(fixture);
 
         using var anonyme = fixture.CreateClient();
@@ -38,12 +50,12 @@ internal static class ScenarioFil
         inscription.EnsureSuccessStatusCode();
 
         var acces = (await inscription.Content.ReadFromJsonAsync<JsonDocument>())!
-            .RootElement.GetProperty("accessToken").GetString();
+            .RootElement.GetProperty("accessToken").GetString()!;
 
         var client = fixture.CreateClient();
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", acces);
 
-        return client;
+        return (client, acces);
     }
 
     /// <summary>Crée un événement et rend son identifiant et son jeton d'invitation.</summary>

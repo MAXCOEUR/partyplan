@@ -565,15 +565,25 @@ de 18.
 - [x] `RG-RT-04` Rester en instance unique : tout ajout d'une seconde instance impose Redis et un ADR préalable
   - → documenté dans `docs/exploitation.md` : deux instances sans backplane donneraient
     un temps réel qui fonctionne pour la moitié des membres
-- [ ] `activity.appended` — ses trois points d'écriture diffusent déjà un message précis,
-      et l'écran du fil d'activité n'existe pas (lot 1.10)
+- [x] `activity.appended` — diffusé par les quatre modules qui journalisent, vérifié par
+      un test à deux clients SignalR (`TempsReelDeuxClientsTests`)
+  - → la diffusion est portée par `IJournalActivite.PublierEnAttenteAsync` et non
+    recopiée à chaque point d'écriture : la charge diffusée ne peut pas diverger de la
+    ligne écrite, et treize recopies auraient offert treize occasions d'oublier un champ
+  - → un message de discussion ne diffuse **pas** `activity.appended` : il n'entre pas
+    dans les catégories de `RG-FIL-01`, et le fil clignoterait sans ligne derrière
 - [ ] Rapiéçage de l'état local au lieu d'une relecture REST
   - → reporté sciemment : rapiécer 22 messages dans autant de listes paginées, triées et
     filtrées créerait autant d'occasions d'afficher autre chose que la base, sans erreur
     visible. Le serveur envoie déjà l'état, donc ce sera possible sans y retoucher
-- [ ] Recette : propagation en moins d'une seconde — `NF-PERF-05`, exige deux appareils réels
+- [ ] Recette : propagation en moins d'une seconde — `NF-PERF-05`
+  - → le test à deux clients couvre la **logique** de diffusion, pas la latence : deux
+    connexions dans le même processus ne mesurent ni un vrai réseau ni un vrai appareil.
+    La cocher ici ferait croire la performance vérifiée. **La mesure remonte au lot 1.17**
 - [ ] Recette : couper le réseau d'un appareil, changer trois choses sur l'autre,
       rétablir, et vérifier que le premier revient **exactement** à jour
+  - → même motif : exige deux appareils. Le test automatisé vérifie que la reconnexion
+    relit l'écran, pas qu'un appareil réel revient exactement à jour
 
 ## Lot 1.7 — Dépenses
 

@@ -163,6 +163,8 @@ public sealed class JoinService(
 
         await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
+        await journal.PublierEnAttenteAsync(cancellationToken).ConfigureAwait(false);
+
         // L'état du nouveau membre, pas seulement son identifiant (RG-RT-02) : les
         // autres écrans doivent pouvoir l'afficher sans relire la liste entière. La
         // vue est construite ici plutôt que réutilisée d'un endpoint : ce service ne
