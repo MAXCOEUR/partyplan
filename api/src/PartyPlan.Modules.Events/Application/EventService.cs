@@ -55,7 +55,8 @@ public sealed class EventService(
     IEventScope scope,
     IClock clock,
     IIdGenerator ids,
-    IDiffusionEvenement diffusion)
+    IDiffusionEvenement diffusion,
+    IJournalActivite journal)
 {
     /// <summary>Nombre de tentatives de tirage d'un code court avant abandon.</summary>
     private const int ShortCodeAttempts = 5;
@@ -280,10 +281,13 @@ public sealed class EventService(
 
         // EF-EVT-03 : un changement de date ou de lieu doit être signalé aux membres qui
         // ont déjà répondu. La détection a lieu ici, avant écrasement des valeurs.
-        var dateOuLieuChange = debut != evenement.StartsAt
-                               || fin != evenement.EndsAt
-                               || (requete.Address is not null
-                                   && requete.Address.Trim() != evenement.Address);
+        // Les deux champs sont distingués : sans cela, l'application ne peut pas dire
+        // si c'est la date ou le lieu qui a bougé, et les deux cas n'en font qu'un à
+        // l'affichage.
+        var dateChange = debut != evenement.StartsAt || fin != evenement.EndsAt;
+        var lieuChange = requete.Address is not null
+                         && requete.Address.Trim() != evenement.Address;
+        var dateOuLieuChange = dateChange || lieuChange;
 
         evenement.Name = nom;
         evenement.StartsAt = debut;
@@ -301,15 +305,23 @@ public sealed class EventService(
 
         if (dateOuLieuChange)
         {
-            db.ActivityEntries.Add(new ActivityEntry
+            List<string> champs = [];
+            if (dateChange)
             {
-                Id = ids.NewId(),
-                EventId = evenement.Id,
-                MemberId = acteur.Id,
-                ActorName = acteur.DisplayName,
-                Kind = ActivityKinds.EventDateOrPlaceChanged,
-                CreatedAt = clock.UtcNow,
-            });
+                champs.Add("date");
+            }
+
+            if (lieuChange)
+            {
+                champs.Add("lieu");
+            }
+
+            journal.Consigner(
+                evenement.Id,
+                acteur.Id,
+                acteur.DisplayName,
+                ActivityKinds.EventDateOrPlaceChanged,
+                new { champs });
         }
 
         await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);

@@ -39,7 +39,8 @@ public sealed class JoinService(
     IUserIdentityLookup users,
     IClock clock,
     IIdGenerator ids,
-    IDiffusionEvenement diffusion)
+    IDiffusionEvenement diffusion,
+    IJournalActivite journal)
 {
     public static readonly DomainError InvitationNotFound = DomainError.NotFound(
         "invitation.not_found",
@@ -154,15 +155,11 @@ public sealed class JoinService(
 
         db.EventMembers.Add(membre);
 
-        db.ActivityEntries.Add(new ActivityEntry
-        {
-            Id = ids.NewId(),
-            EventId = evenement.Id,
-            MemberId = membre.Id,
-            ActorName = membre.DisplayName,
-            Kind = ActivityKinds.MemberJoined,
-            CreatedAt = clock.UtcNow,
-        });
+        journal.Consigner(
+            evenement.Id,
+            membre.Id,
+            membre.DisplayName,
+            ActivityKinds.MemberJoined);
 
         await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 

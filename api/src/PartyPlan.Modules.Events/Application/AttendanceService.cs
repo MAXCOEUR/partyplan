@@ -39,9 +39,9 @@ public sealed class AttendanceService(
     IEventsDbContext db,
     ICurrentUser currentUser,
     IClock clock,
-    IIdGenerator ids,
     IDiffusionEvenement diffusion,
-    IUserIdentityLookup identites)
+    IUserIdentityLookup identites,
+    IJournalActivite journal)
 {
     /// <summary>Plafond d'accompagnants. Au-delà, il s'agit d'un autre événement.</summary>
     public const int MaxExtraGuests = 10;
@@ -138,16 +138,12 @@ public sealed class AttendanceService(
 
         if (ancien != statut)
         {
-            db.ActivityEntries.Add(new ActivityEntry
-            {
-                Id = ids.NewId(),
-                EventId = eventId,
-                MemberId = membre.Id,
-                ActorName = membre.DisplayName,
-                Kind = ActivityKinds.MemberStatusChanged,
-                Payload = $"{{\"de\":\"{ancien}\",\"vers\":\"{statut}\"}}",
-                CreatedAt = clock.UtcNow,
-            });
+            journal.Consigner(
+                eventId,
+                membre.Id,
+                membre.DisplayName,
+                ActivityKinds.MemberStatusChanged,
+                new { de = ancien.ToString(), vers = statut.ToString() });
         }
 
         await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
