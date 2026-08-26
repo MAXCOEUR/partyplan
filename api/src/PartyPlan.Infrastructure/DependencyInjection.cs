@@ -71,6 +71,12 @@ public static class DependencyInjection
         services.AddSingleton<PartyPlan.SharedKernel.Contracts.IDiffusionEvenement,
             TempsReel.DiffusionSignalR>();
 
+        // Fil d'activité. À portée requête et non singleton, à l'inverse de la
+        // diffusion : l'implémentation inscrit dans le DbContext de la requête en
+        // cours, afin que la ligne soit validée par la transaction de l'action métier.
+        services.AddScoped<PartyPlan.SharedKernel.Contracts.IJournalActivite,
+            Journal.JournalActivite>();
+
         // Notifications poussées. L'émetteur réel n'est choisi que si une clé de compte de
         // service est lisible ; sinon les notifications sont journalisées (NF-DEV-04,
         // règle 5). Le choix est fait à chaque portée, sur une clé déjà validée.
