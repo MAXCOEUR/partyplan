@@ -58,7 +58,8 @@ public sealed class ShoppingService(
     IExpenseFromPurchase depenses,
     IClock clock,
     IIdGenerator ids,
-    IDiffusionEvenement diffusion)
+    IDiffusionEvenement diffusion,
+    IJournalActivite journal)
 {
     public static readonly DomainError EventNotFound = DomainError.NotFound(
         "event.not_found",
@@ -166,6 +167,14 @@ public sealed class ShoppingService(
         };
 
         db.ShoppingItems.Add(article);
+
+        journal.Consigner(
+            eventId,
+            moi.MemberId,
+            moi.DisplayName,
+            ActivityKinds.ItemCreated,
+            new { libelle = article.Name });
+
         await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
         var ajoute = await RelireAsync(eventId, article.Id, moi.MemberId, cancellationToken)
@@ -240,6 +249,14 @@ public sealed class ShoppingService(
         }
 
         contexte.Article!.DeletedAt = clock.UtcNow;
+
+        journal.Consigner(
+            eventId,
+            contexte.MoiId,
+            contexte.MonNom,
+            ActivityKinds.ItemDeleted,
+            new { libelle = contexte.Article.Name });
+
         await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
         // Pas d'état : l'article a quitté la liste, son identifiant suffit à savoir
@@ -294,6 +311,20 @@ public sealed class ShoppingService(
                 : AlreadyClaimed;
         }
 
+        // L'attribution passe par une écriture conditionnelle, déjà validée à ce
+        // point : la ligne de fil ne peut donc pas partager sa transaction. L'ordre est
+        // choisi — attribuer puis consigner — pour que le seul échec possible soit une
+        // attribution sans sa ligne, jamais une ligne sans attribution. Un fil qui
+        // annonce ce qui n'a pas eu lieu serait pire qu'un fil incomplet.
+        journal.Consigner(
+            eventId,
+            contexte.MoiId,
+            contexte.MonNom,
+            ActivityKinds.ItemClaimed,
+            new { libelle = contexte.Article!.Name });
+
+        await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+
         var vue = await RelireAsync(eventId, itemId, contexte.MoiId, cancellationToken)
             .ConfigureAwait(false);
 
@@ -326,6 +357,13 @@ public sealed class ShoppingService(
         article.AssignedMemberId = null;
         article.AssignedAt = null;
         article.UpdatedAt = clock.UtcNow;
+
+        journal.Consigner(
+            eventId,
+            contexte.MoiId,
+            contexte.MonNom,
+            ActivityKinds.ItemUnclaimed,
+            new { libelle = article.Name });
 
         await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
@@ -392,6 +430,17 @@ public sealed class ShoppingService(
         article.ActualPrice = requete.ActualPrice;
         article.UpdatedAt = clock.UtcNow;
 
+        // Le montant n'est porté que s'il a été déclaré : un zéro serait lu comme un
+        // prix, alors qu'il n'y a pas eu de saisie.
+        journal.Consigner(
+            eventId,
+            contexte.MoiId,
+            contexte.MonNom,
+            ActivityKinds.ItemPurchased,
+            requete.ActualPrice is { } prixConsigne
+                ? new { libelle = article.Name, montant = prixConsigne }
+                : (object)new { libelle = article.Name });
+
         await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
         if (requete.ActualPrice is { } prix)
@@ -430,7 +479,7 @@ public sealed class ShoppingService(
     /// personne qui arbitre l'événement d'un simple participant : elle seule agit sur
     /// ce qui appartient à autrui.
     /// </summary>
-    private async Task<(ShoppingItem? Article, Guid MoiId, bool JeGere, DomainError? Erreur)>
+    private async Task<(ShoppingItem? Article, Guid MoiId, string MonNom, bool JeGere, DomainError? Erreur)>
         ContexteAsync(
             Guid eventId,
             Guid itemId,
@@ -439,7 +488,7 @@ public sealed class ShoppingService(
         var moi = await membership.FindCurrentAsync(eventId, cancellationToken).ConfigureAwait(false);
         if (moi is null)
         {
-            return (null, Guid.Empty, false, EventNotFound);
+            return (null, Guid.Empty, string.Empty, false, EventNotFound);
         }
 
         var article = await db.ShoppingItems
@@ -447,8 +496,8 @@ public sealed class ShoppingService(
             .ConfigureAwait(false);
 
         return article is null
-            ? (null, moi.MemberId, moi.CanManage, NotFound)
-            : (article, moi.MemberId, moi.CanManage, null);
+            ? (null, moi.MemberId, moi.DisplayName, moi.CanManage, NotFound)
+            : (article, moi.MemberId, moi.DisplayName, moi.CanManage, null);
     }
 
     private async Task<Result<ShoppingItemView>> RelireAsync(

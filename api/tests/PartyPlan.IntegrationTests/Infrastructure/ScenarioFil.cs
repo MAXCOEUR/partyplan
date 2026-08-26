@@ -90,6 +90,29 @@ internal static class ScenarioFil
     }
 
     /// <summary>
+    /// POST avec en-tête d'idempotence. Plusieurs endpoints d'écriture l'exigent
+    /// (RequireIdempotency), et l'oublier rend un 400 qui ressemble à une erreur de
+    /// contrat plutôt qu'à un en-tête manquant.
+    /// </summary>
+    internal static Task<HttpResponseMessage> PosterAsync(
+        this HttpClient client,
+        string chemin,
+        object? corps = null)
+    {
+        ArgumentNullException.ThrowIfNull(client);
+
+        var requete = new HttpRequestMessage(HttpMethod.Post, new Uri(chemin, UriKind.Relative));
+        if (corps is not null)
+        {
+            requete.Content = JsonContent.Create(corps);
+        }
+
+        requete.Headers.Add("Idempotency-Key", Guid.CreateVersion7().ToString());
+
+        return client.SendAsync(requete);
+    }
+
+    /// <summary>
     /// Lignes du fil, sans filtre de cloisonnement : aucun périmètre n'est amorcé hors
     /// d'une requête HTTP, et le filtre global renverrait donc zéro ligne.
     /// </summary>

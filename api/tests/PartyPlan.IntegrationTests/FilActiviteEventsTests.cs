@@ -2,7 +2,7 @@ namespace PartyPlan.IntegrationTests;
 
 using System.Net.Http.Json;
 using PartyPlan.IntegrationTests.Infrastructure;
-using PartyPlan.Modules.Events.Domain;
+using PartyPlan.SharedKernel.Contracts;
 using Shouldly;
 using Xunit;
 

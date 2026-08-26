@@ -1,6 +1,6 @@
 namespace PartyPlan.UnitTests;
 
-using PartyPlan.Modules.Events.Domain;
+using PartyPlan.SharedKernel.Contracts;
 using Shouldly;
 using Xunit;
 
