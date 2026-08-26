@@ -5,6 +5,7 @@ using System.Net.Http.Json;
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using PartyPlan.Modules.Events.Domain;
+using PartyPlan.Modules.Notifications.Domain;
 using Shouldly;
 
 /// <summary>
@@ -173,6 +174,68 @@ internal static class ScenarioFil
         var ligne = (await fixture.ActivitesAsync(eventId, categorie)).ShouldHaveSingleItem();
         var brut = ligne.Payload.ShouldNotBeNull();
         return (ligne, JsonDocument.Parse(brut).RootElement);
+    }
+
+    /// <summary>Notifications d'un événement, dans l'ordre d'inscription.</summary>
+    internal static async Task<List<Notification>> NotificationsAsync(
+        this PartyPlanApiFixture fixture,
+        string eventId,
+        string? categorie = null)
+    {
+        ArgumentNullException.ThrowIfNull(fixture);
+
+        var id = Guid.Parse(eventId);
+        List<Notification> lignes = [];
+
+        await fixture.WithDatabaseAsync(async db =>
+            lignes = await db.Notifications
+                .Where(n => n.EventId == id
+                            && (categorie == null || n.Category == categorie))
+                .OrderBy(n => n.CreatedAt)
+                .ToListAsync());
+
+        return lignes;
+    }
+
+    /// <summary>Compte du propriétaire de l'événement.</summary>
+    internal static async Task<Guid> ProprietaireAsync(
+        this PartyPlanApiFixture fixture,
+        string eventId)
+    {
+        ArgumentNullException.ThrowIfNull(fixture);
+
+        var id = Guid.Parse(eventId);
+        var proprietaire = Guid.Empty;
+
+        await fixture.WithDatabaseAsync(async db =>
+            proprietaire = await db.Events
+                .IgnoreQueryFilters()
+                .Where(e => e.Id == id)
+                .Select(e => e.CreatedByUserId)
+                .FirstAsync());
+
+        return proprietaire;
+    }
+
+    /// <summary>Compte correspondant à un membre nommé.</summary>
+    internal static async Task<Guid> CompteDuMembreAsync(
+        this PartyPlanApiFixture fixture,
+        string eventId,
+        string nomAffiche)
+    {
+        ArgumentNullException.ThrowIfNull(fixture);
+
+        var id = Guid.Parse(eventId);
+        Guid? compte = null;
+
+        await fixture.WithDatabaseAsync(async db =>
+            compte = await db.EventMembers
+                .IgnoreQueryFilters()
+                .Where(m => m.EventId == id && m.DisplayName == nomAffiche)
+                .Select(m => m.UserId)
+                .FirstAsync());
+
+        return compte!.Value;
     }
 
     /// <summary>Valeur texte d'un champ du payload.</summary>

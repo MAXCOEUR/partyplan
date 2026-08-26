@@ -41,7 +41,8 @@ public sealed class AttendanceService(
     IClock clock,
     IDiffusionEvenement diffusion,
     IUserIdentityLookup identites,
-    IJournalActivite journal)
+    IJournalActivite journal,
+    IFileNotifications notifications)
 {
     /// <summary>Plafond d'accompagnants. Au-delà, il s'agit d'un autre événement.</summary>
     public const int MaxExtraGuests = 10;
@@ -144,6 +145,9 @@ public sealed class AttendanceService(
                 membre.DisplayName,
                 ActivityKinds.MemberStatusChanged,
                 new { de = ancien.ToString(), vers = statut.ToString() });
+
+            await PrevenirOrganisateurAsync(eventId, membre, statut, cancellationToken)
+                .ConfigureAwait(false);
         }
 
         await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
@@ -298,6 +302,59 @@ public sealed class AttendanceService(
     }
 
     /// <summary>Membre correspondant au compte appelant.</summary>
+    /// <summary>
+    /// Prévient l'organisateur d'une réponse (EF-NOT-01).
+    /// <para>
+    /// La clé de déduplication porte le <b>statut</b> et pas seulement le membre :
+    /// répondre deux fois « oui » ne prévient qu'une fois, mais passer de « oui » à
+    /// « non » est exactement ce que l'organisateur doit savoir.
+    /// </para>
+    /// <para>
+    /// Rien n'est envoyé à celui qui vient de répondre : il sait ce qu'il a fait, et
+    /// recevoir l'écho de son propre geste est le défaut le plus sûr pour faire couper
+    /// les notifications.
+    /// </para>
+    /// </summary>
+    private async Task PrevenirOrganisateurAsync(
+        Guid eventId,
+        EventMember membre,
+        EventMemberStatus statut,
+        CancellationToken cancellationToken)
+    {
+        var organisateur = await db.EventMembers
+            .Where(m => m.EventId == eventId
+                        && m.Role == EventMemberRole.Owner
+                        && m.UserId != null)
+            .Select(m => m.UserId)
+            .FirstOrDefaultAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        if (organisateur is null || organisateur == membre.UserId)
+        {
+            return;
+        }
+
+        notifications.Enfiler(new NotificationAEnvoyer(
+            organisateur,
+            eventId,
+            NotificationCategories.InvitationAnswer,
+            "Une réponse est arrivée",
+            $"{membre.DisplayName} a répondu {Reponse(statut)}.",
+            $"/events/{eventId}/invites",
+            clock.UtcNow,
+            $"{eventId}:{NotificationCategories.InvitationAnswer}:{membre.Id}:{statut}"));
+    }
+
+    /// <summary>Statut tel qu'on le dit, et non tel qu'il est stocké.</summary>
+    private static string Reponse(EventMemberStatus statut) => statut switch
+    {
+        EventMemberStatus.Going => "oui",
+        EventMemberStatus.NotGoing => "non",
+        EventMemberStatus.Maybe => "peut-être",
+        EventMemberStatus.Late => "oui, en retard",
+        _ => "oui, en partant tôt",
+    };
+
     private Task<EventMember?> MembreCourantAsync(Guid eventId, CancellationToken cancellationToken)
     {
         if (currentUser.UserId is not { } compte)

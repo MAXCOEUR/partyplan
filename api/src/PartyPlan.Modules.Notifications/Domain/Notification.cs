@@ -46,32 +46,6 @@ public sealed class Notification
     public string DedupKey { get; set; } = string.Empty;
 }
 
-/// <summary>
-/// Catégories de notification. Chacune est désactivable individuellement (EF-NOT-07),
-/// ce qui suppose une valeur stable en base.
-/// </summary>
-public static class NotificationCategories
-{
-    public const string InvitationAnswer = "invitation.answer";
-    public const string EventChanged = "event.changed";
-    public const string InvitationPending = "invitation.pending";
-    public const string ShoppingUnclaimed = "shopping.unclaimed";
-    public const string EventStartingSoon = "event.starting_soon";
-    public const string BalanceDue = "balance.due";
-    public const string Activity = "activity";
-
-    public static readonly string[] All =
-    [
-        InvitationAnswer,
-        EventChanged,
-        InvitationPending,
-        ShoppingUnclaimed,
-        EventStartingSoon,
-        BalanceDue,
-        Activity,
-    ];
-}
-
 /// <summary>Préférence par destinataire et par catégorie (EF-NOT-07).</summary>
 public sealed class NotificationPreference
 {

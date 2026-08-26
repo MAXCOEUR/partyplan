@@ -56,7 +56,8 @@ public sealed class EventService(
     IClock clock,
     IIdGenerator ids,
     IDiffusionEvenement diffusion,
-    IJournalActivite journal)
+    IJournalActivite journal,
+    IFileNotifications notifications)
 {
     /// <summary>Nombre de tentatives de tirage d'un code court avant abandon.</summary>
     private const int ShortCodeAttempts = 5;
@@ -322,6 +323,10 @@ public sealed class EventService(
                 acteur.DisplayName,
                 ActivityKinds.EventDateOrPlaceChanged,
                 new { champs });
+
+            await PrevenirDuChangementAsync(
+                    evenement, acteur, champs, cancellationToken)
+                .ConfigureAwait(false);
         }
 
         await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
@@ -473,6 +478,50 @@ public sealed class EventService(
     }
 
     // ---------------------------------------------------------------- outils ----
+
+    /// <summary>
+    /// Prévient les membres d'un changement de date ou de lieu (EF-NOT-02).
+    /// <para>
+    /// Tous sauf l'auteur : il vient de le faire. La clé de déduplication porte
+    /// l'horodatage du changement, si bien qu'un second déplacement de date prévient de
+    /// nouveau — c'est précisément ce qui doit remonter.
+    /// </para>
+    /// </summary>
+    private async Task PrevenirDuChangementAsync(
+        Event evenement,
+        EventMember acteur,
+        List<string> champs,
+        CancellationToken cancellationToken)
+    {
+        var destinataires = await db.EventMembers
+            .Where(m => m.EventId == evenement.Id
+                        && m.UserId != null
+                        && m.Id != acteur.Id
+                        && m.RemovedAt == null)
+            .Select(m => m.UserId!.Value)
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        var quoi = champs.Count == 2
+            ? "la date et le lieu"
+            : champs[0] == "date" ? "la date" : "le lieu";
+
+        var instant = clock.UtcNow;
+
+        foreach (var destinataire in destinataires)
+        {
+            notifications.Enfiler(new NotificationAEnvoyer(
+                destinataire,
+                evenement.Id,
+                NotificationCategories.EventChanged,
+                evenement.Name,
+                $"{acteur.DisplayName} a modifié {quoi}.",
+                $"/events/{evenement.Id}",
+                instant,
+                $"{evenement.Id}:{NotificationCategories.EventChanged}:"
+                + $"{destinataire}:{instant.ToUnixTimeSeconds()}"));
+        }
+    }
 
     private static Result Valider(string? nom, DateTimeOffset debut, DateTimeOffset? fin)
     {
