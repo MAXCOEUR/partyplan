@@ -69,6 +69,9 @@ services:
       Database__MigrateOnStartup: "true"
       Database__SeedDemoData: ${SEED_DEMO:-true}
       RateLimiting__Enabled: "true"
+      # Ordonnanceur des notifications. Une seule instance l'exécute (RG-RT-04) :
+      # la clé de déduplication protège la planification, pas l'envoi.
+      Notifications__Ordonnanceur__Enabled: "${NOTIFICATIONS_ORDONNANCEUR_ENABLED:-true}"
     ports:
       - "${API_PORT:-5080}:8080"
 
