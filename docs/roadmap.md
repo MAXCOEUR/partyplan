@@ -40,7 +40,7 @@ Toute tâche non cochée d'une version publiée devient une anomalie, pas un rep
 |---|---|---|
 | V0 — socle technique | lots 0.2 à 0.6, dépôt GitHub et protection de branche | lot 0.1 (INPI, nom, logo, hébergeur, DNS), lot 0.7 (serveur) |
 | V0.5 — comptes et administration | lots 0.8 à 0.14 | connexion Google (identifiants Google Cloud requis) |
-| V1.0 — MVP événementiel | lots 1.2 à 1.5, 1.7, 1.8, le socle hors ligne du lot 1.12, plus la discussion et les sondages remontés de V1.1 | fil d'activité (1.10), temps réel (1.6), notifications (1.11), conformité (1.13), exploitation (1.14), légal (1.15), vitrine (1.16), recette et publication (1.17, 1.18) |
+| V1.0 — MVP événementiel | lots 1.2 à 1.5, 1.7, 1.8, le fil d'activité (1.10), le temps réel (1.6) hors recette matérielle, le socle hors ligne du lot 1.12, plus la discussion et les sondages remontés de V1.1 | notifications (1.11), conformité (1.13), exploitation (1.14), légal (1.15), vitrine (1.16), recette et publication (1.17, 1.18) |
 
 Décisions d'architecture prises : `ADR 0001` monorepo, `ADR 0002` monolithe modulaire,
 `ADR 0003` domaines et certificats, `ADR 0004` chaîne de livraison, `ADR 0005` identité
@@ -649,11 +649,34 @@ navigation : quatre onglets subsistent, et la place est prise par la discussion.
 
 ## Lot 1.10 — Fil d'activité
 
-- [ ] `EF-FIL-01` Fil horodaté des actions structurantes
-- [ ] `RG-FIL-01` Couvrir les 10 catégories d'événements listées
-- [ ] `RG-FIL-02` Lecture seule, non modifiable même par le propriétaire
-- [ ] Pagination par curseur — `§8.1`
-- [ ] Intégration au tableau de bord
+**Livré le 26/08/2026.** Alimenté par le contrat `IJournalActivite`, inscrit dans la
+transaction de l'action métier — voir
+`docs/superpowers/specs/2026-08-26-fil-activite-design.md`.
+
+- [x] `EF-FIL-01` Fil horodaté des actions structurantes
+- [x] `RG-FIL-01` Couvrir les catégories listées — **13 et non 10** : la règle a été
+      complétée d'abord, les trois actions d'annulation manquaient (libération d'un
+      article, suppression d'une dépense, annulation d'un remboursement)
+  - → un fil qui consigne l'attribution mais pas la libération trompe là où il prétend
+    faire preuve, et c'est exactement la situation où deux membres se contredisent
+  - → `event.schedule_changed` retiré, mort avec le planning abandonné le 21/08/2026
+  - → dix points d'écriture répartis sur quatre modules, aucun n'accédant à
+    `activity_entries` : le contrat vit dans le noyau partagé, comme `IDiffusionEvenement`
+- [x] `RG-FIL-02` Lecture seule, non modifiable même par le propriétaire
+  - → deux barrières : le déclencheur d'ajout seul en base, et un écran sans la moindre
+    interaction — ni appui, ni glissement, ni menu contextuel
+- [x] Pagination par curseur — `§8.1`, convention identique à celle de la discussion
+  - → le curseur porte sur l'horodatage, l'identifiant départageant les ex æquo : une
+    action consigne parfois plusieurs lignes dans la même milliseconde
+- [x] Intégration au tableau de bord — trois dernières lignes, section masquée si vide,
+      en chargement ou en erreur
+- [x] La phrase affichée est composée par l'application, jamais stockée : la ligne étant
+      inaltérable, une formulation maladroite y resterait pour toujours et le fil ne
+      serait jamais traduisible
+- [x] Vérifié de bout en bout contre une API réelle le 26/08/2026, `make verif` vert
+- [ ] Consultation hors ligne au-delà de la première page — exigerait de remplacer
+      `shared_preferences` (limite consignée au lot 1.12), reporté sciemment
+- [ ] Lien d'une ligne vers la ressource concernée — un article supprimé n'a plus d'écran
 
 ## Lot 1.11 — Notifications
 
