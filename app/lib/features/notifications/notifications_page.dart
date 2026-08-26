@@ -133,7 +133,9 @@ class _LigneAvis extends ConsumerWidget {
                 const SizedBox(height: PpSpacing.xs),
                 Text(
                   ilYA(avis.recuLe),
-                  style: theme.textTheme.labelSmall?.copyWith(color: secondaire),
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    color: secondaire,
+                  ),
                 ),
               ],
             ),

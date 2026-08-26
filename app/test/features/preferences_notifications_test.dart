@@ -17,9 +17,14 @@ const _categories = [
   'activity',
 ];
 
-Future<void> _monter(WidgetTester tester, List<PreferenceAvis> preferences) async {
+Future<void> _monter(
+  WidgetTester tester,
+  List<PreferenceAvis> preferences,
+) async {
   final conteneur = ProviderContainer(
-    overrides: [preferencesAvisProvider.overrideWith((ref) async => preferences)],
+    overrides: [
+      preferencesAvisProvider.overrideWith((ref) async => preferences),
+    ],
   );
   addTearDown(conteneur.dispose);
 
@@ -83,7 +88,11 @@ void main() {
       // Écrite par une version plus récente du serveur : mieux vaut une ligne au nom
       // technique qu'un réglage qu'on ne peut plus couper.
       await _monter(tester, const [
-        PreferenceAvis(categorie: 'quelque.chose', poussee: true, courriel: true),
+        PreferenceAvis(
+          categorie: 'quelque.chose',
+          poussee: true,
+          courriel: true,
+        ),
       ]);
 
       expect(find.text('quelque.chose'), findsOneWidget);

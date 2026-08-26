@@ -86,11 +86,12 @@ class PreferenceAvis {
     required this.courriel,
   });
 
-  factory PreferenceAvis.depuisJson(Map<String, dynamic> json) => PreferenceAvis(
-    categorie: json['category'] as String? ?? '',
-    poussee: json['pushEnabled'] as bool? ?? true,
-    courriel: json['emailEnabled'] as bool? ?? true,
-  );
+  factory PreferenceAvis.depuisJson(Map<String, dynamic> json) =>
+      PreferenceAvis(
+        categorie: json['category'] as String? ?? '',
+        poussee: json['pushEnabled'] as bool? ?? true,
+        courriel: json['emailEnabled'] as bool? ?? true,
+      );
 
   final String categorie;
   final bool poussee;

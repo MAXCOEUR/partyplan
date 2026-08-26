@@ -81,7 +81,11 @@ void main() {
       );
       addTearDown(conteneur.dispose);
 
-      await monterEcran(tester, const NotificationsPage(), conteneur: conteneur);
+      await monterEcran(
+        tester,
+        const NotificationsPage(),
+        conteneur: conteneur,
+      );
 
       expect(find.text('Réessayer'), findsOneWidget);
     });
@@ -92,14 +96,20 @@ void main() {
 
     test('moins d’une minute se dit « à l’instant »', () {
       expect(
-        ilYA(maintenant.subtract(const Duration(seconds: 30)), depuis: maintenant),
+        ilYA(
+          maintenant.subtract(const Duration(seconds: 30)),
+          depuis: maintenant,
+        ),
         'à l’instant',
       );
     });
 
     test('dans l’heure, la minute compte', () {
       expect(
-        ilYA(maintenant.subtract(const Duration(minutes: 5)), depuis: maintenant),
+        ilYA(
+          maintenant.subtract(const Duration(minutes: 5)),
+          depuis: maintenant,
+        ),
         'il y a 5 min',
       );
     });

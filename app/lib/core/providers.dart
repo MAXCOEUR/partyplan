@@ -371,10 +371,9 @@ final avisProvider = FutureProvider<PageAvis>(
 /// Dérivé de [avisProvider] plutôt que d'un appel dédié : la page porte déjà le
 /// décompte, et un second appel doublerait les requêtes pour la même valeur.
 final avisNonLusProvider = Provider<int>(
-  (ref) => ref.watch(avisProvider).maybeWhen(
-    data: (page) => page.nonLus,
-    orElse: () => 0,
-  ),
+  (ref) => ref
+      .watch(avisProvider)
+      .maybeWhen(data: (page) => page.nonLus, orElse: () => 0),
 );
 
 /// Préférences par catégorie (`EF-NOT-07`).

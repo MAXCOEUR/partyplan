@@ -3,9 +3,9 @@ namespace PartyPlan.Modules.Shopping;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using PartyPlan.SharedKernel.Contracts;
 using PartyPlan.Modules.Shopping.Application;
 using PartyPlan.Modules.Shopping.Endpoints;
+using PartyPlan.SharedKernel.Contracts;
 using PartyPlan.SharedKernel.Modules;
 
 /// <summary>Module « Shopping » (ADR 0002).</summary>
