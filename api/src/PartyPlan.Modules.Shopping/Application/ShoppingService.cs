@@ -59,7 +59,8 @@ public sealed class ShoppingService(
     IClock clock,
     IIdGenerator ids,
     IDiffusionEvenement diffusion,
-    IJournalActivite journal)
+    IJournalActivite journal,
+    IFileNotifications notifications)
 {
     public static readonly DomainError EventNotFound = DomainError.NotFound(
         "event.not_found",
@@ -327,6 +328,13 @@ public sealed class ShoppingService(
             ActivityKinds.ItemClaimed,
             new { libelle = contexte.Article!.Name });
 
+        await PrevenirDeLActiviteAsync(
+                eventId,
+                contexte.MoiId,
+                $"{contexte.MonNom} s'occupe de {contexte.Article.Name}.",
+                cancellationToken)
+            .ConfigureAwait(false);
+
         await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
         await journal.PublierEnAttenteAsync(cancellationToken).ConfigureAwait(false);
@@ -483,6 +491,43 @@ public sealed class ShoppingService(
     }
 
     // --------------------------------------------------------------- outils ----
+
+    /// <summary>
+    /// Prévient les autres membres d'une activité (<c>EF-NOT-10</c>).
+    /// <para>
+    /// Plafonnée par <c>RG-NOT-02</c>, dans la mise en file : une liste remplie à
+    /// plusieurs produirait sinon une notification par article.
+    /// </para>
+    /// </summary>
+    private async Task PrevenirDeLActiviteAsync(
+        Guid eventId,
+        Guid acteur,
+        string corps,
+        CancellationToken cancellationToken)
+    {
+        var autres = await membership.ListActiveAsync(eventId, cancellationToken)
+            .ConfigureAwait(false);
+
+        var instant = clock.UtcNow;
+
+        foreach (var membre in autres)
+        {
+            if (membre.MemberId == acteur || membre.UserId is not { } compte)
+            {
+                continue;
+            }
+
+            notifications.Enfiler(new NotificationAEnvoyer(
+                compte,
+                eventId,
+                NotificationCategories.Activity,
+                "Ça bouge dans la soirée",
+                corps,
+                $"/events/{eventId}/courses",
+                instant,
+                $"{eventId}:{NotificationCategories.Activity}:{compte}:{instant.ToUnixTimeMilliseconds()}"));
+        }
+    }
 
     /// <summary>
     /// Article visé, appelant, et droit de gestion. <c>JeGere</c> distingue une
