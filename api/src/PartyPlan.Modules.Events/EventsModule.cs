@@ -19,6 +19,7 @@ public sealed class EventsModule : IModule
         services.AddScoped<EventService>();
         services.AddScoped<JoinService>();
         services.AddScoped<AttendanceService>();
+        services.AddScoped<ActivityService>();
 
         // Contrat public consommé par l'administration : des décomptes, jamais de
         // contenu (RG-ADM-01).

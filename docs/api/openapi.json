@@ -711,6 +711,64 @@
         ]
       }
     },
+    "/v1/events/{eventId}/activity": {
+      "get": {
+        "tags": [
+          "Events"
+        ],
+        "summary": "Fil d'activité de l'événement.",
+        "description": "Trié du plus récent au plus ancien ; `before` remonte vers le passé. Lecture seule : le fil ne se modifie pas, y compris pour le propriétaire (RG-FIL-02).",
+        "operationId": "ListActivity",
+        "parameters": [
+          {
+            "name": "eventId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "before",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActivityPage"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "Bearer": []
+          }
+        ]
+      }
+    },
     "/v1/events/{eventId}/invitation/rotate": {
       "post": {
         "tags": [
@@ -3241,6 +3299,77 @@
   },
   "components": {
     "schemas": {
+      "ActivityPage": {
+        "required": [
+          "items",
+          "hasMore"
+        ],
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ActivityView"
+            }
+          },
+          "hasMore": {
+            "type": "boolean"
+          }
+        },
+        "description": "Une page du fil, du plus récent au plus ancien.\nHasMore dit s'il reste des lignes plus anciennes à demander. Sans\nlui, l'application redemanderait indéfiniment une page qui n'existe pas."
+      },
+      "ActivityView": {
+        "required": [
+          "id",
+          "memberId",
+          "actorName",
+          "avatarUrl",
+          "kind",
+          "donnees",
+          "createdAt"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "memberId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "actorName": {
+            "type": "string"
+          },
+          "avatarUrl": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "kind": {
+            "type": "string"
+          },
+          "donnees": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/JsonElement"
+              }
+            ]
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "description": "Une ligne du fil, telle que l'application la reçoit.\nDonnees porte des données brutes et jamais une phrase : la ligne\nest inaltérable en base (RG-FIL-02), et une formulation stockée le serait aussi. La\nphrase est composée par l'application, ce qui la laisse corrigible et traduisible\n(NF-I18N-01)."
+      },
       "AttendanceBody": {
         "required": [
           "status",
@@ -3360,6 +3489,7 @@
         "required": [
           "memberId",
           "displayName",
+          "avatarUrl",
           "amount"
         ],
         "type": "object",
@@ -3370,6 +3500,12 @@
           },
           "displayName": {
             "type": "string"
+          },
+          "avatarUrl": {
+            "type": [
+              "null",
+              "string"
+            ]
           },
           "amount": {
             "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
@@ -4135,6 +4271,7 @@
         },
         "description": "Confirmation d'une participation."
       },
+      "JsonElement": {},
       "LectureBody": {
         "required": [
           "messageId"
@@ -4358,6 +4495,7 @@
           "id",
           "authorMemberId",
           "authorDisplayName",
+          "authorAvatarUrl",
           "body",
           "attachmentUrl",
           "pollId",
@@ -4382,6 +4520,12 @@
           },
           "authorDisplayName": {
             "type": "string"
+          },
+          "authorAvatarUrl": {
+            "type": [
+              "null",
+              "string"
+            ]
           },
           "body": {
             "type": [
@@ -5022,8 +5166,10 @@
           "id",
           "fromMemberId",
           "fromDisplayName",
+          "fromAvatarUrl",
           "toMemberId",
           "toDisplayName",
+          "toAvatarUrl",
           "amount",
           "done",
           "involvesMe"
@@ -5044,12 +5190,24 @@
           "fromDisplayName": {
             "type": "string"
           },
+          "fromAvatarUrl": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
           "toMemberId": {
             "type": "string",
             "format": "uuid"
           },
           "toDisplayName": {
             "type": "string"
+          },
+          "toAvatarUrl": {
+            "type": [
+              "null",
+              "string"
+            ]
           },
           "amount": {
             "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
@@ -5150,6 +5308,7 @@
           "category",
           "assignedMemberId",
           "assignedDisplayName",
+          "assignedAvatarUrl",
           "assignedToMe",
           "isPurchased",
           "purchasedQuantity",
@@ -5192,6 +5351,12 @@
             "format": "uuid"
           },
           "assignedDisplayName": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "assignedAvatarUrl": {
             "type": [
               "null",
               "string"
