@@ -3,6 +3,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 import 'models/article_course.dart';
 import 'models/depense.dart';
+import 'models/activite.dart';
 import 'models/message.dart';
 import 'models/reglement.dart';
 import 'models/sondage.dart';
@@ -16,6 +17,7 @@ import 'network/api_client.dart';
 import 'network/comptes_api.dart';
 import 'network/courses_api.dart';
 import 'network/depenses_api.dart';
+import 'network/activite_api.dart';
 import 'network/discussion_api.dart';
 import 'network/reglements_api.dart';
 import 'network/sondages_api.dart';
@@ -349,6 +351,20 @@ final reglementsApiProvider = Provider<ReglementsApi>(
 /// application (RG-RMB-02).
 final reglementsProvider = FutureProvider.family<PageReglements, String>(
   (ref, evenementId) => ref.watch(reglementsApiProvider).lire(evenementId),
+);
+
+// ---------------------------------------------------------------- activité ----
+
+final activiteApiProvider = Provider<ActiviteApi>(
+  (ref) => ActiviteApi(ref.watch(apiClientProvider)),
+);
+
+/// Première page du fil d'activité d'un événement (`EF-FIL-01`).
+///
+/// Invalidé par `EcouteEvenement` à chaque message diffusé : `activity.appended` n'a
+/// donc besoin d'aucun traitement particulier côté écran.
+final filActiviteProvider = FutureProvider.family<PageActivite, String>(
+  (ref, evenementId) => ref.watch(activiteApiProvider).lire(evenementId),
 );
 
 // -------------------------------------------------------------- discussion ----
