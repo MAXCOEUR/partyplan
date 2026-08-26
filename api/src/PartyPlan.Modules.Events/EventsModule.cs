@@ -33,6 +33,10 @@ public sealed class EventsModule : IModule
         // Événements à venir, consommés par l'ordonnanceur de notifications : des dates
         // et un propriétaire, jamais le contenu de la soirée.
         services.AddScoped<IEvenementsAVenir, EvenementsAVenir>();
+
+        // Rappels temporels calculés ici, où vivent les présences (EF-NOT-03, EF-NOT-05).
+        services.AddScoped<IPlanificateurRappels, RappelsDeReponse>();
+        services.AddScoped<IPlanificateurRappels, RappelsDeDebut>();
     }
 
     public void MapEndpoints(IEndpointRouteBuilder routes) => EventsEndpoints.Map(routes);

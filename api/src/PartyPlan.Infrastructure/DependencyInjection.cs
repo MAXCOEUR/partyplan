@@ -160,7 +160,11 @@ public static class DependencyInjection
         // de déduplication protège la planification, pas l'envoi.
         services.AddOptions<Notifications.OrdonnanceurOptions>()
             .Bind(configuration.GetSection(Notifications.OrdonnanceurOptions.SectionName));
-        services.AddHostedService<Notifications.OrdonnanceurNotifications>();
+        // Enregistré comme service à part entière, puis exposé en service hébergé :
+        // les tests le résolvent pour déclencher une passe sans attendre la cadence.
+        services.AddSingleton<Notifications.OrdonnanceurNotifications>();
+        services.AddHostedService(sp =>
+            sp.GetRequiredService<Notifications.OrdonnanceurNotifications>());
 
         services.AddHealthChecks()
             .AddDbContextCheck<PartyPlanDbContext>("database", tags: ["ready"]);

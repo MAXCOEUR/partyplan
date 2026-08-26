@@ -72,7 +72,7 @@ public sealed class OrdonnanceurNotifications(
         {
             try
             {
-                await PasseAsync(stoppingToken).ConfigureAwait(false);
+                await PasseAsync(clock.UtcNow, stoppingToken).ConfigureAwait(false);
             }
             catch (Exception erreur) when (erreur is not OperationCanceledException)
             {
@@ -92,11 +92,16 @@ public sealed class OrdonnanceurNotifications(
         }
     }
 
-    /// <summary>Une passe complète. Publique pour être éprouvée sans attendre la cadence.</summary>
-    public async Task PasseAsync(CancellationToken cancellationToken)
+    /// <summary>
+    /// Une passe complète, à un instant donné.
+    /// <para>
+    /// L'instant est un paramètre et non une lecture de l'horloge : un rappel « J-3 » ne
+    /// se teste pas en attendant trois jours, et rendre l'horloge mutable pour toute
+    /// l'application serait un prix bien plus lourd que ce paramètre.
+    /// </para>
+    /// </summary>
+    public async Task PasseAsync(DateTimeOffset maintenant, CancellationToken cancellationToken)
     {
-        var maintenant = clock.UtcNow;
-
         using var portee = portees.CreateScope();
         var fournisseur = portee.ServiceProvider;
 

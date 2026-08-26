@@ -323,7 +323,15 @@ public sealed class SettlementService(
         membres.FirstOrDefault(m => m.MemberId == memberId)?.DisplayName ?? string.Empty;
 
 
-    private async Task<(IReadOnlyList<Solde> Soldes,
+    /// <summary>
+    /// Soldes, règlements proposés et règlements effectués.
+    /// <para>
+    /// <c>internal</c> et non <c>private</c> : le planificateur de rappels de dette
+    /// (EF-NOT-06) doit connaître les mêmes soldes, et recopier le calcul le ferait
+    /// diverger de celui qui fait foi — le §6.5 n'en éprouve qu'un.
+    /// </para>
+    /// </summary>
+    internal async Task<(IReadOnlyList<Solde> Soldes,
                        IReadOnlyList<Reglement> Proposes,
                        List<Settlement> Effectues,
                        bool InvariantRespecte)>

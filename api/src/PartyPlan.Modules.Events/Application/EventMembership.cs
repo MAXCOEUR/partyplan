@@ -40,7 +40,8 @@ public sealed class EventMembership(
                     ? identite.AvatarUrl
                     : null,
                 m.CountsAsPresent,
-                m.CanManageEvent)),
+                m.CanManageEvent,
+                m.UserId)),
         ];
     }
 
@@ -93,6 +94,7 @@ public sealed class EventMembership(
             membre.DisplayName,
             identite?.AvatarUrl,
             membre.CountsAsPresent,
-            membre.CanManageEvent);
+            membre.CanManageEvent,
+            membre.UserId);
     }
 }
