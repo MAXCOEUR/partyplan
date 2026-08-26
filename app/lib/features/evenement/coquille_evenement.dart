@@ -96,7 +96,8 @@ class _CoquilleEvenementState extends ConsumerState<CoquilleEvenement> {
       ..invalidate(depensesProvider(widget.eventId))
       ..invalidate(reglementsProvider(widget.eventId))
       ..invalidate(sondagesProvider(widget.eventId))
-      ..invalidate(epinglesProvider(widget.eventId));
+      ..invalidate(epinglesProvider(widget.eventId))
+      ..invalidate(filActiviteProvider(widget.eventId));
 
     // Le fil de discussion se rafraîchit au lieu d'être invalidé. C'est un notifier
     // paginé : l'invalider le remettrait à sa première page, et les pages remontées
@@ -437,6 +438,11 @@ class _MenuPlus extends StatelessWidget {
           leading: const Icon(Icons.handshake_rounded),
           title: const Text('Qui rend quoi'),
           onTap: () => context.push(PpRoutes.versReglements(evenementId)),
+        ),
+        ListTile(
+          leading: const Icon(Icons.history_rounded),
+          title: Text(l10n.filTitre),
+          onTap: () => context.push(PpRoutes.versActivite(evenementId)),
         ),
         ListTile(
           leading: const Icon(Icons.ios_share_rounded),

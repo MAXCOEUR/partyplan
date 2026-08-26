@@ -253,5 +253,155 @@
   "menuPlusParametres": "Paramètres",
   "accueilMonProfil": "Mon profil",
   "accueilAdministration": "Administration",
-  "ongletBientot": "Cette partie arrive prochainement."
+  "ongletBientot": "Cette partie arrive prochainement.",
+  "filTitre": "Activité",
+  "@filTitre": {
+    "description": "Titre de l'écran du fil d'activité (EF-FIL-01)."
+  },
+  "filVideTitre": "Rien ne s’est encore passé",
+  "filVideExplication": "Les arrivées, les courses et les dépenses s’inscriront ici, dans l’ordre.",
+  "filErreurTitre": "Impossible de charger l’activité",
+  "filToutVoir": "Tout voir",
+  "filHorsLigne": "Activité de ta dernière consultation. Les lignes plus anciennes demandent une connexion.",
+  "filAujourdhui": "Aujourd’hui",
+  "filHier": "Hier",
+  "filArriveMembre": "a rejoint la soirée",
+  "filChangeStatut": "a répondu {reponse}",
+  "@filChangeStatut": {
+    "description": "Changement de statut de présence.",
+    "placeholders": {
+      "reponse": {
+        "type": "String"
+      }
+    }
+  },
+  "filAjouteArticle": "a ajouté {libelle}",
+  "@filAjouteArticle": {
+    "placeholders": {
+      "libelle": {
+        "type": "String"
+      }
+    }
+  },
+  "filSupprimeArticle": "a retiré {libelle}",
+  "@filSupprimeArticle": {
+    "placeholders": {
+      "libelle": {
+        "type": "String"
+      }
+    }
+  },
+  "filPrendArticle": "s’occupe de {libelle}",
+  "@filPrendArticle": {
+    "placeholders": {
+      "libelle": {
+        "type": "String"
+      }
+    }
+  },
+  "filLibereArticle": "ne s’occupe plus de {libelle}",
+  "@filLibereArticle": {
+    "placeholders": {
+      "libelle": {
+        "type": "String"
+      }
+    }
+  },
+  "filAcheteArticle": "a acheté {libelle}",
+  "@filAcheteArticle": {
+    "placeholders": {
+      "libelle": {
+        "type": "String"
+      }
+    }
+  },
+  "filAcheteArticleMontant": "a acheté {libelle} pour {montant}",
+  "@filAcheteArticleMontant": {
+    "placeholders": {
+      "libelle": {
+        "type": "String"
+      },
+      "montant": {
+        "type": "String"
+      }
+    }
+  },
+  "filCreeDepense": "a ajouté la dépense {libelle} de {montant}",
+  "@filCreeDepense": {
+    "placeholders": {
+      "libelle": {
+        "type": "String"
+      },
+      "montant": {
+        "type": "String"
+      }
+    }
+  },
+  "filModifieDepense": "a fait passer {libelle} de {ancien} à {montant}",
+  "@filModifieDepense": {
+    "placeholders": {
+      "libelle": {
+        "type": "String"
+      },
+      "ancien": {
+        "type": "String"
+      },
+      "montant": {
+        "type": "String"
+      }
+    }
+  },
+  "filSupprimeDepense": "a supprimé la dépense {libelle} de {montant}",
+  "@filSupprimeDepense": {
+    "placeholders": {
+      "libelle": {
+        "type": "String"
+      },
+      "montant": {
+        "type": "String"
+      }
+    }
+  },
+  "filMarqueReglement": "a noté le remboursement de {de} à {vers}, {montant}",
+  "@filMarqueReglement": {
+    "description": "Le débiteur et le créancier sont nommés : l'auteur de l'action peut être un troisième membre.",
+    "placeholders": {
+      "de": {
+        "type": "String"
+      },
+      "vers": {
+        "type": "String"
+      },
+      "montant": {
+        "type": "String"
+      }
+    }
+  },
+  "filAnnuleReglement": "a annulé le remboursement de {de} à {vers}, {montant}",
+  "@filAnnuleReglement": {
+    "placeholders": {
+      "de": {
+        "type": "String"
+      },
+      "vers": {
+        "type": "String"
+      },
+      "montant": {
+        "type": "String"
+      }
+    }
+  },
+  "filChangeDate": "a modifié la date",
+  "filChangeLieu": "a modifié le lieu",
+  "filChangeDateEtLieu": "a modifié la date et le lieu",
+  "filActionInconnue": "a fait quelque chose",
+  "@filActionInconnue": {
+    "description": "Repli pour une catégorie inconnue : le fil est en ajout seul, une version future du serveur peut en écrire de nouvelles."
+  },
+  "presenceOui": "oui",
+  "presenceNon": "non",
+  "presencePeutEtre": "peut-être",
+  "presenceEnRetard": "en retard",
+  "presencePartTot": "part tôt",
+  "presenceSansReponse": "sans réponse"
 }
