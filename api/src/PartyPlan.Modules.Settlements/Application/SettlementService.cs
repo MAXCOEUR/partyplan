@@ -62,7 +62,8 @@ public sealed class SettlementService(
     IClock clock,
     IIdGenerator ids,
     ILogger<SettlementService> logger,
-    IDiffusionEvenement diffusion)
+    IDiffusionEvenement diffusion,
+    IJournalActivite journal)
     : ISettlementStatus
 {
     public static readonly DomainError EventNotFound = DomainError.NotFound(
@@ -218,6 +219,21 @@ public sealed class SettlementService(
             MarkedByMemberId = moi.MemberId,
         });
 
+        // Les deux parties, et non l'auteur seul : une personne qui gère l'événement
+        // peut marquer un remboursement entre deux autres, auquel cas ActorName ne dit
+        // pas qui a réglé qui.
+        journal.Consigner(
+            eventId,
+            moi.MemberId,
+            moi.DisplayName,
+            ActivityKinds.SettlementMarked,
+            new
+            {
+                de = NomDe(membres, requete.FromMemberId),
+                vers = NomDe(membres, requete.ToMemberId),
+                montant = requete.Amount,
+            });
+
         await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
         var page = await ConsulterAsync(eventId, cancellationToken)
@@ -257,6 +273,22 @@ public sealed class SettlementService(
         }
 
         reglement.CancelledAt = clock.UtcNow;
+
+        var parties = await membership.ListActiveAsync(eventId, cancellationToken)
+            .ConfigureAwait(false);
+
+        journal.Consigner(
+            eventId,
+            moi.MemberId,
+            moi.DisplayName,
+            ActivityKinds.SettlementCancelled,
+            new
+            {
+                de = NomDe(parties, reglement.FromMemberId),
+                vers = NomDe(parties, reglement.ToMemberId),
+                montant = reglement.Amount,
+            });
+
         await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
         var page = await ConsulterAsync(eventId, cancellationToken)
@@ -278,6 +310,14 @@ public sealed class SettlementService(
     }
 
     // --------------------------------------------------------------- outils ----
+
+    /// <summary>
+    /// Nom d'un membre au moment de l'action. Le fil le fige (RG-USR-04) : un
+    /// changement de nom ultérieur ne doit pas réécrire qui devait quoi à qui.
+    /// </summary>
+    private static string NomDe(IReadOnlyList<EventMemberRef> membres, Guid memberId) =>
+        membres.FirstOrDefault(m => m.MemberId == memberId)?.DisplayName ?? string.Empty;
+
 
     private async Task<(IReadOnlyList<Solde> Soldes,
                        IReadOnlyList<Reglement> Proposes,
