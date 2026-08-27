@@ -17,12 +17,22 @@ class AvisApi {
     analyser: (corps) => PageAvis.depuisJson(corps! as Map<String, dynamic>),
   );
 
-  /// Marque un avis comme lu. Idempotent côté serveur.
-  Future<void> marquerLu(String id) =>
-      _client.post<void>('/notifications/$id/read', analyser: (_) {});
+  /// Marque un avis comme lu.
+  ///
+  /// Différable : l'endpoint est idempotent, donc rejouable sans conséquence, et une
+  /// notification lue dans le métro doit le rester au retour du réseau
+  /// (`NF-OFFLINE-01`).
+  Future<void> marquerLu(String id) => _client.post<void>(
+    '/notifications/$id/read',
+    differable: true,
+    analyser: (_) {},
+  );
 
-  Future<void> toutMarquerLu() =>
-      _client.post<void>('/notifications/read-all', analyser: (_) {});
+  Future<void> toutMarquerLu() => _client.post<void>(
+    '/notifications/read-all',
+    differable: true,
+    analyser: (_) {},
+  );
 
   Future<List<PreferenceAvis>> preferences() => _client.get(
     '/notifications/preferences',
@@ -31,9 +41,12 @@ class AvisApi {
         .toList(),
   );
 
+  /// Différable : le réglage est une valeur, pas un incrément. Le rejeu réécrit la
+  /// même chose.
   Future<void> definirPreference(PreferenceAvis preference) =>
       _client.patch<void>(
         '/notifications/preferences',
+        differable: true,
         corps: {
           'category': preference.categorie,
           'pushEnabled': preference.poussee,
@@ -53,6 +66,7 @@ class AvisApi {
   }) => _client.put<void>(
     '/events/$evenementId/mute',
     corps: {'muted': enSourdine},
+    differable: true,
     analyser: (_) {},
   );
 }

@@ -4,10 +4,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:partyplan/core/models/activite.dart';
+import 'package:partyplan/core/network/activite_api.dart';
 import 'package:partyplan/core/providers.dart';
 import 'package:partyplan/features/evenement/sections/section_activite.dart';
 
 import '../aide/monter_ecran.dart';
+import '../doubles/activite_api_double.dart';
 
 Activite _ligne(String id, String libelle) => Activite(
   id: id,
@@ -24,8 +26,8 @@ Future<void> _monter(
 }) async {
   final conteneur = ProviderContainer(
     overrides: [
-      filActiviteProvider.overrideWith(
-        (ref, id) async => PageActivite(lignes: lignes, encore: encore),
+      activiteApiProvider.overrideWithValue(
+        ActiviteApiDouble(lignes: lignes, encore: encore),
       ),
     ],
   );
@@ -82,12 +84,9 @@ void main() {
       // l'écran à chaque ouverture.
       final conteneur = ProviderContainer(
         overrides: [
-          // Un Completer jamais complété plutôt qu'un Future.delayed : un délai
-          // laisserait un minuteur en attente après démontage, et le test échouerait
-          // sur l'invariant du framework plutôt que sur ce qu'il vérifie.
-          filActiviteProvider.overrideWith(
-            (ref, id) => Completer<PageActivite>().future,
-          ),
+          // Une lecture qui ne rend jamais : la section doit rester muette tant que le
+          // fil n'est pas chargé.
+          activiteApiProvider.overrideWithValue(const _ApiQuiNeRendJamais()),
         ],
       );
       addTearDown(conteneur.dispose);
@@ -107,13 +106,7 @@ void main() {
       // bord dont le reste s'affiche correctement.
       final conteneur = ProviderContainer(
         overrides: [
-          // L'état d'erreur est fourni tel quel, sans future qui échoue : Riverpod 3
-          // réessaie un provider en échec, et le minuteur de reprise survivrait au
-          // démontage du widget — le test échouerait alors sur un invariant du
-          // framework plutôt que sur ce qu'il vérifie.
-          filActiviteProvider('e1').overrideWithValue(
-            AsyncError<PageActivite>(Exception('réseau'), StackTrace.empty),
-          ),
+          activiteApiProvider.overrideWithValue(const _ApiQuiEchoue()),
         ],
       );
       addTearDown(conteneur.dispose);
@@ -127,4 +120,28 @@ void main() {
       expect(find.text('Activité'), findsNothing);
     });
   });
+}
+
+/// Lecture qui ne rend jamais : éprouve l'état de chargement.
+class _ApiQuiNeRendJamais implements ActiviteApi {
+  const _ApiQuiNeRendJamais();
+
+  @override
+  Future<PageActivite> lire(
+    String evenementId, {
+    String? avant,
+    int limite = 30,
+  }) => Completer<PageActivite>().future;
+}
+
+/// Lecture qui échoue : éprouve l'effacement de la section.
+class _ApiQuiEchoue implements ActiviteApi {
+  const _ApiQuiEchoue();
+
+  @override
+  Future<PageActivite> lire(
+    String evenementId, {
+    String? avant,
+    int limite = 30,
+  }) async => throw Exception('réseau');
 }

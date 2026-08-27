@@ -71,6 +71,12 @@ public static class DependencyInjection
         services.AddSingleton<PartyPlan.SharedKernel.Contracts.IDiffusionEvenement,
             TempsReel.DiffusionSignalR>();
 
+        // Registre des connexions temps réel. Singleton en mémoire : une seule instance
+        // d'API est autorisée (RG-RT-04), le hub n'ayant pas de backplane.
+        services.AddSingleton<TempsReel.RegistreConnexions>();
+        services.AddSingleton<PartyPlan.SharedKernel.Contracts.IConnexionsEvenement,
+            TempsReel.ConnexionsEvenement>();
+
         // Fil d'activité. À portée requête et non singleton, à l'inverse de la
         // diffusion : l'implémentation inscrit dans le DbContext de la requête en
         // cours, afin que la ligne soit validée par la transaction de l'action métier.

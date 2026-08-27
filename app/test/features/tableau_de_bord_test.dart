@@ -2,9 +2,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:partyplan/core/models/evenement.dart';
 import 'package:partyplan/core/models/membre.dart';
-import 'package:partyplan/core/models/activite.dart';
 import 'package:partyplan/core/providers.dart';
 import 'package:partyplan/features/evenement/tableau_de_bord_page.dart';
+
+import '../doubles/activite_api_double.dart';
 
 import '../aide/fabriques.dart';
 import '../aide/monter_ecran.dart';
@@ -173,9 +174,7 @@ void main() {
           sessionStoreProvider.overrideWithValue(SessionStoreDouble()),
           // Le tableau de bord porte désormais un aperçu du fil d'activité : sans
           // cette substitution, il partirait chercher le réseau.
-          filActiviteProvider.overrideWith(
-            (ref, id) async => PageActivite.vide,
-          ),
+          activiteApiProvider.overrideWithValue(ActiviteApiDouble()),
           evenementProvider.overrideWith(
             (ref, id) async => throw Exception('404'),
           ),
@@ -209,7 +208,7 @@ Future<void> _monter(
       evenementProvider.overrideWith((ref, id) async => evenement ?? resume()),
       // Le tableau de bord porte désormais un aperçu du fil d'activité : sans
       // cette substitution, il partirait chercher le réseau.
-      filActiviteProvider.overrideWith((ref, id) async => PageActivite.vide),
+      activiteApiProvider.overrideWithValue(ActiviteApiDouble()),
       membresProvider.overrideWith(
         (ref, id) async => membres ?? [membre(nom: 'Moi', cestMoi: true)],
       ),

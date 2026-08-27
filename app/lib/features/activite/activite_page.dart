@@ -35,15 +35,14 @@ class ActivitePage extends ConsumerStatefulWidget {
 class _ActivitePageState extends ConsumerState<ActivitePage> {
   final _defilement = ScrollController();
 
-  /// Pages plus anciennes déjà remontées.
+  /// La pagination vit dans le notifier, et non ici.
   ///
-  /// Tenues à part de la première page, qui vient du provider et se rafraîchit au
-  /// temps réel. Les lignes du fil ne changent jamais après écriture : ce qui a été
-  /// remonté reste valable, et seules des lignes neuves apparaissent en tête.
-  final _plusAnciennes = <Activite>[];
-
+  /// Un état local concaténé devant la page du provider perdait des lignes dès qu'une
+  /// activité arrivait pendant la remontée : la page fraîche poussait la trentième hors
+  /// de sa fenêtre, et elle disparaissait du milieu du registre — sans trou visible,
+  /// puisque le filet est continu. La fusion se fait désormais sur l'identifiant, dans
+  /// `FilActiviteNotifier`.
   bool _chargeLaSuite = false;
-  bool _resteDuPasse = true;
   Object? _erreurDeSuite;
 
   @override
@@ -77,43 +76,34 @@ class _ActivitePageState extends ConsumerState<ActivitePage> {
   }
 
   Future<void> _chargerLaSuite() async {
-    if (_chargeLaSuite || !_resteDuPasse || _erreurDeSuite != null) {
-      return;
-    }
+    final page = ref.read(filActiviteProvider(widget.evenementId)).value;
 
-    final premiere = ref.read(filActiviteProvider(widget.evenementId)).value;
-    if (premiere == null || !premiere.encore) {
-      return;
-    }
-
-    final connues = [...premiere.lignes, ..._plusAnciennes];
-    if (connues.isEmpty) {
+    if (_chargeLaSuite ||
+        _erreurDeSuite != null ||
+        page == null ||
+        !page.encore) {
       return;
     }
 
     setState(() => _chargeLaSuite = true);
 
     try {
-      final suite = await ref
-          .read(activiteApiProvider)
-          .lire(widget.evenementId, avant: connues.last.id);
+      await ref
+          .read(filActiviteProvider(widget.evenementId).notifier)
+          .chargerPlusAncien();
 
       if (!mounted) {
         return;
       }
 
-      setState(() {
-        _plusAnciennes.addAll(suite.lignes);
-        _resteDuPasse = suite.encore;
-        _chargeLaSuite = false;
-      });
+      setState(() => _chargeLaSuite = false);
     } on Object catch (erreur) {
       if (!mounted) {
         return;
       }
 
-      // L'erreur est retenue plutôt que relancée : la liste déjà chargée reste lisible,
-      // et seul le bas de page annonce l'échec.
+      // L'erreur est retenue plutôt que relancée : le registre déjà chargé reste
+      // lisible, et seul le bas de page annonce l'échec.
       setState(() {
         _erreurDeSuite = erreur;
         _chargeLaSuite = false;
@@ -155,7 +145,7 @@ class _ActivitePageState extends ConsumerState<ActivitePage> {
   }
 
   Widget _corps(PpL10n l10n, PageActivite page) {
-    final lignes = [...page.lignes, ..._plusAnciennes];
+    final lignes = page.lignes;
 
     if (lignes.isEmpty) {
       return PpEmptyState(
@@ -167,12 +157,13 @@ class _ActivitePageState extends ConsumerState<ActivitePage> {
 
     return RefreshIndicator(
       onRefresh: () async {
-        setState(() {
-          _plusAnciennes.clear();
-          _resteDuPasse = true;
-          _erreurDeSuite = null;
-        });
-        ref.invalidate(filActiviteProvider(widget.evenementId));
+        setState(() => _erreurDeSuite = null);
+
+        // Attendu, et non lancé puis oublié : sans cela l'indicateur se rétracte avant
+        // l'arrivée des données, et on tire une seconde fois en croyant avoir raté.
+        await ref
+            .read(filActiviteProvider(widget.evenementId).notifier)
+            .rafraichir();
       },
       child: ListView.builder(
         controller: _defilement,
@@ -218,7 +209,7 @@ class _ActivitePageState extends ConsumerState<ActivitePage> {
       );
     }
 
-    if (_chargeLaSuite || (page.encore && _resteDuPasse)) {
+    if (_chargeLaSuite || page.encore) {
       return const Padding(
         padding: EdgeInsets.symmetric(vertical: PpSpacing.xl),
         child: Center(child: PpLoadingIndicateur()),

@@ -96,8 +96,13 @@ class _CoquilleEvenementState extends ConsumerState<CoquilleEvenement> {
       ..invalidate(depensesProvider(widget.eventId))
       ..invalidate(reglementsProvider(widget.eventId))
       ..invalidate(sondagesProvider(widget.eventId))
-      ..invalidate(epinglesProvider(widget.eventId))
-      ..invalidate(filActiviteProvider(widget.eventId));
+      ..invalidate(epinglesProvider(widget.eventId));
+
+    // Le fil d'activité se rafraîchit au lieu d'être invalidé, pour la même raison que
+    // la discussion : l'invalider le remettrait à sa première page, et les lignes déjà
+    // remontées disparaîtraient du milieu du registre à chaque message reçu.
+    // ignore: discarded_futures
+    ref.read(filActiviteProvider(widget.eventId).notifier).rafraichir();
 
     // Le fil de discussion se rafraîchit au lieu d'être invalidé. C'est un notifier
     // paginé : l'invalider le remettrait à sa première page, et les pages remontées

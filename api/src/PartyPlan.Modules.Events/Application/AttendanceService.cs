@@ -42,7 +42,8 @@ public sealed class AttendanceService(
     IDiffusionEvenement diffusion,
     IUserIdentityLookup identites,
     IJournalActivite journal,
-    IFileNotifications notifications)
+    IFileNotifications notifications,
+    IConnexionsEvenement connexions)
 {
     /// <summary>Plafond d'accompagnants. Au-delà, il s'agit d'un autre événement.</summary>
     public const int MaxExtraGuests = 10;
@@ -223,6 +224,16 @@ public sealed class AttendanceService(
                 cancellationToken)
             .ConfigureAwait(false);
 
+        // Sans ce retrait, l'exclu garderait son abonnement au canal temps réel et
+        // continuerait de recevoir les montants et la discussion d'une soirée dont il
+        // n'est plus membre. Le REST lui est déjà fermé.
+        if (cible.UserId is { } compteExclu)
+        {
+            await connexions
+                .FermerAsync(eventId, compteExclu, cancellationToken)
+                .ConfigureAwait(false);
+        }
+
         return Result.Success();
     }
 
@@ -297,6 +308,15 @@ public sealed class AttendanceService(
                 new { memberId = membre.Id },
                 cancellationToken)
             .ConfigureAwait(false);
+
+        // Même raison qu'à l'exclusion : quitter une soirée doit couper le canal, pas
+        // seulement la retirer de la liste.
+        if (membre.UserId is { } compteParti)
+        {
+            await connexions
+                .FermerAsync(eventId, compteParti, cancellationToken)
+                .ConfigureAwait(false);
+        }
 
         return Result.Success();
     }

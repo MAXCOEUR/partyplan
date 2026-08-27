@@ -392,13 +392,139 @@ final activiteApiProvider = Provider<ActiviteApi>(
   (ref) => ActiviteApi(ref.watch(apiClientProvider)),
 );
 
-/// Première page du fil d'activité d'un événement (`EF-FIL-01`).
+/// Fil d'activité d'un événement, chargé par pages (`EF-FIL-01`).
 ///
-/// Invalidé par `EcouteEvenement` à chaque message diffusé : `activity.appended` n'a
-/// donc besoin d'aucun traitement particulier côté écran.
-final filActiviteProvider = FutureProvider.family<PageActivite, String>(
-  (ref, evenementId) => ref.watch(activiteApiProvider).lire(evenementId),
-);
+/// Un notifier et non un `FutureProvider` : le fil se pagine **et** se rafraîchit au
+/// temps réel, et ces deux besoins se contredisent si l'état est remplacé à chaque
+/// message. Un `invalidate` remettrait le registre à sa première page, et les lignes
+/// déjà remontées disparaîtraient du milieu — sans trou visible, puisque le filet qui
+/// relie les lignes est continu. Sur la trace de référence en cas de désaccord sur les
+/// montants (`RG-FIL-02`), c'est le pire défaut possible.
+class FilActiviteNotifier extends AsyncNotifier<PageActivite> {
+  FilActiviteNotifier(this.evenementId);
+
+  final String evenementId;
+
+  /// Lignes demandées par page.
+  static const parPage = 30;
+
+  bool _enCoursDeRemontee = false;
+
+  /// Reste-t-il des lignes plus anciennes que celles déjà chargées.
+  bool _resteDuPasse = true;
+
+  @override
+  Future<PageActivite> build() async {
+    final page = await ref
+        .watch(activiteApiProvider)
+        .lire(evenementId, limite: parPage);
+
+    _resteDuPasse = page.encore;
+
+    return page;
+  }
+
+  /// Ajoute la page suivante, plus ancienne, à la suite du registre.
+  ///
+  /// Sans effet si le début est atteint ou si une remontée est déjà en cours : le
+  /// défilement déclenche plusieurs fois d'affilée, et deux requêtes concurrentes
+  /// rendraient la même page deux fois.
+  Future<void> chargerPlusAncien() async {
+    final actuel = state.value;
+
+    if (actuel == null || !_resteDuPasse || _enCoursDeRemontee) {
+      return;
+    }
+
+    if (actuel.lignes.isEmpty) {
+      return;
+    }
+
+    _enCoursDeRemontee = true;
+
+    try {
+      final precedentes = await ref
+          .read(activiteApiProvider)
+          .lire(evenementId, avant: actuel.lignes.last.id, limite: parPage);
+
+      final connues = actuel.lignes.map((l) => l.id).toSet();
+
+      _resteDuPasse = precedentes.encore;
+
+      state = AsyncData(
+        PageActivite(
+          lignes: [
+            ...actuel.lignes,
+            ...precedentes.lignes.where((l) => !connues.contains(l.id)),
+          ],
+          encore: precedentes.encore,
+        ),
+      );
+    } on Object {
+      // Une remontée ratée laisse le registre tel quel : l'écran affiche déjà des
+      // lignes lisibles, et les remplacer par une erreur pour une page manquée serait
+      // disproportionné. Le pied de liste propose la reprise.
+      rethrow;
+    } finally {
+      _enCoursDeRemontee = false;
+    }
+  }
+
+  /// Relit la page la plus récente et la fusionne avec ce qui est déjà chargé.
+  ///
+  /// Appelée à chaque changement diffusé par le temps réel. **La fusion se fait sur
+  /// l'identifiant** : une ligne du fil ne change jamais après écriture, mais des
+  /// lignes neuves apparaissent en tête et poussent les autres hors de la première
+  /// page. Concaténer deux fenêtres indépendantes en perdrait autant qu'il en arrive.
+  Future<void> rafraichir() async {
+    final actuel = state.value;
+
+    if (actuel == null) {
+      // Jamais chargé : la construction ordinaire s'en charge, et forcer ici
+      // doublerait la requête.
+      return;
+    }
+
+    final PageActivite fraiches;
+
+    try {
+      fraiches = await ref
+          .read(activiteApiProvider)
+          .lire(evenementId, limite: parPage);
+    } on Object {
+      // Déclenché par le temps réel, donc sans que personne l'ait demandé : lever ici
+      // produirait une exception asynchrone non capturée, et remplacer l'état par une
+      // erreur effacerait un registre parfaitement lisible pour un incident réseau
+      // passager.
+      return;
+    }
+
+    final connues = fraiches.lignes.map((l) => l.id).toSet();
+
+    state = AsyncData(
+      PageActivite(
+        lignes: [
+          ...fraiches.lignes,
+          // Les lignes plus anciennes que la page fraîche sont conservées : ce sont
+          // celles déjà remontées, que le serveur ne renvoie pas ici.
+          ...actuel.lignes.where((l) => !connues.contains(l.id)),
+        ],
+        // C'est l'état courant qui sait s'il reste du passé, pas la page fraîche qui
+        // n'en connaît que les trente premières lignes.
+        encore: _resteDuPasse,
+      ),
+    );
+  }
+}
+
+final filActiviteProvider =
+    AsyncNotifierProvider.family<FilActiviteNotifier, PageActivite, String>(
+      FilActiviteNotifier.new,
+      // Aucun réessai automatique : l'écran propose une reprise explicite, et le
+      // minuteur de reprise de Riverpod survit au démontage du widget — il rallume
+      // silencieusement des requêtes pour un écran qu'on a quitté.
+      retry: (_, _) => null,
+    );
 
 // -------------------------------------------------------------- discussion ----
 

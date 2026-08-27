@@ -11,7 +11,15 @@ using PartyPlan.SharedKernel.Contracts;
 /// <para>
 /// Un groupe par événement, et l'appartenance est vérifiée **à l'établissement de la
 /// connexion** plutôt qu'à chaque message : une vérification par message coûterait une
-/// requête à chaque diffusion, et l'exclusion d'un membre ferme sa connexion.
+/// requête à chaque diffusion.
+/// </para>
+/// <para>
+/// Ce choix a une contrepartie, longtemps affirmée ici sans être tenue : une connexion
+/// admise le reste tant qu'elle vit. L'exclusion d'un membre passe donc par
+/// <see cref="PartyPlan.SharedKernel.Contracts.IConnexionsEvenement"/>, qui le retire
+/// de son groupe — sans quoi il continuerait de recevoir les montants et la discussion
+/// d'une soirée dont il n'est plus membre. C'est <see cref="RegistreConnexions"/> qui
+/// permet de relier un compte à ses connexions.
 /// </para>
 /// <para>
 /// L'identifiant de l'événement voyage en chaîne de requête et non en argument de
@@ -22,7 +30,8 @@ using PartyPlan.SharedKernel.Contracts;
 [Authorize]
 public sealed class EventHub(
     IEventMembership appartenance,
-    ILogger<EventHub> logger) : Hub
+    ILogger<EventHub> logger,
+    RegistreConnexions registre) : Hub
 {
     /// <summary>Nom du groupe. Un préfixe évite toute collision avec un autre usage.</summary>
     public static string Groupe(Guid eventId) => $"event:{eventId}";
@@ -78,6 +87,15 @@ public sealed class EventHub(
             .AddToGroupAsync(Context.ConnectionId, Groupe(eventId), Context.ConnectionAborted)
             .ConfigureAwait(false);
 
+        registre.Inscrire(Context.ConnectionId, eventId, userId);
+
         await base.OnConnectedAsync().ConfigureAwait(false);
+    }
+
+    public override async Task OnDisconnectedAsync(Exception? exception)
+    {
+        registre.Retirer(Context.ConnectionId);
+
+        await base.OnDisconnectedAsync(exception).ConfigureAwait(false);
     }
 }
