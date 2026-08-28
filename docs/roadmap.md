@@ -40,7 +40,7 @@ Toute tâche non cochée d'une version publiée devient une anomalie, pas un rep
 |---|---|---|
 | V0 — socle technique | lots 0.2 à 0.6, dépôt GitHub et protection de branche | lot 0.1 (INPI, nom, logo, hébergeur, DNS), lot 0.7 (serveur) |
 | V0.5 — comptes et administration | lots 0.8 à 0.14 | connexion Google (identifiants Google Cloud requis) |
-| V1.0 — MVP événementiel | lots 1.2 à 1.5, 1.7, 1.8, le fil d'activité (1.10), les notifications (1.11), le temps réel (1.6) hors recette matérielle, le socle hors ligne du lot 1.12, plus la discussion et les sondages remontés de V1.1 | limites de la formule gratuite (1.19), conformité (1.13), exploitation (1.14), légal (1.15), vitrine (1.16), recette et publication (1.17, 1.18) |
+| V1.0 — MVP événementiel | lots 1.2 à 1.5, 1.7, 1.8, le fil d'activité (1.10), les notifications (1.11), les limites de la formule gratuite (1.19), le temps réel (1.6) hors recette matérielle, le socle hors ligne du lot 1.12, plus la discussion et les sondages remontés de V1.1 | conformité (1.13), exploitation (1.14), légal (1.15), vitrine (1.16), recette et publication (1.17, 1.18) |
 
 Décisions d'architecture prises : `ADR 0001` monorepo, `ADR 0002` monolithe modulaire,
 `ADR 0003` domaines et certificats, `ADR 0004` chaîne de livraison, `ADR 0005` identité
@@ -845,22 +845,36 @@ Remonté de V2.0 : `RG-PRM-01` et `RG-PRM-02` figuraient au lot 4.1, où ils att
 encaissement dont ils ne dépendent pas. Les limites sont livrées ici ; le paiement reste
 au lot 4.1.
 
-- [ ] `IFormuleCompte` dans `SharedKernel`, implémenté par `Users` sur `premium_until`
-- [ ] `RG-PRM-01` Quota de 3 événements possédés simultanément, à la création
-- [ ] `RG-PRM-01` Plafond de 20 membres actifs par événement, à l'adhésion
-- [ ] `RG-PRM-02` Aucune vérification ailleurs qu'à l'écriture qui franchirait la limite
-- [ ] Dépassement toléré après un transfert de propriété — `RG-ROLE-02` reste praticable
-- [ ] Comptages dans la transaction de l'écriture, comme `RG-CRS-01`
-- [ ] `RG-INV-05` L'idempotence de l'adhésion passe avant le quota
-- [ ] `RG-INV-04` L'aperçu public annonce « complet » avant la création d'un compte
-- [ ] `EF-PRM-04` Attribution et retrait par un `PlatformAdmin`, échéance et motif obligatoires
-- [ ] `RG-ADM-05` `Support` exclu de l'attribution
-- [ ] `RG-ADM-06` Action d'audit `user.plan_changed`, en ajout seul, idempotente
-- [ ] `EF-PRM-05` Formule affichée au profil, quota consommé sur l'accueil
-- [ ] Action « changer la formule » sur la fiche compte du back-office
-- [ ] Tests unitaires aux frontières exactes : 2/3/4 événements, 19/20/21 membres
-- [ ] Tests d'intégration : les deux quotas, la concurrence, l'audit, les 403
-- [ ] `tools/verifier-frontieres-modules.sh` reste vert — `Events` n'atteint jamais `Users`
+- [x] `IFormuleCompte` dans `SharedKernel`, implémenté par `Users` sur `premium_until`
+- [x] `RG-PRM-01` Quota de 3 événements possédés simultanément, à la création
+  - → la propriété se lit sur `event_members.role`, non sur `events.created_by_user_id` :
+    le second reste au créateur et rendrait le transfert sans effet sur le quota
+  - → une soirée terminée libère sa place d'elle-même ; l'historique reste intact
+- [x] `RG-PRM-01` Plafond de 20 membres actifs par événement, à l'adhésion
+  - → la formule consultée est celle du propriétaire (`EF-PRM-03`), jamais celle de
+    l'arrivant ; rejoindre reste illimité en formule gratuite
+  - → les accompagnants de `EF-PRES-06` ne consomment aucune place (`RG-PRES-04`)
+- [x] `RG-PRM-02` Aucune vérification ailleurs qu'à l'écriture qui franchirait la limite
+- [x] Dépassement toléré après un transfert de propriété — `RG-ROLE-02` reste praticable
+- [x] `RG-INV-05` L'idempotence de l'adhésion passe avant le quota
+- [x] `RG-INV-04` L'aperçu public annonce « complet » avant la création d'un compte
+- [x] `EF-PRM-04` Attribution et retrait par un `PlatformAdmin`, échéance et motif obligatoires
+- [x] `RG-ADM-05` `Support` exclu de l'attribution
+- [x] `RG-ADM-06` Action d'audit `user.plan_changed`, en ajout seul, idempotente
+- [x] `EF-PRM-05` Formule affichée au profil, quota consommé sur l'accueil
+- [x] Action « changer la formule » sur la fiche compte du back-office
+- [x] Tests unitaires aux frontières exactes : 2/3/4 événements, 19/20/21 membres
+- [x] Tests d'intégration : les deux quotas, l'audit, les 403 — 24 cas ajoutés
+- [x] `tools/verifier-frontieres-modules.sh` reste vert — `Events` n'atteint jamais `Users`
+- [x] `make verif` vert le 28/08/2026 : 198 tests unitaires, 285 d'intégration, 504 Flutter
+
+**Écarté en cours de route, et pourquoi.** Le plan prévoyait un comptage transactionnel
+« comme `RG-CRS-01` ». `RG-CRS-01` n'utilise pas de transaction mais une écriture
+conditionnelle, qui ne se transpose pas à un décompte de lignes, et `IEventsDbContext`
+n'expose pas `Database`. Deux écritures concurrentes au bord d'une borne peuvent donc la
+franchir d'une unité. Le cas est assumé : ces quotas bornent une offre, ils ne protègent
+ni un cloisonnement ni un calcul financier, et `RG-PRM-02` interdit déjà de dégrader
+l'existant — personne ne serait exclu.
 
 Hors périmètre : paiement, écran Premium, archives à 3 mois, fonctions du lot 4.2.
 
