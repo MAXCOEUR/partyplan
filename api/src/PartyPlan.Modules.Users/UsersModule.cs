@@ -31,6 +31,9 @@ public sealed class UsersModule : IModule
         services.AddScoped<AccountDeletionService>();
         services.AddScoped<IUserIdentityLookup, UserIdentityLookup>();
 
+        // Contrat public consommé par Events pour appliquer les quotas (ADR 0008).
+        services.AddScoped<IFormuleCompte, FormuleCompte>();
+
         // Contrat public consommé par l'administration (ADR 0002).
         services.AddScoped<UserDirectory>();
         services.AddScoped<IUserDirectory>(sp => sp.GetRequiredService<UserDirectory>());
