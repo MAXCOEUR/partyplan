@@ -270,6 +270,32 @@ public sealed class UserDirectory(
     public Task<Result> RemoveAvatarAsync(Guid userId, CancellationToken cancellationToken) =>
         accounts.DeleteAvatarAsync(userId, cancellationToken);
 
+    public async Task<Result<PlanChange>> SetPlanAsync(
+        Guid userId,
+        DateTimeOffset? premiumUntil,
+        CancellationToken cancellationToken)
+    {
+        var utilisateur = await Vivant(userId).FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false);
+        if (utilisateur is null)
+        {
+            return AccountService.NotFound;
+        }
+
+        var precedente = utilisateur.PremiumUntil;
+
+        // Rien à écrire si rien ne change : l'appelant s'appuie sur ce drapeau pour ne pas
+        // laisser deux lignes identiques dans un journal inaltérable (RG-ADM-06).
+        if (precedente == premiumUntil)
+        {
+            return new PlanChange(precedente, precedente, Changed: false);
+        }
+
+        utilisateur.PremiumUntil = premiumUntil;
+        await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+
+        return new PlanChange(precedente, premiumUntil, Changed: true);
+    }
+
     private IQueryable<User> Vivant(Guid userId) =>
         db.Users.Where(u => u.Id == userId && u.DeletedAt == null);
 

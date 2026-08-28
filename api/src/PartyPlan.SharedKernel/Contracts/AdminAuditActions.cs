@@ -19,5 +19,12 @@ public static class AdminAuditActions
     public const string EmailVerifiedByAdmin = "user.email_verified_by_admin";
     public const string DataExported = "user.data_exported";
     public const string AvatarRemoved = "user.avatar_removed";
+
+    /// <summary>
+    /// Changement de formule (EF-PRM-04). Une seule action pour l'octroi et le retrait :
+    /// c'est le même geste, et la nouvelle échéance distingue l'un de l'autre. Deux
+    /// constantes auraient obligé chaque lecteur du journal à savoir laquelle chercher.
+    /// </summary>
+    public const string PlanChanged = "user.plan_changed";
     public const string AdminSeeded = "admin.seeded";
 }

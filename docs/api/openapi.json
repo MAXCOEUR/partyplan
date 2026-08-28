@@ -484,6 +484,81 @@
         ]
       }
     },
+    "/v1/admin/users/{userId}/plan": {
+      "put": {
+        "tags": [
+          "Administration"
+        ],
+        "summary": "Accorde la formule payante jusqu'à une échéance, avec motif obligatoire.",
+        "operationId": "AdminSetPlan",
+        "parameters": [
+          {
+            "name": "userId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetPlanRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "Bearer": []
+          }
+        ]
+      },
+      "delete": {
+        "tags": [
+          "Administration"
+        ],
+        "summary": "Ramène un compte à la formule gratuite, avec motif obligatoire.",
+        "operationId": "AdminRevokePlan",
+        "parameters": [
+          {
+            "name": "userId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "reason",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "Bearer": []
+          }
+        ]
+      }
+    },
     "/v1/events": {
       "get": {
         "tags": [
@@ -5475,6 +5550,29 @@
             "type": "string"
           }
         }
+      },
+      "SetPlanRequest": {
+        "required": [
+          "premiumUntil",
+          "reason"
+        ],
+        "type": "object",
+        "properties": {
+          "premiumUntil": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "reason": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        },
+        "description": "            Octroi de la formule payante (EF-PRM-04).\n            Ni l'échéance ni le motif ne portent [Required] : leur absence est traitée par\nl'endpoint, qui répond alors plan.expiry_required ou plan.reason_required.\nUn code métier stable vaut mieux qu'un message de validation générique pour une règle\nque le client doit pouvoir distinguer."
       },
       "SettlementsPage": {
         "required": [

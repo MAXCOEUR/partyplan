@@ -50,7 +50,29 @@ public interface IUserDirectory
 
     /// <summary>Supprime une photo de profil signalée comme inappropriée (EF-ADM-13).</summary>
     Task<Result> RemoveAvatarAsync(Guid userId, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Fixe ou retire l'échéance de la formule payante (EF-PRM-04, ADR 0008).
+    /// <para>
+    /// Une échéance nulle vaut retour à la formule gratuite. Le résultat porte l'ancienne
+    /// valeur et dit si quelque chose a changé : c'est l'appelant qui décide d'écrire au
+    /// journal d'audit, et une réapplication à l'identique ne doit rien y laisser.
+    /// </para>
+    /// </summary>
+    Task<Result<PlanChange>> SetPlanAsync(
+        Guid userId,
+        DateTimeOffset? premiumUntil,
+        CancellationToken cancellationToken);
 }
+
+/// <summary>
+/// Effet d'un changement de formule. <paramref name="Changed"/> distingue un octroi réel
+/// d'une réapplication sans effet.
+/// </summary>
+public sealed record PlanChange(
+    DateTimeOffset? Previous,
+    DateTimeOffset? Current,
+    bool Changed);
 
 public sealed record UserQuery(string? Search, int Page, int PageSize, bool IncludeDeleted = false);
 

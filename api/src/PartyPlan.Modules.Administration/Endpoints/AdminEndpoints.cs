@@ -15,6 +15,18 @@ public sealed record SuspendRequest([Required][MaxLength(500)] string Reason);
 
 public sealed record ChangeRoleRequest([Required] string Role);
 
+/// <summary>
+/// Octroi de la formule payante (EF-PRM-04).
+/// <para>
+/// Ni l'échéance ni le motif ne portent <c>[Required]</c> : leur absence est traitée par
+/// l'endpoint, qui répond alors <c>plan.expiry_required</c> ou <c>plan.reason_required</c>.
+/// Un code métier stable vaut mieux qu'un message de validation générique pour une règle
+/// que le client doit pouvoir distinguer.
+/// </para>
+/// </summary>
+public sealed record SetPlanRequest(DateTimeOffset? PremiumUntil, [MaxLength(500)] string? Reason);
+
+
 /// <summary>Entrée du journal d'audit, telle que présentée dans le back-office.</summary>
 public sealed record AuditEntryView(
     Guid Id,
@@ -407,11 +419,117 @@ internal static class AdminEndpoints
             .WithName("AdminChangeRole")
             .WithSummary("Attribue ou retire un rôle plateforme.")
             .RequireAuthorization(AdminPolicy);
+
+        // Attribution de la formule payante (EF-PRM-04, ADR 0008). Réservée au
+        // PlatformAdmin : RG-ADM-05 borne le rôle Support à la consultation et au
+        // dépannage, et offrir un abonnement n'est ni l'un ni l'autre.
+        groupe.MapPut("/users/{userId:guid}/plan", async (
+                Guid userId,
+                SetPlanRequest corps,
+                IUserDirectory users,
+                IAuditLog audit,
+                IClock clock,
+                CancellationToken cancellationToken) =>
+            {
+                if (corps.PremiumUntil is not { } echeance)
+                {
+                    return Problem(ExpiryRequired);
+                }
+
+                if (echeance <= clock.UtcNow)
+                {
+                    return Problem(ExpiryInPast);
+                }
+
+                return await AppliquerFormuleAsync(
+                        userId,
+                        echeance,
+                        corps.Reason,
+                        users,
+                        audit,
+                        cancellationToken)
+                    .ConfigureAwait(false);
+            })
+            .WithName("AdminSetPlan")
+            .WithSummary("Accorde la formule payante jusqu'à une échéance, avec motif obligatoire.")
+            .RequireAuthorization(AdminPolicy);
+
+        // Le motif voyage en chaîne de requête et non dans un corps : un DELETE porteur
+        // d'un corps n'est pas inféré par les endpoints minimaux, et le dépôt n'en a aucun
+        // autre exemple.
+        groupe.MapDelete("/users/{userId:guid}/plan", async (
+                Guid userId,
+                string? reason,
+                IUserDirectory users,
+                IAuditLog audit,
+                CancellationToken cancellationToken) =>
+            await AppliquerFormuleAsync(
+                    userId,
+                    premiumUntil: null,
+                    reason,
+                    users,
+                    audit,
+                    cancellationToken)
+                .ConfigureAwait(false))
+            .WithName("AdminRevokePlan")
+            .WithSummary("Ramène un compte à la formule gratuite, avec motif obligatoire.")
+            .RequireAuthorization(AdminPolicy);
+    }
+
+    /// <summary>
+    /// Applique une échéance de formule et journalise, mais seulement si quelque chose a
+    /// changé : le back-office se manipule à la main, et un double clic ne doit pas laisser
+    /// deux lignes identiques dans un journal inaltérable (RG-ADM-06).
+    /// </summary>
+    private static async Task<IResult> AppliquerFormuleAsync(
+        Guid userId,
+        DateTimeOffset? premiumUntil,
+        string? motif,
+        IUserDirectory users,
+        IAuditLog audit,
+        CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(motif))
+        {
+            return Problem(ReasonRequired);
+        }
+
+        var resultat = await users.SetPlanAsync(userId, premiumUntil, cancellationToken)
+            .ConfigureAwait(false);
+
+        if (resultat.IsFailure)
+        {
+            return Problem(resultat.Error!);
+        }
+
+        if (resultat.Value!.Changed)
+        {
+            await audit.RecordAsync(
+                AdminAuditActions.PlanChanged,
+                userId,
+                motif.Trim(),
+                new { precedente = resultat.Value.Previous, nouvelle = resultat.Value.Current },
+                cancellationToken).ConfigureAwait(false);
+        }
+
+        return Results.NoContent();
     }
 
     private static readonly DomainError SelfActionRefused = DomainError.Rule(
         "admin.self_action_refused",
         "Tu ne peux pas appliquer cette action à ton propre compte.");
+
+    private static readonly DomainError ExpiryRequired = DomainError.Validation(
+        "plan.expiry_required",
+        "Indique une échéance : une formule payante sans terme ne se renouvelle pas.");
+
+    private static readonly DomainError ExpiryInPast = DomainError.Validation(
+        "plan.expiry_in_past",
+        "L'échéance doit être dans le futur.");
+
+    private static readonly DomainError ReasonRequired = DomainError.Validation(
+        "plan.reason_required",
+        "Indique un motif : le journal d'audit doit dire pourquoi.");
 
     private static IResult Respond<T>(Result<T> resultat) =>
         resultat.IsSuccess ? Results.Ok(resultat.Value) : Problem(resultat.Error!);
