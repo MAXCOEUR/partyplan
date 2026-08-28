@@ -423,6 +423,13 @@ internal static class AdminEndpoints
         // Attribution de la formule payante (EF-PRM-04, ADR 0008). Réservée au
         // PlatformAdmin : RG-ADM-05 borne le rôle Support à la consultation et au
         // dépannage, et offrir un abonnement n'est ni l'un ni l'autre.
+        //
+        // Aucun garde SelfActionRefused ici, contrairement à suspend, delete et role.
+        // RG-ADM-03 protège d'un auto-sabotage — se suspendre, se révoquer, se
+        // supprimer sont des gestes dont on ne revient pas seul. S'accorder une formule
+        // n'appartient pas à cette famille : c'est une faveur, elle est réversible, elle
+        // est journalisée, et l'administrateur d'une instance en est le propriétaire.
+        // Le jour où un encaissement existera (lot 4.1), la question se reposera.
         groupe.MapPut("/users/{userId:guid}/plan", async (
                 Guid userId,
                 SetPlanRequest corps,
