@@ -65,6 +65,12 @@ infra/data/
 *.sqlite
 *.db
 
+# Photos de profil et pièces jointes du poste, partagées entre l'API en conteneur et
+# celle de « make api ». Auparavant sous /tmp, donc perdues à chaque reconstruction du
+# conteneur et à chaque redémarrage du poste : la base gardait des URL vers des fichiers
+# disparus, et l'application affichait des images cassées.
+.data/
+
 # Chaînes traduites générées depuis lib/l10n/arb par `make l10n`
 app/lib/l10n/generated/
 

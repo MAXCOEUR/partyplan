@@ -20,6 +20,12 @@ API_EMU     := http://10.0.2.2:5080
 # autorisées de appsettings.Development.json : les deux valeurs doivent rester égales.
 WEB_DEV_PORT := 5173
 
+# Stockage des photos et pièces jointes, partagé entre l'API en conteneur et l'API
+# lancée par « make api ». Le chemin est repris tel quel dans le montage du conteneur
+# (infra/compose/compose.yml) : les deux valeurs doivent rester égales, faute de quoi
+# chaque moitié écrit dans un stockage que l'autre ignore.
+MEDIA_DIR := $(CURDIR)/.data/media
+
 # Identifiant client Google, lu dans .env pour n'avoir qu'une source de vérité. Vide
 # tant qu'il n'y est pas : l'application se lance alors sans bouton Google, et
 # l'inscription par mot de passe suffit (NF-DEV-05).
@@ -91,9 +97,14 @@ api: ## Lance l'API en rechargement à chaud (base et courriel en conteneur)
 	@# porte pas, et sans eux l'API refuse tout jeton Google sans que le bouton de
 	@# l'application le laisse deviner. Vides, la vérification reste simplement
 	@# désactivée (NF-DEV-05).
+	@# Même stockage que le conteneur, monté depuis .data/media : sans cela l'API
+	@# locale écrirait dans /tmp et ne verrait pas les photos téléversées via
+	@# « make up », ni l'inverse. /tmp est en outre purgé au redémarrage du poste.
+	@mkdir -p $(MEDIA_DIR)
 	ASPNETCORE_ENVIRONMENT=Development ASPNETCORE_URLS=$(API_URLS) \
 	  env DOTNET_WATCH_SUPPRESS_STATIC_FILE_HANDLING=1 \
 	  App__PublicBaseUrl=http://localhost:$(WEB_DEV_PORT) \
+	  Media__RootPath=$(MEDIA_DIR) \
 	  Google__ClientId=$(GOOGLE_CLIENT_ID) \
 	  Google__AndroidClientId=$(GOOGLE_ANDROID_CLIENT_ID) \
 	  $$(./tools/verifier-inotify.sh --env) \

@@ -338,6 +338,21 @@ dépendances, et `docker pull postgres:16-alpine` pour l'image utilisée par les
 | Testcontainers échoue | Docker arrêté | Démarrer Docker |
 | `make up` échoue sur l'image web | Compilation Flutter Web longue, mémoire | Utiliser `make api` et `make app` pour développer |
 | « The configured user limit (128) on the number of inotify instances » | Limite noyau saturée par les IDE | Section 6 bis, puis `make inotify` pour contrôler |
+| Photos de profil et pièces jointes en image cassée | Fichiers absents de `.data/media` — voir ci-dessous | Retéléverser, ou vider les colonnes d'URL orphelines |
+
+### Où vivent les photos et les pièces jointes
+
+Dans `.data/media`, à la racine du dépôt, ignoré par git. Le même dossier sert à l'API
+en conteneur — monté sur `/var/lib/partyplan/media`, le chemin de production — et à
+celle de `make api`, via `Media__RootPath`. Les deux valeurs doivent rester égales :
+`MEDIA_DIR` dans le `Makefile` et le montage dans `infra/compose/compose.yml`.
+
+Ce dossier était auparavant `/tmp/partyplan-media`, sans montage. Deux conséquences,
+corrigées le 28/08/2026 : chaque reconstruction du conteneur effaçait les photos, et
+l'API locale ne voyait pas celles du conteneur — la base gardait alors des URL vers des
+fichiers disparus, et l'application affichait des images cassées. Un lancement depuis
+Rider sans variable retombe sur le chemin d'`appsettings.Development.json`, qui pointe
+désormais vers ce même dossier, relatif au projet.
 
 ---
 

@@ -64,7 +64,10 @@ services:
       # Notifications poussées journalisées en console faute de clé — NF-DEV-04
       Push__FirebaseServiceAccountPath: ${FIREBASE_SERVICE_ACCOUNT_PATH:-}
       App__PublicBaseUrl: http://localhost:${WEB_PORT:-8080}
-      Media__RootPath: /tmp/partyplan-media
+      # Même chemin qu'en production (NF-DEV-08), et monté depuis la machine : les
+      # photos doivent survivre à une reconstruction du conteneur, et « make api »
+      # comme « make up » doivent lire les mêmes fichiers.
+      Media__RootPath: /var/lib/partyplan/media
       Media__PublicBaseUrl: http://localhost:${API_PORT:-5080}/media
       Database__MigrateOnStartup: "true"
       Database__SeedDemoData: ${SEED_DEMO:-true}
@@ -72,6 +75,12 @@ services:
       # Ordonnanceur des notifications. Une seule instance l'exécute (RG-RT-04) :
       # la clé de déduplication protège la planification, pas l'envoi.
       Notifications__Ordonnanceur__Enabled: "${NOTIFICATIONS_ORDONNANCEUR_ENABLED:-true}"
+    volumes:
+      # Montage depuis le dépôt et non volume nommé : un volume nommé survivrait aux
+      # reconstructions, mais resterait invisible pour l'API lancée par « make api ».
+      # Les deux écriraient alors dans deux stockages distincts, et chacun verrait
+      # l'autre en 404.
+      - ../../.data/media:/var/lib/partyplan/media
     ports:
       - "${API_PORT:-5080}:8080"
 
