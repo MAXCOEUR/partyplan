@@ -1,11 +1,39 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:partyplan/core/models/evenement.dart';
+import 'package:partyplan/core/network/api_exception.dart';
+import 'package:partyplan/core/network/evenements_api.dart';
 import 'package:partyplan/core/providers.dart';
 import 'package:partyplan/features/evenement/creation_evenement_page.dart';
 
 import '../aide/monter_ecran.dart';
 import '../doubles/session_store_double.dart';
+
+/// Refuse la création comme le fait le serveur au-delà du quota (RG-PRM-01).
+class _ApiQuotaAtteint implements EvenementsApi {
+  static const message =
+      'Tu organises déjà 3 soirées à venir, le maximum de la formule gratuite. '
+      'Attends la fin de l’une d’elles, quitte-la ou supprime-la — ou passe à la '
+      'formule payante.';
+
+  @override
+  Future<ResumeEvenement> creer({
+    required String nom,
+    required DateTime debut,
+    DateTime? fin,
+    String? adresse,
+    String? description,
+    required String cleIdempotence,
+  }) async => throw ApiException(
+    statusCode: 403,
+    title: message,
+    code: 'plan.event_quota_reached',
+  );
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => throw UnimplementedError();
+}
 
 void main() {
   group('Assistant de création', () {
@@ -79,6 +107,24 @@ void main() {
       }
     });
 
+    testWidgets('un refus du serveur est affiché tel quel, sans être réécrit', (
+      tester,
+    ) async {
+      // Le quota nomme sa cause et ses sorties. Le remplacer par « l'événement n'a
+      // pas pu être créé » laisse l'organisateur sans rien à faire de l'information.
+      await _monter(tester, api: _ApiQuotaAtteint());
+
+      await tester.enterText(find.byType(TextFormField).first, 'Soirée de trop');
+      await tester.tap(find.text('Suite'));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Créer l’événement'));
+      await tester.pumpAndSettle();
+
+      expect(find.textContaining('le maximum de la formule gratuite'), findsOneWidget);
+      expect(find.text('L’événement n’a pas pu être créé.'), findsNothing);
+    });
+
     testWidgets('NF-A11Y-03 : chaque segment porte un libellé sémantique', (
       tester,
     ) async {
@@ -94,9 +140,12 @@ void main() {
   });
 }
 
-Future<void> _monter(WidgetTester tester) async {
+Future<void> _monter(WidgetTester tester, {EvenementsApi? api}) async {
   final conteneur = ProviderContainer(
-    overrides: [sessionStoreProvider.overrideWithValue(SessionStoreDouble())],
+    overrides: [
+      sessionStoreProvider.overrideWithValue(SessionStoreDouble()),
+      if (api != null) evenementsApiProvider.overrideWithValue(api),
+    ],
   );
   addTearDown(conteneur.dispose);
 

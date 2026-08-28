@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../app/router.dart';
+import '../../core/network/api_exception.dart';
 import '../../core/providers.dart';
 import '../../design/components/pp_choix_date_heure.dart';
 import '../../design/components/pp_form.dart';
@@ -248,7 +249,18 @@ class _CreationEvenementPageState extends ConsumerState<CreationEvenementPage> {
         // sans rouvrir le formulaire d'un événement déjà créé.
         context.replace(PpRoutes.versEvenement(resume.id));
       }
+    } on ApiException catch (erreur) {
+      // Le message du serveur est affiché tel quel : un refus de quota nomme sa cause
+      // et ses deux sorties (RG-PRM-01), et le remplacer par « l'événement n'a pas pu
+      // être créé » laisserait l'organisateur sans rien à faire de l'information.
+      if (mounted) {
+        setState(() {
+          _enCours = false;
+          _erreurServeur = erreur.title;
+        });
+      }
     } on Exception {
+      // Panne réseau : là, le message générique est le seul honnête.
       if (mounted) {
         setState(() {
           _enCours = false;
