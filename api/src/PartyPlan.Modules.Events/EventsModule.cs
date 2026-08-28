@@ -35,6 +35,9 @@ public sealed class EventsModule : IModule
         services.AddScoped<IEvenementsAVenir, EvenementsAVenir>();
 
         // Rappels temporels calculés ici, où vivent les présences (EF-NOT-03, EF-NOT-05).
+        // Quotas de la formule gratuite (ADR 0008).
+        services.AddScoped<QuotaEvenements>();
+
         services.AddScoped<IPlanificateurRappels, RappelsDeReponse>();
         services.AddScoped<IPlanificateurRappels, RappelsDeDebut>();
     }
