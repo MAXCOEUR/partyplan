@@ -102,7 +102,9 @@ Compte, et ne compte pas :
 | Événement dont je suis membre sans le posséder | non | rejoindre est illimité |
 | Compte abonné | sans objet | quota levé |
 
-**Dépassement toléré** : un transfert de propriété ne vérifie rien. Un compte à 3/3 qui
+**Dépassement toléré** : un transfert de propriété ne vérifie rien, et deux créations
+simultanées au bord du quota ne sont pas sérialisées — même motif qu'à l'adhésion,
+exposé au §4. Un compte à 3/3 qui
 accepte un transfert passe à 4/3 ; ses quatre événements fonctionnent, seule une
 cinquième création lui est refusée. `RG-ROLE-02` reste praticable en toutes
 circonstances. Vérifié par test.
@@ -125,9 +127,17 @@ Trois précautions :
 1. **L'idempotence de `RG-INV-05` passe avant le quota.** Un membre déjà présent qui
    rejoue sa requête réussit sans toucher au compteur. Vérifier le quota d'abord ferait
    échouer une adhésion valide sur un simple doublon de requête.
-2. **Comptage dans la transaction de l'écriture**, comme `RG-CRS-01` pour l'attribution
-   d'un article. Hors transaction, deux adhésions simultanées franchissent toutes les
-   deux le plafond.
+2. **La course est acceptée, et documentée comme telle.** Deux adhésions arrivant à
+   19/20 dans la même poignée de millisecondes peuvent produire 21 membres. Aucune
+   garantie transactionnelle n'est tentée : `IEventsDbContext` n'expose pas `Database`,
+   et l'écriture conditionnelle qui protège `RG-CRS-01`
+   (`ShoppingService.cs:299-307`) ne se transpose pas à un décompte de lignes.
+   Élargir le contrat du module pour un plafond commercial serait disproportionné.
+   La conséquence d'un franchissement est nulle : `RG-PRM-02` interdit de dégrader
+   l'existant, donc personne ne serait exclu, et un dépassement est déjà toléré par
+   conception après un transfert de propriété. Ce quota borne une offre, il ne protège
+   ni un cloisonnement ni un calcul financier — les deux seuls endroits où le dépôt paie
+   le prix d'une garantie forte.
 3. **Les accompagnants ne comptent pas.** `EF-PRES-06` en autorise dix par membre ; les
    inclure ferait franchir le plafond après une déclaration de présence, donc
    rétroactivement, ce que `RG-PRM-02` interdit. `RG-PRES-04` sépare déjà les deux
@@ -218,13 +228,12 @@ au jour près.
 le code attendu ; une soirée terminée rend une place sans rien supprimer ; la supprimer la
 rend aussi ; en quitter une après transfert la rend ; un abonné en crée dix ; être membre
 de dix événements d'autrui ne consomme rien ; **un compte à 4/3 après transfert garde ses
-quatre événements pleinement utilisables** — `RG-PRM-02`, `RG-PRM-03` ; deux créations
-simultanées au bord du quota n'en laissent passer qu'une.
+quatre événements pleinement utilisables** — `RG-PRM-02`, `RG-PRM-03`.
 
 **Intégration, plafond de membres** — la 21ᵉ adhésion renvoie 403 ; un rejeu d'un membre
 existant réussit à 20/20 (`RG-INV-05` avant le quota) ; le plafond suit le propriétaire,
 pas l'arrivant ; dix accompagnants ne consomment aucune place ; l'aperçu public annonce
-« complet » ; deux adhésions simultanées à 19/20 n'en laissent passer qu'une.
+« complet ».
 
 **Intégration, attribution** — un `PlatformAdmin` accorde puis retire ; `Support` et
 `User` reçoivent 403 ; l'échéance passée est refusée ; le motif manquant est refusé ;
