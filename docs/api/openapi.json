@@ -4442,7 +4442,8 @@
           "description",
           "participantCount",
           "joinEnabled",
-          "alreadyMember"
+          "alreadyMember",
+          "complet"
         ],
         "type": "object",
         "properties": {
@@ -4484,6 +4485,9 @@
             "type": "boolean"
           },
           "alreadyMember": {
+            "type": "boolean"
+          },
+          "complet": {
             "type": "boolean"
           }
         },

@@ -24,7 +24,8 @@ public sealed record JoinPreview(
     string? Description,
     int ParticipantCount,
     bool JoinEnabled,
-    bool AlreadyMember);
+    bool AlreadyMember,
+    bool Complet);
 
 /// <summary>Confirmation d'une participation.</summary>
 public sealed record JoinResult(Guid EventId, Guid MemberId);
@@ -40,7 +41,8 @@ public sealed class JoinService(
     IClock clock,
     IIdGenerator ids,
     IDiffusionEvenement diffusion,
-    IJournalActivite journal)
+    IJournalActivite journal,
+    QuotaEvenements quota)
 {
     public static readonly DomainError InvitationNotFound = DomainError.NotFound(
         "invitation.not_found",
@@ -143,6 +145,26 @@ public sealed class JoinService(
             return JoinClosed;
         }
 
+        // Après l'idempotence de RG-INV-05, jamais avant : un rejeu à 20/20 doit réussir,
+        // sinon un doublon de requête refuserait une adhésion déjà acquise. La formule
+        // consultée est celle du propriétaire (EF-PRM-03), et le comptage est évité s'il
+        // est abonné.
+        var proprietaireAbonne = await quota
+            .ProprietaireAbonneAsync(evenement.Id, cancellationToken)
+            .ConfigureAwait(false);
+
+        if (!proprietaireAbonne)
+        {
+            var membresActifs = await quota
+                .CompterMembresActifsAsync(evenement.Id, cancellationToken)
+                .ConfigureAwait(false);
+
+            if (!QuotaEvenements.AdhesionAutorisee(membresActifs, proprietaireAbonne))
+            {
+                return QuotaEvenements.PlafondMembresAtteint;
+            }
+        }
+
         var membre = new EventMember
         {
             Id = ids.NewId(),
@@ -210,6 +232,15 @@ public sealed class JoinService(
             && await MembreUtilisateurAsync(evenement.Id, userId, cancellationToken)
                 .ConfigureAwait(false) is not null;
 
+        // Annoncé avant toute création de compte : sans cela, un invité s'inscrirait pour
+        // découvrir ensuite qu'il ne peut pas entrer. RG-INV-04 autorise déjà le nombre de
+        // participants, donc aucune donnée nouvelle n'est exposée.
+        var proprietaireAbonne = await quota
+            .ProprietaireAbonneAsync(evenement.Id, cancellationToken)
+            .ConfigureAwait(false);
+
+        var complet = !QuotaEvenements.AdhesionAutorisee(participants, proprietaireAbonne);
+
         return new JoinPreview(
             evenement.Name,
             evenement.StartsAt,
@@ -218,7 +249,8 @@ public sealed class JoinService(
             evenement.Description,
             participants,
             evenement.JoinEnabled,
-            dejaMembre);
+            dejaMembre,
+            complet);
     }
 
     /// <summary>
