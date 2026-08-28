@@ -357,7 +357,9 @@ class _CarteCompte extends ConsumerWidget {
                       Icons.workspace_premium_outlined,
                       size: 16,
                     ),
-                    label: Text(compte.estAbonne ? 'Retirer Premium' : 'Passer Premium'),
+                    label: Text(
+                      compte.estAbonne ? 'Retirer Premium' : 'Passer Premium',
+                    ),
                     onPressed: () => _changerFormule(context, ref, api),
                   ),
                   OutlinedButton.icon(
@@ -641,8 +643,7 @@ Future<_ChoixFormule?> _demanderFormule(BuildContext context) {
                 ButtonSegment(value: 12, label: Text('1 an')),
               ],
               selected: {mois},
-              onSelectionChanged: (choix) =>
-                  setState(() => mois = choix.first),
+              onSelectionChanged: (choix) => setState(() => mois = choix.first),
             ),
             const SizedBox(height: PpSpacing.lg),
             TextField(

@@ -58,8 +58,8 @@ class PpFormule extends StatelessWidget {
     final quota = quotaEvenements;
     final detail = !abonne && possedes != null && quota != null
         ? possedes <= 1
-            ? '$possedes soirée sur $quota'
-            : '$possedes soirées sur $quota'
+              ? '$possedes soirée sur $quota'
+              : '$possedes soirées sur $quota'
         : null;
 
     return Semantics(
