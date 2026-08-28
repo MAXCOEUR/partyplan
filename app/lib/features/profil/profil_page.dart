@@ -9,6 +9,7 @@ import '../../core/providers.dart';
 import '../../design/components/pp_avatar.dart';
 import '../../design/components/pp_barre_app.dart';
 import '../../design/components/pp_card.dart';
+import '../../design/components/pp_formule.dart';
 import '../../design/components/pp_retour.dart';
 import '../../design/components/pp_rail.dart';
 import '../../design/components/pp_remonte_au_parent.dart';
@@ -163,6 +164,8 @@ class _EnTeteProfil extends StatelessWidget {
                   const SizedBox(height: PpSpacing.sm),
                   _EtiquetteRole(role: profil.rolePlateforme),
                 ],
+                const SizedBox(height: PpSpacing.sm),
+                PpFormule(premiumJusquau: profil.premiumJusquau),
               ],
             ),
           ),

@@ -353,6 +353,14 @@ class _CarteCompte extends ConsumerWidget {
                     ),
                   ),
                   OutlinedButton.icon(
+                    icon: const Icon(
+                      Icons.workspace_premium_outlined,
+                      size: 16,
+                    ),
+                    label: Text(compte.estAbonne ? 'Retirer Premium' : 'Passer Premium'),
+                    onPressed: () => _changerFormule(context, ref, api),
+                  ),
+                  OutlinedButton.icon(
                     icon: Icon(
                       Icons.delete_outline_rounded,
                       size: 16,
@@ -399,6 +407,50 @@ class _CarteCompte extends ConsumerWidget {
       ref,
       () => api.suspendre(compte.id, motif),
       'Compte suspendu.',
+    );
+  }
+
+  /// Attribue ou retire la formule payante (EF-PRM-04).
+  ///
+  /// Retirer ne demande qu'un motif ; accorder demande en plus une durée, parce qu'une
+  /// formule sans terme ne se renouvelle pas et que le serveur refuse une échéance nulle.
+  Future<void> _changerFormule(
+    BuildContext context,
+    WidgetRef ref,
+    ComptesApi api,
+  ) async {
+    if (compte.estAbonne) {
+      final motif = await _demanderMotifFormule(
+        context,
+        titre: 'Retirer la formule payante',
+        action: 'Retirer',
+      );
+
+      if (motif == null || !context.mounted) {
+        return;
+      }
+
+      await _agir(
+        context,
+        ref,
+        () => api.retirerFormule(compte.id, motif),
+        'Compte ramené à la formule gratuite.',
+      );
+
+      return;
+    }
+
+    final choix = await _demanderFormule(context);
+
+    if (choix == null || !context.mounted) {
+      return;
+    }
+
+    await _agir(
+      context,
+      ref,
+      () => api.accorderFormule(compte.id, choix.echeance, choix.motif),
+      'Formule payante accordée.',
     );
   }
 
@@ -553,4 +605,133 @@ class _Puce extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Choix fait dans la boîte d'attribution de formule.
+class _ChoixFormule {
+  const _ChoixFormule({required this.echeance, required this.motif});
+
+  final DateTime echeance;
+  final String motif;
+}
+
+/// Demande une durée et un motif avant d'accorder la formule payante (EF-PRM-04).
+///
+/// Trois durées proposées plutôt qu'un sélecteur de date : ce sont les seules qu'un
+/// administrateur accorde en pratique, et un calendrier complet pour trois valeurs
+/// ajouterait un écran sans rien apporter.
+Future<_ChoixFormule?> _demanderFormule(BuildContext context) {
+  final controleur = TextEditingController();
+  var mois = 1;
+
+  return showDialog<_ChoixFormule>(
+    context: context,
+    builder: (context) => StatefulBuilder(
+      builder: (context, setState) => AlertDialog(
+        title: const Text('Accorder la formule payante'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('Durée'),
+            const SizedBox(height: PpSpacing.sm),
+            SegmentedButton<int>(
+              segments: const [
+                ButtonSegment(value: 1, label: Text('1 mois')),
+                ButtonSegment(value: 12, label: Text('1 an')),
+              ],
+              selected: {mois},
+              onSelectionChanged: (choix) =>
+                  setState(() => mois = choix.first),
+            ),
+            const SizedBox(height: PpSpacing.lg),
+            TextField(
+              controller: controleur,
+              autofocus: true,
+              maxLength: 500,
+              decoration: const InputDecoration(
+                labelText: 'Motif',
+                hintText: 'Client pilote, geste commercial…',
+              ),
+            ),
+            const SizedBox(height: PpSpacing.sm),
+            Text(
+              'Le motif est consigné au journal d\'audit, qui ne peut plus être '
+              'modifié.',
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Annuler'),
+          ),
+          FilledButton(
+            onPressed: () {
+              final motif = controleur.text.trim();
+
+              if (motif.isEmpty) {
+                return;
+              }
+
+              Navigator.of(context).pop(
+                _ChoixFormule(
+                  // Le serveur refuse une échéance passée : la date est calculée à
+                  // partir de maintenant, jamais saisie librement.
+                  echeance: DateTime.now().add(Duration(days: 30 * mois)),
+                  motif: motif,
+                ),
+              );
+            },
+            child: const Text('Accorder'),
+          ),
+        ],
+      ),
+    ),
+  );
+}
+
+/// Demande le motif d'un retrait de formule. Obligatoire comme pour une suspension :
+/// le journal d'audit doit dire pourquoi (RG-ADM-06).
+Future<String?> _demanderMotifFormule(
+  BuildContext context, {
+  required String titre,
+  required String action,
+}) {
+  final controleur = TextEditingController();
+
+  return showDialog<String>(
+    context: context,
+    builder: (context) => AlertDialog(
+      title: Text(titre),
+      content: TextField(
+        controller: controleur,
+        autofocus: true,
+        maxLength: 500,
+        decoration: const InputDecoration(
+          labelText: 'Motif',
+          hintText: 'Fin de la période d\'essai…',
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Annuler'),
+        ),
+        FilledButton(
+          onPressed: () {
+            final motif = controleur.text.trim();
+
+            if (motif.isEmpty) {
+              return;
+            }
+
+            Navigator.of(context).pop(motif);
+          },
+          child: Text(action),
+        ),
+      ],
+    ),
+  );
 }

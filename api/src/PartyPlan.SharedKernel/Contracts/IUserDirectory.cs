@@ -83,6 +83,14 @@ public sealed record UserPage(IReadOnlyList<UserRecord> Items, int Total, int Pa
 /// nécessaires au support (RG-RGPD-04) : ni contenu d'événement, ni empreinte de mot de
 /// passe.
 /// </summary>
+/// <summary>
+/// Fiche technique d'un compte, telle que le back-office la présente.
+/// <para>
+/// <c>PremiumUntil</c> porte l'échéance de la formule payante, nulle en formule gratuite
+/// (EF-PRM-04). Présente ici parce qu'un administrateur doit voir la formule avant de la
+/// changer.
+/// </para>
+/// </summary>
 public sealed record UserRecord(
     Guid Id,
     string? Email,
@@ -99,7 +107,8 @@ public sealed record UserRecord(
     int EventCount,
     int ActiveSessionCount,
     DateTimeOffset CreatedAt,
-    DateTimeOffset? DeletedAt);
+    DateTimeOffset? DeletedAt,
+    DateTimeOffset? PremiumUntil);
 
 public sealed record InstanceMetrics(
     int TotalUsers,

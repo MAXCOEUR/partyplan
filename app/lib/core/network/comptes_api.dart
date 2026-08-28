@@ -248,6 +248,24 @@ class ComptesApi {
     analyser: (_) {},
   );
 
+  /// Accorde la formule payante jusqu'à une échéance (EF-PRM-04). Réservé au
+  /// `PlatformAdmin` côté serveur ; le motif alimente le journal d'audit (RG-ADM-06).
+  Future<void> accorderFormule(String id, DateTime echeance, String motif) =>
+      _client.put<void>(
+        '/admin/users/$id/plan',
+        corps: {
+          'premiumUntil': echeance.toUtc().toIso8601String(),
+          'reason': motif,
+        },
+        analyser: (_) {},
+      );
+
+  /// Ramène un compte à la formule gratuite (EF-PRM-04). Le motif voyage en chaîne de
+  /// requête : un DELETE porteur d'un corps n'est pas accepté par l'API.
+  Future<void> retirerFormule(String id, String motif) => _client.delete(
+    '/admin/users/$id/plan?reason=${Uri.encodeQueryComponent(motif)}',
+  );
+
   Future<List<EntreeAudit>> journalAudit({int page = 1, int taille = 50}) =>
       _client.get<List<EntreeAudit>>(
         '/admin/audit',

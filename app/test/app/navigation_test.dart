@@ -44,6 +44,9 @@ ProviderContainer _conteneur() {
       mesEvenementsProvider.overrideWith(
         (ref) async => [itemListe(id: _evenement, nom: 'Soirée test')],
       ),
+      // L'accueil affiche le quota de la formule gratuite : sans cette surcharge, il
+      // partirait chercher le vrai profil et laisserait un minuteur en attente.
+      profilProvider.overrideWith((ref) async => profilDeTest()),
       evenementProvider(_evenement).overrideWith((ref) async => resume()),
       membresProvider(_evenement).overrideWith((ref) async => []),
       // Le tableau de bord porte désormais un aperçu du fil d'activité : sans

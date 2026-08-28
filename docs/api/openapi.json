@@ -6119,7 +6119,8 @@
           "eventCount",
           "activeSessionCount",
           "createdAt",
-          "deletedAt"
+          "deletedAt",
+          "premiumUntil"
         ],
         "type": "object",
         "properties": {
@@ -6194,6 +6195,13 @@
             "format": "date-time"
           },
           "deletedAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "premiumUntil": {
             "type": [
               "null",
               "string"

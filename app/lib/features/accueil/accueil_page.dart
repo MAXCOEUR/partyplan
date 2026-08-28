@@ -14,6 +14,7 @@ import '../../design/components/pp_bandeau_hors_ligne.dart';
 import '../../design/components/pp_barre_app.dart';
 import '../../design/components/pp_card.dart';
 import '../../design/components/pp_date_pastille.dart';
+import '../../design/components/pp_formule.dart';
 import '../../design/components/pp_rail.dart';
 import '../../design/components/pp_states.dart';
 import '../../design/components/pp_status_chip.dart';
@@ -197,7 +198,55 @@ class _Liste extends ConsumerWidget {
                 child: _Carte(evenement: e, estompee: true),
               ),
           ],
+          const SizedBox(height: PpSpacing.xl),
+          const _QuotaFormule(),
         ],
+      ),
+    );
+  }
+}
+
+/// Quota consommé, en pied de liste (EF-PRM-05).
+///
+/// En pied et non en tête : ce n'est pas la question qu'on se pose en ouvrant
+/// l'application. Mais visible tout de même, parce qu'une limite découverte au seul
+/// moment du refus est une mauvaise surprise.
+///
+/// Le décompte se fait sur la liste déjà chargée : le rôle de l'appelant et le caractère
+/// passé de chaque soirée y figurent, et une route de plus serait un aller-retour réseau
+/// pour deux lignes de calcul.
+///
+/// La formule, elle, vient du profil, que l'accueil ne chargeait pas jusqu'ici. La
+/// requête est donc nouvelle, mais elle ne retarde aucun affichage : tant qu'elle n'a pas
+/// répondu, ce bloc s'efface et la liste reste complète au-dessus. `NF-PERF-04` mesure le
+/// premier affichage utile, qui n'attend pas cette réponse.
+class _QuotaFormule extends ConsumerWidget {
+  const _QuotaFormule();
+
+  /// Reprend RG-PRM-01. Codé ici faute d'être exposé par l'API : ce n'est qu'un
+  /// affichage, le serveur reste seul à appliquer la règle, et un écart se verrait au
+  /// premier refus.
+  static const _quota = 3;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final profil = ref.watch(profilProvider).value;
+    final evenements = ref.watch(mesEvenementsProvider).value;
+
+    if (profil == null || evenements == null || profil.estAbonne) {
+      return const SizedBox.shrink();
+    }
+
+    final possedes = evenements
+        .where((e) => !e.estPasse && e.monRole == RoleMembre.proprietaire)
+        .length;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: PpSpacing.xs),
+      child: PpFormule(
+        premiumJusquau: profil.premiumJusquau,
+        evenementsPossedes: possedes,
+        quotaEvenements: _quota,
       ),
     );
   }

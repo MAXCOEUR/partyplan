@@ -315,5 +315,6 @@ public sealed class UserDirectory(
         evenements,
         sessions,
         u.CreatedAt,
-        u.DeletedAt);
+        u.DeletedAt,
+        u.PremiumUntil);
 }

@@ -1,9 +1,33 @@
 import 'package:partyplan/core/models/evenement.dart';
 import 'package:partyplan/core/models/invitation.dart';
 import 'package:partyplan/core/models/membre.dart';
+import 'package:partyplan/core/models/profil.dart';
 
 /// Date fixe : un test ne doit jamais dépendre de l'heure à laquelle il tourne.
 final debutFictif = DateTime(2026, 9, 12, 20);
+
+/// Profil ordinaire, en formule gratuite.
+///
+/// Nécessaire dès qu'un test monte un écran affichant la formule — l'accueil et le
+/// profil. Sans surcharge, le vrai profil serait demandé au réseau et laisserait un
+/// minuteur en attente à la fin du test.
+Profil profilDeTest({
+  String role = 'User',
+  DateTime? premiumJusquau,
+}) => Profil(
+  id: 'u1',
+  email: 'moi@partyplan.local',
+  emailVerifie: true,
+  nomAffiche: 'Maxence',
+  urlPhoto: null,
+  langue: 'fr-FR',
+  fuseau: 'Europe/Paris',
+  rolePlateforme: role,
+  aUnMotDePasse: true,
+  motDePasseAChanger: false,
+  creeLe: DateTime(2026, 8, 1),
+  premiumJusquau: premiumJusquau,
+);
 
 EvenementDeLaListe itemListe({
   String id = 'e1',

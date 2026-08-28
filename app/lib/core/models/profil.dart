@@ -12,6 +12,7 @@ class Profil {
     required this.aUnMotDePasse,
     required this.motDePasseAChanger,
     required this.creeLe,
+    this.premiumJusquau,
   });
 
   factory Profil.depuisJson(Map<String, dynamic> json) => Profil(
@@ -25,6 +26,9 @@ class Profil {
     rolePlateforme: json['platformRole'] as String? ?? 'User',
     aUnMotDePasse: json['hasPassword'] as bool? ?? false,
     motDePasseAChanger: json['mustChangePassword'] as bool? ?? false,
+    premiumJusquau: json['premiumUntil'] == null
+        ? null
+        : DateTime.parse(json['premiumUntil'] as String),
     creeLe: DateTime.parse(json['createdAt'] as String),
   );
 
@@ -42,7 +46,18 @@ class Profil {
   /// passe (RG-ADM-10). Aucune autre action n'est permise entre-temps.
   final bool motDePasseAChanger;
 
+  /// Échéance de la formule payante, nulle en formule gratuite (EF-PRM-05). Une échéance
+  /// passée vaut gratuit : c'est la même règle que côté serveur, où aucune tâche ne vient
+  /// remettre le champ à nul.
+  final DateTime? premiumJusquau;
+
   final DateTime creeLe;
+
+  bool get estAbonne {
+    final terme = premiumJusquau;
+
+    return terme != null && terme.isAfter(DateTime.now());
+  }
 
   /// Vrai pour `Support` et `PlatformAdmin`. N'accorde aucun droit dans un événement
   /// (RG-ADM-01) : sert uniquement à afficher l'entrée vers le back-office.
@@ -110,6 +125,7 @@ class FicheCompte {
     required this.sessionsActives,
     required this.creeLe,
     required this.supprimeLe,
+    this.premiumJusquau,
   });
 
   factory FicheCompte.depuisJson(Map<String, dynamic> json) => FicheCompte(
@@ -130,6 +146,9 @@ class FicheCompte {
     supprimeLe: json['deletedAt'] == null
         ? null
         : DateTime.parse(json['deletedAt'] as String),
+    premiumJusquau: json['premiumUntil'] == null
+        ? null
+        : DateTime.parse(json['premiumUntil'] as String),
   );
 
   final String id;
@@ -146,7 +165,17 @@ class FicheCompte {
   final DateTime creeLe;
   final DateTime? supprimeLe;
 
+  /// Échéance de la formule payante (EF-PRM-04). Affichée avant toute modification :
+  /// un administrateur doit voir la formule qu'il s'apprête à changer.
+  final DateTime? premiumJusquau;
+
   bool get estSupprime => supprimeLe != null;
+
+  bool get estAbonne {
+    final terme = premiumJusquau;
+
+    return terme != null && terme.isAfter(DateTime.now());
+  }
 }
 
 /// Page de résultats du back-office.
@@ -210,6 +239,7 @@ class EntreeAudit {
     'user.deleted' => 'Compte supprimé',
     'user.role_changed' => 'Rôle modifié',
     'user.email_verified_by_admin' => 'Adresse vérifiée manuellement',
+    'user.plan_changed' => 'Formule modifiée',
     _ => action,
   };
 }
