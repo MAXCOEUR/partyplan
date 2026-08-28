@@ -1,4 +1,22 @@
-# Socle Premium — conception
+# Socle Premium — conception *(abandonnée)*
+
+> **Abandonnée le 28/08/2026, remplacée par
+> `2026-08-28-limites-formule-gratuite-design.md` et par l'`ADR 0008`.**
+>
+> Conservée telle quelle, sans retouche, parce qu'elle documente des arbitrages qui ont
+> été repesés et parce que deux de ses raisonnements ont été retenus : la réécriture de
+> `RG-PRM-03`, et le fait qu'un module dédié accueillera mieux les cycles de vie du lot
+> 4.1 qu'une colonne unique. Ce second point est acté comme une dette dans l'`ADR 0008`,
+> non comme un travail à faire aujourd'hui.
+>
+> Ce qui a été renversé : le quota portait ici sur les événements créés, historique
+> compris, et seule leur suppression libérait une place — donc au prix des dépenses et
+> des remboursements de la soirée effacée. Le quota porte désormais sur les seuls
+> événements actifs, et une soirée terminée libère sa place d'elle-même.
+>
+> Elle n'a jamais été implémentée : ni module `Subscriptions`, ni migration, ni plan.
+> Le cahier des charges n'en a jamais porté la trace.
+
 
 **But** : une formule payante existe, elle est attribuable, et elle lève une limite
 réelle. Sans paiement : l'encaissement appartient au lot 4.1, ce document lui prépare

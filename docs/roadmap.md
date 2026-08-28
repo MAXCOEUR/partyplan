@@ -40,12 +40,12 @@ Toute tâche non cochée d'une version publiée devient une anomalie, pas un rep
 |---|---|---|
 | V0 — socle technique | lots 0.2 à 0.6, dépôt GitHub et protection de branche | lot 0.1 (INPI, nom, logo, hébergeur, DNS), lot 0.7 (serveur) |
 | V0.5 — comptes et administration | lots 0.8 à 0.14 | connexion Google (identifiants Google Cloud requis) |
-| V1.0 — MVP événementiel | lots 1.2 à 1.5, 1.7, 1.8, le fil d'activité (1.10), les notifications (1.11), le temps réel (1.6) hors recette matérielle, le socle hors ligne du lot 1.12, plus la discussion et les sondages remontés de V1.1 | conformité (1.13), exploitation (1.14), légal (1.15), vitrine (1.16), recette et publication (1.17, 1.18) |
+| V1.0 — MVP événementiel | lots 1.2 à 1.5, 1.7, 1.8, le fil d'activité (1.10), les notifications (1.11), le temps réel (1.6) hors recette matérielle, le socle hors ligne du lot 1.12, plus la discussion et les sondages remontés de V1.1 | limites de la formule gratuite (1.19), conformité (1.13), exploitation (1.14), légal (1.15), vitrine (1.16), recette et publication (1.17, 1.18) |
 
 Décisions d'architecture prises : `ADR 0001` monorepo, `ADR 0002` monolithe modulaire,
 `ADR 0003` domaines et certificats, `ADR 0004` chaîne de livraison, `ADR 0005` identité
 et administration, `ADR 0006` compte obligatoire pour rejoindre, `ADR 0007` retrait de
-la double authentification.
+la double authentification, `ADR 0008` limites de la formule gratuite.
 
 ---
 
@@ -834,6 +834,36 @@ lui ouvrir CORS élargirait la surface pour un besoin qui n'existe pas.
 - [ ] Fiche de confidentialité Google Play — dépend de la publication (lot 1.18)
 - [ ] Captures d'écran de l'application sur la page d'accueil
 
+## Lot 1.19 — Limites de la formule gratuite
+
+**Décidé le 28/08/2026** — `ADR 0008`, conception
+`docs/superpowers/specs/2026-08-28-limites-formule-gratuite-design.md`. Numéroté 1.19
+parce que décidé après les autres, mais **à livrer avant le lot 1.17** : la recette et la
+bêta doivent éprouver le produit avec ses limites, pas sans elles.
+
+Remonté de V2.0 : `RG-PRM-01` et `RG-PRM-02` figuraient au lot 4.1, où ils attendaient un
+encaissement dont ils ne dépendent pas. Les limites sont livrées ici ; le paiement reste
+au lot 4.1.
+
+- [ ] `IFormuleCompte` dans `SharedKernel`, implémenté par `Users` sur `premium_until`
+- [ ] `RG-PRM-01` Quota de 3 événements possédés simultanément, à la création
+- [ ] `RG-PRM-01` Plafond de 20 membres actifs par événement, à l'adhésion
+- [ ] `RG-PRM-02` Aucune vérification ailleurs qu'à l'écriture qui franchirait la limite
+- [ ] Dépassement toléré après un transfert de propriété — `RG-ROLE-02` reste praticable
+- [ ] Comptages dans la transaction de l'écriture, comme `RG-CRS-01`
+- [ ] `RG-INV-05` L'idempotence de l'adhésion passe avant le quota
+- [ ] `RG-INV-04` L'aperçu public annonce « complet » avant la création d'un compte
+- [ ] `EF-PRM-04` Attribution et retrait par un `PlatformAdmin`, échéance et motif obligatoires
+- [ ] `RG-ADM-05` `Support` exclu de l'attribution
+- [ ] `RG-ADM-06` Action d'audit `user.plan_changed`, en ajout seul, idempotente
+- [ ] `EF-PRM-05` Formule affichée au profil, quota consommé sur l'accueil
+- [ ] Action « changer la formule » sur la fiche compte du back-office
+- [ ] Tests unitaires aux frontières exactes : 2/3/4 événements, 19/20/21 membres
+- [ ] Tests d'intégration : les deux quotas, la concurrence, l'audit, les 403
+- [ ] `tools/verifier-frontieres-modules.sh` reste vert — `Events` n'atteint jamais `Users`
+
+Hors périmètre : paiement, écran Premium, archives à 3 mois, fonctions du lot 4.2.
+
 ## Lot 1.17 — Recette et bêta privée
 
 - [x] Recette du parcours événementiel — `tools/recette/parcours-evenement.py`,
@@ -959,12 +989,19 @@ Objectif : premier revenu, sans dégrader la gratuité qui porte la viralité.
 - [ ] Intégrer les achats intégrés Google Play et App Store
 - [ ] Intégrer le paiement web pour la PWA
 - [ ] Gérer le cycle de vie : renouvellement, expiration, remboursement, rétablissement d'achat
-- [ ] `EF-PRM-03` Les fonctions Premium bénéficient à tous les membres de l'événement d'un abonné
-- [ ] `RG-PRM-01` Appliquer les limites de la formule gratuite : 20 participants, archives 3 mois
-- [ ] `RG-PRM-02` L'atteinte d'une limite ne dégrade jamais un événement en cours
-- [ ] `RG-PRM-03` Aucune fonction du MVP ne devient payante rétroactivement
 - [ ] Écran Premium et parcours d'abonnement
 - [ ] Mettre à jour les conditions générales pour l'abonnement
+- [ ] `RG-PRM-01` Archives limitées à 3 mois — la seule des trois limites non livrée au lot 1.19
+- [ ] **Migrer `users.premium_until` vers une table d'abonnements** — dette inscrite à
+      l'`ADR 0008` : une colonne unique ne porte pas un renouvellement, une expiration, un
+      remboursement ni un rétablissement d'achat. La migration se fera sur des données de
+      production, V1.0 et V1.1 étant publiées. Prix consenti pour ne pas bâtir en V1.0 un
+      module que rien n'exerçait
+- [ ] Reprendre `IFormuleCompte` sur la nouvelle table, sans toucher à ses appelants — c'est
+      la raison pour laquelle le contrat ne renvoie qu'un booléen
+
+**Livré par anticipation au lot 1.19** : `EF-PRM-03`, `EF-PRM-04`, `EF-PRM-05`,
+`RG-PRM-01` hors archives, `RG-PRM-02`, `RG-PRM-03`.
 
 ## Lot 4.2 — Fonctions Premium — `EF-PRM-02`
 

@@ -686,15 +686,43 @@ il devient utile, jamais au premier lancement.
 | EF-PRM-01 | P2 | Abonnement individuel 2,99 €/mois ou 19,99 €/an. |
 | EF-PRM-02 | P2 | Fonctions incluses : au-delà de 20 participants, archives illimitées, modèles d'événements, thèmes et images de couverture, sondages avancés, export PDF/tableur, groupes de partage multiples, rappels avancés, statistiques. |
 | EF-PRM-03 | P2 | Les fonctions Premium bénéficient à tous les membres d'un événement créé par un abonné. |
+| EF-PRM-04 | P1 | Un `PlatformAdmin` attribue ou retire la formule payante depuis la fiche d'un compte, avec une échéance et un motif. Seul moyen d'attribution jusqu'au lot 4.1. |
+| EF-PRM-05 | P1 | Chacun voit sa formule et son quota consommé depuis son profil. |
 
-**RG-PRM-01** — Limites de l'offre gratuite : 20 participants par événement, nombre
-d'événements actifs illimité, consultation des événements passés limitée à 3 mois après
-leur date de fin.
+**RG-PRM-01** — Limites de l'offre gratuite, chacune levée par la formule payante :
+
+| Limite | Valeur | Assiette |
+|---|---|---|
+| Événements possédés simultanément | 3 | Événements non supprimés dont le compte est `Owner` et dont la fin est à venir. La fin implicite à +12 h de `EF-EVT-02` s'applique. |
+| Membres par événement | 20 | Membres actifs, quel que soit leur statut de présence. Les accompagnants de `EF-PRES-06` n'entrent pas dans ce décompte. |
+| Consultation des événements passés | 3 mois après la date de fin | Reportée au lot 4.1 : non implémentée à ce jour. |
+
+Un événement terminé libère sa place **de lui-même**. Quitter ou supprimer libère par
+anticipation. Aucune place ne se libère au prix d'un historique financier détruit.
+
+Le plafond de 20 membres est celui du **propriétaire** de l'événement, jamais celui de
+l'arrivant : c'est `EF-PRM-03` appliqué à l'adhésion. Rejoindre reste illimité en formule
+gratuite — sans quoi une invitation échouerait pour un motif étranger à l'événement comme
+à son organisateur.
 
 **RG-PRM-02** — L'atteinte d'une limite ne bloque jamais un événement en cours : elle
-empêche l'ajout du 21ᵉ participant, sans dégrader l'existant.
+empêche le geste suivant — la création d'un quatrième événement, l'ajout d'un
+21ᵉ membre — sans rien dégrader de l'existant. Le quota n'est donc vérifié qu'à
+l'écriture qui le franchirait. Un compte peut se retrouver **au-dessus** de son quota
+après un transfert de propriété (`RG-ROLE-02`) : ses événements restent tous pleinement
+utilisables, seule une nouvelle création lui est refusée. Refuser le transfert
+enfermerait le cédant dans un événement qu'il ne pourrait plus quitter.
 
-**RG-PRM-03** — Aucune fonction du MVP ne devient payante rétroactivement.
+**RG-PRM-03** — Une fonction déjà exercée ne se ferme jamais. Un événement existant
+reste intégralement utilisable quelle que soit la formule : consultable, modifiable, ses
+courses, ses dépenses et ses remboursements accessibles. Seul un **nouvel** usage au-delà
+du quota est refusé.
+
+> La formulation antérieure — *« aucune fonction du MVP ne devient payante
+> rétroactivement »* — est devenue fausse le jour où la création d'événement, fonction
+> du MVP, s'est vue plafonnée. Une garantie laissée écrite alors qu'elle ne tient plus
+> est pire que sa réécriture : le lecteur suivant la croit encore valable. Voir
+> `ADR 0008`.
 
 ---
 
@@ -1533,7 +1561,7 @@ d'autant plus facilement qu'il est décidé maintenant.
 | HY-05 | Statut « peut-être » exclu de la répartition par défaut | Facturer un absent probable génère des litiges | Oui |
 | HY-06 | Android avant iOS | Coût et délai de publication moindres, itération plus rapide | Oui |
 | HY-07 | Suppression de compte par anonymisation des données financières | Une suppression réelle détruirait la comptabilité de tiers | Oui |
-| HY-08 | Offre gratuite limitée à 20 participants, archives 3 mois | Cohérent avec l'usage cible de 3 à 20 personnes | Oui |
+| HY-08 | Offre gratuite limitée à 20 membres par événement et 3 événements possédés simultanément | Cohérent avec l'usage cible de 3 à 20 personnes ; le plafond d'événements pèse sur l'organisateur, qui tire la valeur du produit, et jamais sur l'invité — `ADR 0008` | Oui |
 | HY-09 | Devise unique, l'euro | Le multi-devise complexifie tous les calculs pour un cas marginal | Oui |
 | HY-10 | Pas de Redis au démarrage | Aucun besoin mesuré en instance unique | Non, technique |
 | HY-11 | Le back-office n'est accessible qu'en version Web, sous `/admin/*` | Embarquer des écrans d'administration dans l'application mobile publiée sur les stores augmente la surface d'attaque sans usage réel | Oui |
