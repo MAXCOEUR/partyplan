@@ -57,7 +57,9 @@ public sealed class EventService(
     IIdGenerator ids,
     IDiffusionEvenement diffusion,
     IJournalActivite journal,
-    IFileNotifications notifications)
+    IFileNotifications notifications,
+    QuotaEvenements quota,
+    IFormuleCompte formule)
 {
     /// <summary>Nombre de tentatives de tirage d'un code court avant abandon.</summary>
     private const int ShortCodeAttempts = 5;
@@ -104,6 +106,23 @@ public sealed class EventService(
         if (validation.IsFailure)
         {
             return validation.Error!;
+        }
+
+        // Le quota est vérifié avant le tirage du code court : inutile d'en consommer une
+        // tentative pour une création qui sera refusée (RG-PRM-01, ADR 0008). Le comptage
+        // est évité pour un abonné, dont la formule lève la borne.
+        var abonne = await formule.EstAbonneAsync(utilisateur, cancellationToken)
+            .ConfigureAwait(false);
+
+        if (!abonne)
+        {
+            var possedes = await quota.CompterPossedesAsync(utilisateur, cancellationToken)
+                .ConfigureAwait(false);
+
+            if (!QuotaEvenements.CreationAutorisee(possedes, abonne))
+            {
+                return QuotaEvenements.QuotaAtteint;
+            }
         }
 
         var code = await TirerCodeCourtAsync(cancellationToken).ConfigureAwait(false);
