@@ -11,8 +11,12 @@ final debutFictif = DateTime(2026, 9, 12, 20);
 /// Nécessaire dès qu'un test monte un écran affichant la formule — l'accueil et le
 /// profil. Sans surcharge, le vrai profil serait demandé au réseau et laisserait un
 /// minuteur en attente à la fin du test.
-Profil profilDeTest({String role = 'User', DateTime? premiumJusquau}) => Profil(
-  id: 'u1',
+Profil profilDeTest({
+  String id = 'u1',
+  String role = 'User',
+  DateTime? premiumJusquau,
+}) => Profil(
+  id: id,
   email: 'moi@partyplan.local',
   emailVerifie: true,
   nomAffiche: 'Maxence',

@@ -323,6 +323,23 @@ class _CarteCompte extends ConsumerWidget {
                       'Adresse marquée comme vérifiée.',
                     ),
                   ),
+                // Réservée au PlatformAdmin (RG-ADM-05), mais permise sur son propre
+                // compte : RG-ADM-03 protège d'un auto-sabotage — se suspendre, se
+                // révoquer, se supprimer sont des gestes dont on ne revient pas seul.
+                // Changer sa formule n'appartient pas à cette famille : c'est
+                // réversible, journalisé, et l'API l'autorise déjà (ADR 0008). Masquer
+                // le bouton rendait l'interface plus restrictive que le serveur.
+                if (peutAdministrer)
+                  OutlinedButton.icon(
+                    icon: const Icon(
+                      Icons.workspace_premium_outlined,
+                      size: 16,
+                    ),
+                    label: Text(
+                      compte.estAbonne ? 'Retirer Premium' : 'Passer Premium',
+                    ),
+                    onPressed: () => _changerFormule(context, ref, api),
+                  ),
                 // Actions réservées à PlatformAdmin (RG-ADM-05), et jamais sur
                 // soi-même (RG-ADM-03).
                 if (peutAdministrer && !estMoi) ...[
@@ -351,16 +368,6 @@ class _CarteCompte extends ConsumerWidget {
                       () => api.changerRole(compte.id, role),
                       'Rôle modifié.',
                     ),
-                  ),
-                  OutlinedButton.icon(
-                    icon: const Icon(
-                      Icons.workspace_premium_outlined,
-                      size: 16,
-                    ),
-                    label: Text(
-                      compte.estAbonne ? 'Retirer Premium' : 'Passer Premium',
-                    ),
-                    onPressed: () => _changerFormule(context, ref, api),
                   ),
                   OutlinedButton.icon(
                     icon: Icon(
