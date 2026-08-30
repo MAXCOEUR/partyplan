@@ -99,7 +99,9 @@ public sealed class MessageService(
     IEventImageStorage images,
     IClock clock,
     IIdGenerator ids,
-    IDiffusionEvenement diffusion) : IPollAnnouncement
+    IDiffusionEvenement diffusion,
+    IFileNotifications notifications,
+    IReveilNotifications reveil) : IPollAnnouncement
 {
     /// <summary>Longueur du corps d'un message cité, au-delà de laquelle il est coupé.</summary>
     private const int LongueurCitation = 120;
@@ -460,7 +462,41 @@ public sealed class MessageService(
         }
 
         db.Messages.Add(message);
+
+        var cites = mentions.ToHashSet();
+        var extrait = message.Body is { Length: > 0 } corpsMessage
+            ? corpsMessage.Length <= 120 ? corpsMessage : corpsMessage[..117] + "…"
+            : "a envoyé une image";
+
+        // `membres` est déjà en portée : plus haut, `ListActiveAsync` a validé les
+        // personnes citées. Ne pas rappeler le contrat.
+        foreach (var membre in membres)
+        {
+            if (membre.MemberId == moi.MemberId || membre.UserId is not { } compte)
+            {
+                continue;
+            }
+
+            var citee = cites.Contains(membre.MemberId);
+
+            notifications.Enfiler(new NotificationAEnvoyer(
+                compte,
+                eventId,
+                citee ? NotificationCategories.DiscussionMention : NotificationCategories.DiscussionMessage,
+                citee ? $"{moi.DisplayName} t'a cité" : moi.DisplayName,
+                extrait,
+                $"/events/{eventId}",
+                clock.UtcNow,
+                // L'identifiant du message, et non un quart d'heure : chaque message a
+                // sa notification, l'appareil se chargeant de les empiler.
+                $"{eventId}:{(citee ? "mention" : "message")}:{compte}:{message.Id}"));
+        }
+
         await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+
+        // Après validation, jamais avant : une transaction en échec ne doit réveiller
+        // personne pour une notification qui n'existera pas.
+        reveil.Reveiller();
 
         var vue = await VueSeuleAsync(eventId, message.Id, moi.MemberId, cancellationToken)
             .ConfigureAwait(false);
