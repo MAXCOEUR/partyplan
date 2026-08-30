@@ -13,9 +13,15 @@ WORKDIR /src
 # statiques, la valeur ne peut pas être lue à l'exécution.
 ARG API_BASE_URL=https://api.partyplan.maxencecoeur.fr
 
-# Identifiant client Google, vide par défaut : sans lui le bouton « Continuer avec
-# Google » n'apparaît pas et l'inscription par mot de passe suffit (NF-DEV-05).
-ARG GOOGLE_CLIENT_ID=
+# Identifiant client Google. De même nature que l'adresse ci-dessus : public, inscrit
+# dans le JavaScript livré, lisible par n'importe quel visiteur. Il porte donc la même
+# valeur par défaut plutôt qu'une case à remplir ailleurs.
+#
+# Vide, le bouton « Continuer avec Google » n'apparaît pas et l'inscription par mot de
+# passe suffit (NF-DEV-05). C'est un repli, pas le cas courant : laissé vide par
+# inadvertance, il ne produit aucun message — seulement un bouton manquant, qu'on peut
+# chercher longtemps.
+ARG GOOGLE_CLIENT_ID=146275272251-adq6bsorokpqd9fqknmafhpckns9ijts.apps.googleusercontent.com
 
 # Configuration Firebase du Web. Ces valeurs ne sont pas des secrets : elles sont
 # publiques dans toute application web livrée, et la clé d'API est restreinte par domaine.
