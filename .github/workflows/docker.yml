@@ -31,9 +31,22 @@ on:
         default: 'tous'
         type: string
 
+# L'annulation est réservée aux pull requests, où seul un artefact est perdu.
+#
+# Sur `main`, elle faisait disparaître une publication en silence : le 30/08/2026, la
+# poussée qui portait cinq jours de retard sur l'API a vu ses builds `api` et `app`
+# annulés par une poussée suivante, arrivée quatre minutes plus tard et ne touchant que
+# `app/`. La détection par chemins n'a donc resélectionné que `app`. Aucun run n'a
+# échoué, aucune alerte n'est partie, et `partyplan-api:latest` est resté cinq jours en
+# arrière pendant que le front, lui, était à jour — SignalR et l'envoi de photos
+# tombaient en 404 et en 500 sans que rien ne l'explique.
+#
+# Un build annulé n'est jamais repris : sur une branche qui publie, les poussées doivent
+# donc s'enchaîner au lieu de se remplacer. Le groupe reste le même, si bien qu'elles se
+# suivent dans l'ordre et que la dernière fixe `latest`.
 concurrency:
   group: docker-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 permissions:
   contents: read
