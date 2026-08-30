@@ -114,14 +114,20 @@ void main() {
       // pas pu être créé » laisse l'organisateur sans rien à faire de l'information.
       await _monter(tester, api: _ApiQuotaAtteint());
 
-      await tester.enterText(find.byType(TextFormField).first, 'Soirée de trop');
+      await tester.enterText(
+        find.byType(TextFormField).first,
+        'Soirée de trop',
+      );
       await tester.tap(find.text('Suite'));
       await tester.pumpAndSettle();
 
       await tester.tap(find.text('Créer l’événement'));
       await tester.pumpAndSettle();
 
-      expect(find.textContaining('le maximum de la formule gratuite'), findsOneWidget);
+      expect(
+        find.textContaining('le maximum de la formule gratuite'),
+        findsOneWidget,
+      );
       expect(find.text('L’événement n’a pas pu être créé.'), findsNothing);
     });
 

@@ -72,12 +72,18 @@ void main() {
       // supprimer sont des gestes dont on ne revient pas seul. S'accorder une formule
       // n'appartient pas à cette famille, et l'API l'autorise déjà — masquer le bouton
       // rendait l'interface plus restrictive que le serveur, sans raison.
-      await _monter(tester, comptes: [_fiche(id: 'u1', nom: 'Moi')], monId: 'u1');
+      await _monter(
+        tester,
+        comptes: [_fiche(id: 'u1', nom: 'Moi')],
+        monId: 'u1',
+      );
 
       expect(find.text('Passer Premium'), findsOneWidget);
     });
 
-    testWidgets('le libellé bascule pour un compte déjà abonné', (tester) async {
+    testWidgets('le libellé bascule pour un compte déjà abonné', (
+      tester,
+    ) async {
       await _monter(
         tester,
         comptes: [_fiche(id: 'autre', premiumJusquau: DateTime(2099, 1, 1))],
@@ -103,7 +109,11 @@ void main() {
       tester,
     ) async {
       // Le garde RG-ADM-03 doit rester en place là où il a un sens.
-      await _monter(tester, comptes: [_fiche(id: 'u1', nom: 'Moi')], monId: 'u1');
+      await _monter(
+        tester,
+        comptes: [_fiche(id: 'u1', nom: 'Moi')],
+        monId: 'u1',
+      );
 
       expect(find.text('Supprimer'), findsNothing);
       expect(find.text('Suspendre'), findsNothing);
