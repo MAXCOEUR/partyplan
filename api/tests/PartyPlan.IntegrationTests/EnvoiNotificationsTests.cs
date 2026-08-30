@@ -22,13 +22,9 @@ using Xunit;
 [Collection(ApiTestSuite.Name)]
 public sealed class EnvoiNotificationsTests(PartyPlanApiFixture fixture) : IAsyncLifetime
 {
-    /// <summary>18 h à Paris : hors plage de silence. 4 h à Auckland : dedans.</summary>
+    /// <summary>18 h à Paris.</summary>
     private static readonly DateTimeOffset SoireeAParis =
         new(2026, 9, 12, 16, 0, 0, TimeSpan.Zero);
-
-    /// <summary>23 h à Paris : dans la plage de silence.</summary>
-    private static readonly DateTimeOffset NuitAParis =
-        new(2026, 9, 12, 21, 0, 0, TimeSpan.Zero);
 
     /// <summary>Compte et soirée partagés par les tests de résolution par soirée.</summary>
     private Guid _utilisateur;
@@ -85,62 +81,20 @@ public sealed class EnvoiNotificationsTests(PartyPlanApiFixture fixture) : IAsyn
     }
 
     [Fact]
-    public async Task La_plage_de_silence_reporte_sans_horodater()
+    public async Task Une_notification_part_a_23h()
     {
-        // RG-NOT-01. Reportée, pas abandonnée : c'est toute la différence.
-        var jeu = await JeuAsync();
-        await EnfilerAsync(jeu, NotificationCategories.InvitationAnswer);
+        var partis = await EnvoyerAsync(NotificationCategories.DiscussionMessage, heureLocale: 23);
 
-        await EnvoyerAsync(NuitAParis);
-
-        (await LireAsync(jeu.EventId)).ShouldHaveSingleItem().SentAt.ShouldBeNull();
-
-        // Le lendemain matin, elle part.
-        await EnvoyerAsync(NuitAParis.AddHours(11));
-
-        (await LireAsync(jeu.EventId)).ShouldHaveSingleItem().SentAt.ShouldNotBeNull();
+        partis.ShouldBe(1);
     }
 
     [Fact]
-    public async Task Le_rappel_de_debut_traverse_la_plage_de_silence()
+    public async Task Un_rappel_part_aussi_a_23h()
     {
-        // L'exception écrite dans RG-NOT-01 : une soirée qui commence à 23 h se rappelle
-        // à 21 h, et se taire alors rendrait le rappel inutile quand il sert.
-        var jeu = await JeuAsync();
-        await EnfilerAsync(jeu, NotificationCategories.EventStartingSoon);
+        // Plus aucune catégorie n'est reportée : le téléphone tranche, pas le serveur.
+        var partis = await EnvoyerAsync(NotificationCategories.InvitationPending, heureLocale: 23);
 
-        await EnvoyerAsync(NuitAParis);
-
-        (await LireAsync(jeu.EventId)).ShouldHaveSingleItem().SentAt.ShouldNotBeNull();
-    }
-
-    [Fact]
-    public async Task Deux_fuseaux_ne_sont_pas_en_heure_creuse_au_meme_instant()
-    {
-        // C'est tout l'objet de « heure locale du destinataire ». À 16 h UTC il est 18 h
-        // à Paris et 4 h du matin le lendemain à Auckland.
-        var paris = await JeuAsync(fuseau: "Europe/Paris");
-        var auckland = await JeuAsync(fuseau: "Pacific/Auckland");
-
-        await EnfilerAsync(paris, NotificationCategories.InvitationAnswer);
-        await EnfilerAsync(auckland, NotificationCategories.InvitationAnswer);
-
-        await EnvoyerAsync(SoireeAParis);
-
-        (await LireAsync(paris.EventId)).ShouldHaveSingleItem().SentAt.ShouldNotBeNull();
-        (await LireAsync(auckland.EventId)).ShouldHaveSingleItem().SentAt.ShouldBeNull();
-    }
-
-    [Fact]
-    public async Task Un_fuseau_inconnu_ne_prive_pas_de_notification()
-    {
-        // Ne jamais notifier vaut moins bien que notifier à une heure approchante.
-        var jeu = await JeuAsync(fuseau: "Mars/Olympus_Mons");
-        await EnfilerAsync(jeu, NotificationCategories.InvitationAnswer);
-
-        await EnvoyerAsync(SoireeAParis);
-
-        (await LireAsync(jeu.EventId)).ShouldHaveSingleItem().SentAt.ShouldNotBeNull();
+        partis.ShouldBe(1);
     }
 
     [Fact]
@@ -253,13 +207,30 @@ public sealed class EnvoiNotificationsTests(PartyPlanApiFixture fixture) : IAsyn
 
     /// <summary>
     /// Enfile une notification pour la soirée partagée du test, puis déclenche la passe
-    /// d'envoi. Renvoie le nombre de notifications réellement parties.
+    /// d'envoi à l'heure locale (Paris) demandée. Renvoie le nombre de notifications
+    /// réellement parties pour <b>cette</b> notification.
+    /// <para>
+    /// La passe elle-même est globale et la collection de tests partage une seule base :
+    /// un due laissé en file par une autre classe se mêlerait à notre propre compte si on
+    /// le lisait tel quel. On ne peut pas non plus isoler la mesure en comparant
+    /// l'horodatage avant/après sur les seules lignes de l'événement (le motif de
+    /// <c>NotificationsDiscussionTests</c>) : une notification écartée est, elle aussi,
+    /// horodatée sans partir (EF-NOT-07/08), donc un simple diff sur <c>SentAt</c> ne
+    /// distinguerait pas un envoi réel d'un rejet. La première passe vide plutôt tout due
+    /// éventuel laissé par une autre classe ; comme la collection s'exécute en séquence,
+    /// seule notre notification, enfilée juste après, reste due pour la seconde passe.
+    /// </para>
     /// </summary>
-    private async Task<int> EnvoyerAsync(string categorie)
+    private async Task<int> EnvoyerAsync(string categorie, int heureLocale = 18)
     {
+        var instant = new DateTimeOffset(2026, 9, 12, heureLocale - 2, 0, 0, TimeSpan.Zero);
+
+        // Paris est en UTC+2 en septembre (heure d'été).
+        await EnvoyerAsync(instant);
+
         await EnfilerAsync(new Jeu(_utilisateur, _evenement), categorie);
 
-        return await EnvoyerAsync(SoireeAParis);
+        return await EnvoyerAsync(instant);
     }
 
     private async Task<int> EnvoyerAsync(DateTimeOffset instant)
@@ -344,9 +315,7 @@ public sealed class EnvoiNotificationsTests(PartyPlanApiFixture fixture) : IAsyn
         return lignes;
     }
 
-    private async Task<Jeu> JeuAsync(
-        string fuseau = "Europe/Paris",
-        bool avecAppareil = true)
+    private async Task<Jeu> JeuAsync(bool avecAppareil = true)
     {
         var compte = Guid.CreateVersion7();
         var eventId = Guid.CreateVersion7();
@@ -359,7 +328,7 @@ public sealed class EnvoiNotificationsTests(PartyPlanApiFixture fixture) : IAsyn
                 Email = $"envoi-{compte:N}@partyplan.test",
                 DisplayName = "Camille",
                 PasswordHash = "x",
-                Timezone = fuseau,
+                Timezone = "Europe/Paris",
                 CreatedAt = DateTimeOffset.UtcNow,
             });
 

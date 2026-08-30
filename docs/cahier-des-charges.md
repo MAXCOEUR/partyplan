@@ -660,11 +660,10 @@ bout, groupes hors événement) n'entre dans le périmètre.
 | EF-NOT-09 | P1 | Notifications par courriel en repli lorsque les notifications poussées sont indisponibles. |
 | EF-NOT-10 | P0 | Notifier l'activité de l'événement : article pris en charge, article acheté, message posté, sondage créé, dépense ajoutée. |
 
-**RG-NOT-01** — Aucune notification **planifiée** n'est envoyée entre 22 h et 8 h heure
-locale du destinataire, sauf le rappel de début d'événement. Une notification déclenchée
-par un geste humain — message, sondage, dépense, achat — part quelle que soit l'heure :
-la soirée est ce qui se passe le soir, et une conversation à 23 h est le cas d'usage.
-*Amendée le 30/08/2026.*
+**RG-NOT-01** — *Retirée le 30/08/2026.* Aucune plage de silence n'est appliquée par le
+serveur. Les systèmes mobiles offrent tous un mode « ne pas déranger », mieux fait et
+déjà réglé par la personne ; le dupliquer côté serveur retardait en outre les
+notifications d'une soirée jusqu'au lendemain matin, quand elles ne servaient plus.
 
 **RG-NOT-02** — Les notifications d'activité ne sont pas regroupées par le serveur. Elles
 portent une clé de groupe par événement, et c'est l'appareil qui les empile sous un seul

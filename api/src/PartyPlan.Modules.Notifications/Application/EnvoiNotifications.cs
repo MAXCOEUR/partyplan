@@ -9,25 +9,17 @@ using PartyPlan.SharedKernel.Contracts;
 /// <summary>
 /// Passe d'envoi des notifications dues (§5.12).
 /// <para>
-/// Trois filtres avant l'appareil : la catégorie désactivée (<c>EF-NOT-07</c>),
-/// l'événement en sourdine (<c>EF-NOT-08</c>), et la plage de silence
-/// (<c>RG-NOT-01</c>). Les deux premiers horodatent tout de même la ligne — sinon elle
-/// serait réexaminée à chaque réveil, indéfiniment. Le troisième ne l'horodate pas : la
-/// notification part vraiment, plus tard.
+/// Deux filtres avant l'appareil : la catégorie désactivée (<c>EF-NOT-07</c>) et
+/// l'événement en sourdine (<c>EF-NOT-08</c>). Tous deux horodatent tout de même la
+/// ligne — sinon elle serait réexaminée à chaque réveil, indéfiniment. Aucune plage de
+/// silence : le serveur ne juge plus l'heure, retirée par <c>RG-NOT-01</c>.
 /// </para>
 /// </summary>
 public sealed class EnvoiNotifications(
     INotificationsDbContext db,
-    IUserIdentityLookup identites,
     IPushSender emetteur,
     ILogger<EnvoiNotifications> logger) : IEnvoiNotifications
 {
-    /// <summary>Début de la plage de silence, heure locale du destinataire.</summary>
-    private const int DebutDuSilence = 22;
-
-    /// <summary>Fin de la plage de silence.</summary>
-    private const int FinDuSilence = 8;
-
     /// <summary>Plafond par passe. Une file énorme se vide en plusieurs réveils plutôt
     /// que de bloquer une passe pendant des minutes.</summary>
     private const int ParPasse = 200;
@@ -51,10 +43,6 @@ public sealed class EnvoiNotifications(
         }
 
         var destinataires = dues.Select(n => n.UserId!.Value).Distinct().ToList();
-
-        var profils = await identites
-            .FindManyAsync(destinataires, cancellationToken)
-            .ConfigureAwait(false);
 
         var preferences = await db.NotificationPreferences
             .Where(p => destinataires.Contains(p.UserId))
@@ -100,13 +88,6 @@ public sealed class EnvoiNotifications(
                 continue;
             }
 
-            if (EnHeureCreuse(notification, profils, destinataire, maintenant))
-            {
-                // Pas horodatée : elle partira, plus tard. C'est bien un report et non
-                // un abandon (RG-NOT-01).
-                continue;
-            }
-
             foreach (var appareil in appareils.Where(d => d.UserId == destinataire))
             {
                 await emetteur
@@ -135,49 +116,6 @@ public sealed class EnvoiNotifications(
         }
 
         return envoyees;
-    }
-
-    /// <summary>
-    /// Le destinataire est-il dans sa plage de silence (RG-NOT-01) ?
-    /// <para>
-    /// Le rappel de début d'événement la traverse : c'est l'exception écrite dans la
-    /// règle. Une soirée qui commence à 23 h se rappelle à 21 h, et se taire alors
-    /// rendrait le rappel inutile précisément quand il sert.
-    /// </para>
-    /// </summary>
-    private bool EnHeureCreuse(
-        Notification notification,
-        IReadOnlyDictionary<Guid, UserIdentity> profils,
-        Guid destinataire,
-        DateTimeOffset maintenant)
-    {
-        if (notification.Category == NotificationCategories.EventStartingSoon)
-        {
-            return false;
-        }
-
-        var fuseau = profils.TryGetValue(destinataire, out var profil)
-            ? profil.Timezone
-            : "Europe/Paris";
-
-        TimeZoneInfo zone;
-        try
-        {
-            zone = TimeZoneInfo.FindSystemTimeZoneById(fuseau);
-        }
-        catch (Exception erreur)
-            when (erreur is TimeZoneNotFoundException or InvalidTimeZoneException)
-        {
-            // Un fuseau introuvable retombe sur celui de la majorité des comptes plutôt
-            // que d'écarter la personne : ne jamais notifier vaut moins bien que
-            // notifier à une heure approchante.
-            logger.LogWarning("Fuseau inconnu « {Fuseau} », repli sur Europe/Paris.", fuseau);
-            zone = TimeZoneInfo.FindSystemTimeZoneById("Europe/Paris");
-        }
-
-        var heureLocale = TimeZoneInfo.ConvertTime(maintenant, zone).Hour;
-
-        return heureLocale >= DebutDuSilence || heureLocale < FinDuSilence;
     }
 
     /// <summary>
