@@ -41,10 +41,10 @@ public sealed class FileNotifications(
             return;
         }
 
-        if (EstPlafonnee(notification))
-        {
-            return;
-        }
+        // Aucun plafond depuis le 30/08/2026 : chaque geste produit sa notification, et
+        // c'est la clé de groupe de l'appareil qui les empile sous un seul bandeau. Le
+        // plafond au quart d'heure retardait la discussion au-delà de la conversation
+        // qu'il annonçait.
 
         db.Notifications.Add(new Notification
         {
@@ -62,36 +62,4 @@ public sealed class FileNotifications(
 
         // Aucun SaveChangesAsync : la ligne appartient à la transaction de l'appelant.
     }
-
-    /// <summary>
-    /// Le plafond de <c>RG-NOT-02</c> : au maximum une notification d'activité par
-    /// événement, par destinataire et par quart d'heure.
-    /// <para>
-    /// Sans lui, une liste de courses remplie à plusieurs produirait une notification par
-    /// article, et la première soirée un peu active ferait couper les notifications.
-    /// </para>
-    /// <para>
-    /// C'est le seul endroit du lot qui regarde le passé avant d'écrire. Assumé : la
-    /// règle parle d'une fenêtre glissante et non d'une clé, et une clé ne sait pas
-    /// exprimer « depuis moins de quinze minutes ».
-    /// </para>
-    /// </summary>
-    private bool EstPlafonnee(NotificationAEnvoyer notification)
-    {
-        if (notification.Category != NotificationCategories.Activity)
-        {
-            return false;
-        }
-
-        var depuis = notification.ScheduledFor - Fenetre;
-
-        return db.Notifications.Any(n =>
-            n.Category == NotificationCategories.Activity
-            && n.UserId == notification.UserId
-            && n.EventId == notification.EventId
-            && n.ScheduledFor >= depuis);
-    }
-
-    /// <summary>Fenêtre de regroupement de RG-NOT-02.</summary>
-    private static readonly TimeSpan Fenetre = TimeSpan.FromMinutes(15);
 }

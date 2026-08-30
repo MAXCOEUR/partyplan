@@ -60,7 +60,8 @@ public sealed class ShoppingService(
     IIdGenerator ids,
     IDiffusionEvenement diffusion,
     IJournalActivite journal,
-    IFileNotifications notifications)
+    IFileNotifications notifications,
+    IReveilNotifications reveil)
 {
     public static readonly DomainError EventNotFound = DomainError.NotFound(
         "event.not_found",
@@ -337,6 +338,10 @@ public sealed class ShoppingService(
 
         await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
+        // Après validation, jamais avant : une transaction en échec ne doit réveiller
+        // personne pour une attribution qui n'existera pas.
+        reveil.Reveiller();
+
         await journal.PublierEnAttenteAsync(cancellationToken).ConfigureAwait(false);
 
         var vue = await RelireAsync(eventId, itemId, contexte.MoiId, cancellationToken)
@@ -457,7 +462,18 @@ public sealed class ShoppingService(
                 ? new { libelle = article.Name, montant = prixConsigne }
                 : (object)new { libelle = article.Name });
 
+        await PrevenirDeLActiviteAsync(
+                eventId,
+                contexte.MoiId,
+                $"{contexte.MonNom} a acheté {article.Name}.",
+                cancellationToken)
+            .ConfigureAwait(false);
+
         await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+
+        // Après validation, jamais avant : une transaction en échec ne doit réveiller
+        // personne pour un achat qui n'existera pas.
+        reveil.Reveiller();
 
         await journal.PublierEnAttenteAsync(cancellationToken).ConfigureAwait(false);
 
@@ -493,10 +509,11 @@ public sealed class ShoppingService(
     // --------------------------------------------------------------- outils ----
 
     /// <summary>
-    /// Prévient les autres membres d'une activité (<c>EF-NOT-10</c>).
+    /// Prévient les autres membres d'une activité (<c>EF-NOT-10</c>), pour la prise en
+    /// charge d'un article comme pour son achat.
     /// <para>
-    /// Plafonnée par <c>RG-NOT-02</c>, dans la mise en file : une liste remplie à
-    /// plusieurs produirait sinon une notification par article.
+    /// Jamais l'auteur du geste, jamais un membre sans compte : les deux exclusions se
+    /// font ici, une seule fois pour les deux appelants.
     /// </para>
     /// </summary>
     private async Task PrevenirDeLActiviteAsync(
