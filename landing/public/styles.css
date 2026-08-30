@@ -3,6 +3,9 @@
  * Poppins est hébergée ici et non chargée depuis Google Fonts : appeler
  * fonts.gstatic.com transmettrait l'adresse IP de chaque visiteur à un tiers, ce que la
  * politique de confidentialité de ce même site affirme ne pas faire. 31 ko au total.
+ *
+ * La palette, la typographie et les rayons viennent de docs/brand/charte.md et de
+ * DESIGN.md : cette feuille les applique, elle ne les redéfinit pas.
  */
 
 @font-face {
@@ -49,27 +52,35 @@
   --texte: #e8edf7;
   --texte-doux: #9aa8c4;
 
-  /* Échelle de surfaces, reprise du thème sombre de l'application. Deux niveaux
-   * suffisaient tant que la vitrine n'avait que des cartes bordées ; les paliers sont
-   * ce qui donne la profondeur, comme dans l'application. */
+  /* Échelle de surfaces, reprise du thème sombre de l'application. Ce sont les paliers
+   * qui donnent la profondeur, pas des ombres empilées : DESIGN.md. */
   --creux: #0b1120;
   --surface-haute: #26334a;
   --surface-sommet: #303f59;
 
+  /* Une bordure franche sur chaque carte donne une pile de boîtes à liseré. Sur fond
+   * sombre, un liseré presque transparent suffit à détacher la surface. */
+  --liseré: rgb(255 255 255 / 7%);
+  --liseré-net: rgb(255 255 255 / 13%);
+
   /* Rayons de l'application : 20 px pour une carte, capsule pour un élément
-   * interactif. La vitrine était à 0,75 rem, ce qui ne se reconnaissait pas. */
+   * interactif. */
   --rayon-carte: 1.25rem;
   --rayon-moyen: 0.75rem;
   --rayon-capsule: 999px;
 
-  /* Ombre unique, très douce et haute, comme dans l'application. Les élévations
-   * multiples donnent une impression d'application de gestion. */
+  /* Ombre unique, très douce et haute. Les élévations multiples donnent une impression
+   * d'application de gestion. */
   --ombre-carte: 0 1.5rem 3rem -0.5rem rgb(0 0 0 / 45%);
+  --ombre-portee: 0 2.5rem 5rem -1rem rgb(0 0 0 / 60%);
 
   --degrade-marque: linear-gradient(135deg, var(--violet), var(--violet-clair));
 
   --serrage-titre: -0.03em;
   --mesure: 34rem; /* longueur de ligne confortable pour du texte long */
+
+  --gouttiere: clamp(1.25rem, 4vw, 2rem);
+  --section: clamp(4rem, 9vw, 7.5rem);
 }
 
 *,
@@ -80,6 +91,8 @@
 
 html {
   scroll-behavior: smooth;
+  /* L'en-tête est collant : sans cette marge, une ancre place son titre dessous. */
+  scroll-padding-top: 6rem;
 }
 
 body {
@@ -90,6 +103,7 @@ body {
   font-size: clamp(1rem, 0.95rem + 0.2vw, 1.0625rem);
   line-height: 1.65;
   -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -121,430 +135,792 @@ a:hover {
   border-radius: 4px;
 }
 
+img {
+  max-width: 100%;
+  height: auto;
+  display: block;
+}
+
 .saut-contenu {
   position: absolute;
   left: -9999px;
   top: 0;
-  background: var(--papier);
-  color: var(--encre);
+  z-index: 100;
   padding: 0.75rem 1rem;
-  font-weight: 600;
-  z-index: 10;
+  background: var(--violet);
+  color: #fff;
+  border-radius: 0 0 var(--rayon-moyen) 0;
+  text-decoration: none;
 }
 
 .saut-contenu:focus {
-  left: 1rem;
-  top: 1rem;
+  left: 0;
 }
 
 .contenant {
-  width: 100%;
-  max-width: 68rem;
+  width: min(72rem, 100%);
   margin-inline: auto;
-  padding-inline: clamp(1.25rem, 4vw, 2.5rem);
+  padding-inline: var(--gouttiere);
 }
 
-/* ---------------------------------------------------------------- en-tête ---- */
+/* ------------------------------------------------------------ apparition ---- */
+
+/* L'état masqué n'est posé que si le script a pu marquer le document. Sans ce garde,
+ * une page dont le script échoue — ou un outil qui ne l'exécute pas — n'afficherait
+ * qu'un fond vide sous le héros. */
+.js .apparait {
+  opacity: 0;
+  transform: translateY(1.25rem);
+  transition: opacity 0.7s ease, transform 0.7s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.js .apparait.apparu {
+  opacity: 1;
+  transform: none;
+}
+
+/* --------------------------------------------------------------- en-tête ---- */
 
 .entete {
-  padding-block: 1.75rem;
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  padding-block: 0.9rem;
+  transition: background-color 0.3s ease, border-color 0.3s ease;
+  border-bottom: 1px solid transparent;
+}
+
+/* Posé sur un fond translucide dès le premier défilement : sans lui, les titres
+ * traversent la barre. */
+.entete--posee {
+  background: rgb(15 23 42 / 82%);
+  backdrop-filter: blur(14px);
+  border-bottom-color: var(--liseré);
 }
 
 .entete__barre {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
+  gap: 1.5rem;
 }
 
 .marque {
   display: inline-flex;
   align-items: center;
   gap: 0.6rem;
-  font-weight: 600;
-  font-size: 1.125rem;
-  letter-spacing: var(--serrage-titre);
-  color: var(--texte);
   text-decoration: none;
+  color: inherit;
+  margin-right: auto;
 }
 
-/* Le vrai pictogramme, et non plus un « P » composé dans une pastille violette.
- *
- * Le mot reste du texte et n'est pas l'image de lockup fournie : celle-ci porte
- * « Party » en bleu nuit, illisible sur le fond sombre de cette page. Composé en
- * Poppins, il retrouve la même forme avec un contraste juste. */
 .marque__picto {
   width: auto;
-  height: 2.25rem;
-  display: block;
+  height: 2.1rem;
 }
 
+/* La charte interdit de poser les fichiers portant le mot sur un fond sombre : « Party »
+ * y est composé en bleu nuit et disparaît. Le mot est donc recomposé en Poppins Bold,
+ * « Plan » dans le violet clair de la marque. */
 .marque__mot {
   font-weight: 700;
+  font-size: 1.2rem;
+  letter-spacing: -0.02em;
 }
 
 .marque__mot b {
-  font-weight: 700;
   color: var(--violet-clair);
+  font-weight: 700;
 }
 
-.entete__lien {
+.entete__nav {
+  display: flex;
+  gap: 1.5rem;
   font-size: 0.9375rem;
-  font-weight: 500;
+}
+
+.entete__nav a {
+  color: var(--texte-doux);
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+.entete__nav a:hover {
+  color: var(--texte);
+}
+
+@media (max-width: 60rem) {
+  .entete__nav {
+    display: none;
+  }
+}
+
+/* ---------------------------------------------------------------- boutons ---- */
+
+.bouton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.7rem 1.35rem;
+  border-radius: var(--rayon-capsule);
+  font-weight: 600;
+  font-size: 0.9375rem;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+}
+
+.bouton--principal {
+  background: var(--degrade-marque);
+  color: #fff;
+  box-shadow: 0 0.75rem 1.75rem -0.5rem rgb(108 92 231 / 60%);
+}
+
+.bouton--principal:hover {
+  color: #fff;
+  transform: translateY(-2px);
+  box-shadow: 0 1rem 2.25rem -0.5rem rgb(108 92 231 / 75%);
+}
+
+.bouton--discret {
+  background: var(--surface);
+  color: var(--texte);
+  border: 1px solid var(--liseré-net);
+}
+
+.bouton--discret:hover {
+  color: var(--texte);
+  background: var(--surface-haute);
+  transform: translateY(-2px);
+}
+
+.bouton--grand {
+  padding: 0.95rem 1.75rem;
+  font-size: 1rem;
+}
+
+@media (max-width: 30rem) {
+  .entete__lien {
+    padding: 0.55rem 1rem;
+    font-size: 0.875rem;
+  }
+
+  /* Deux boutons de largeurs différentes, empilés, donnent un bord gauche en escalier.
+   * Sur cette largeur ils occupent la colonne. */
+  .heros__actions {
+    display: grid;
+  }
 }
 
 /* ------------------------------------------------------------------ héros ---- */
 
 .heros {
-  padding-block: clamp(2.5rem, 6vw, 5rem) clamp(3rem, 7vw, 6rem);
+  position: relative;
+  padding-block: clamp(3rem, 7vw, 5.5rem) var(--section);
+}
+
+/* Halo de marque : une seule teinte d'accent, très diffuse. Deux couleurs vives en fond
+ * feraient un dégradé de bannière publicitaire. */
+.lueur {
+  position: absolute;
+  inset: -20% 0 auto;
+  height: 46rem;
+  pointer-events: none;
+  background:
+    radial-gradient(38rem 28rem at 72% 12%, rgb(168 85 247 / 22%), transparent 70%),
+    radial-gradient(32rem 24rem at 18% 0%, rgb(108 92 231 / 20%), transparent 70%);
 }
 
 .heros__grille {
+  position: relative;
   display: grid;
-  gap: clamp(2.5rem, 5vw, 4rem);
+  gap: clamp(3rem, 6vw, 4.5rem);
   align-items: center;
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.85fr);
 }
 
-@media (min-width: 60rem) {
+@media (max-width: 62rem) {
   .heros__grille {
-    grid-template-columns: 1fr 22rem;
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 
 .surtitre {
+  margin: 0 0 0.85rem;
   font-size: 0.8125rem;
   font-weight: 600;
-  letter-spacing: 0.12em;
+  letter-spacing: 0.18em;
   text-transform: uppercase;
-  color: var(--texte-doux);
-  margin: 0 0 1.25rem;
+  color: var(--violet-clair);
 }
 
-/* Le titre mêle deux graisses : la question qui fâche est en Semibold, le reste en
- * Regular. C'est la hiérarchie de la phrase, pas une décoration. */
 .titre {
-  margin: 0 0 1.5rem;
-  font-size: clamp(2.25rem, 1.5rem + 3.6vw, 4rem);
-  font-weight: 400;
-  line-height: 1.05;
+  margin: 0 0 1.25rem;
+  font-size: clamp(2.15rem, 1.5rem + 2.4vw, 3.35rem);
+  line-height: 1.1;
+  font-weight: 600;
   letter-spacing: var(--serrage-titre);
+  text-wrap: balance;
 }
 
 .titre strong {
-  font-weight: 600;
+  font-weight: 700;
 }
 
 .titre em {
   font-style: normal;
-  color: var(--rose);
+  background: linear-gradient(120deg, var(--rose), var(--violet-clair));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
 }
 
 .chapo {
   margin: 0 0 2rem;
   max-width: var(--mesure);
-  color: var(--texte-doux);
-  font-size: 1.0625rem;
+  color: #c6cfe3;
+  font-size: clamp(1.0625rem, 1rem + 0.3vw, 1.1875rem);
 }
 
-.signature-marque {
-  margin: 2.5rem 0 0;
-  font-size: 0.9375rem;
-  font-weight: 600;
-  letter-spacing: 0.02em;
-  color: var(--texte-doux);
-}
-
-/* ---------------------------------------------------- ticket, l'élément clé ---- */
-
-/* Le ticket de caisse : matière du sujet, pas ornement. Le papier clair de la charte
- * n'est utilisé que là, ce qui en fait le seul point lumineux de la page. */
-.ticket {
-  position: relative;
-  background: var(--papier);
-  color: var(--encre);
-  padding: 1.75rem 1.5rem 2.25rem;
-  border-radius: 0.5rem 0.5rem 0 0;
-  box-shadow: 0 1.5rem 3rem rgb(0 0 0 / 45%);
-  font-size: 0.9375rem;
-}
-
-/* Bord déchiré, obtenu par un dégradé conique répété : aucune image à charger. */
-.ticket::after {
-  content: '';
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: -0.7rem;
-  height: 0.75rem;
-  background: repeating-conic-gradient(
-    from 135deg at 50% 0,
-    var(--papier) 0 25%,
-    transparent 0 50%
-  );
-  background-size: 1.1rem 1.1rem;
-}
-
-.ticket__entete {
+.heros__actions {
   display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 0.75rem;
-  padding-bottom: 0.75rem;
-  border-bottom: 1px dashed #cbd5e1;
+  flex-wrap: wrap;
+  gap: 0.85rem;
+  margin-bottom: 2rem;
 }
 
-.ticket__titre {
-  margin: 0;
-  font-size: 1rem;
-  font-weight: 600;
-  letter-spacing: -0.01em;
-}
-
-.ticket__date {
-  font-size: 0.75rem;
-  font-weight: 500;
-  color: #64748b;
-  font-variant-numeric: tabular-nums;
-}
-
-.lignes {
-  list-style: none;
-  margin: 0;
-  padding: 0.75rem 0;
-}
-
-.lignes li {
+/* Trois promesses tenables, pas trois arguments de vente. */
+.gages {
   display: flex;
-  justify-content: space-between;
-  gap: 1rem;
-  padding-block: 0.3rem;
-  color: #475569;
-}
-
-/* Un montant ne se coupe jamais : « 15,60 € » réparti sur deux lignes se lit une
- * fraction de seconde comme deux nombres. */
-.lignes b {
-  font-weight: 700;
-  color: var(--encre);
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
-}
-
-.ticket__bascule {
-  margin: 0.5rem 0 0.75rem;
-  padding-top: 0.75rem;
-  border-top: 1px dashed #cbd5e1;
-  font-size: 0.75rem;
-  font-weight: 600;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: #64748b;
-}
-
-.reglements {
-  list-style: none;
-  margin: 0;
+  flex-wrap: wrap;
+  gap: 0.5rem 1.5rem;
+  margin: 0 0 2rem;
   padding: 0;
-  display: grid;
+  list-style: none;
+  font-size: 0.9375rem;
+  color: var(--texte-doux);
+}
+
+.gages li {
+  display: flex;
+  align-items: center;
   gap: 0.5rem;
 }
 
-/* Les trois lignes de règlement arrivent l'une après l'autre : c'est le calcul qui se
- * déroule sous les yeux, et c'est le seul mouvement de la page. */
-.reglements li {
+.gages li::before {
+  content: '';
+  width: 0.4rem;
+  height: 0.4rem;
+  border-radius: 50%;
+  background: var(--succes);
+  flex: none;
+}
+
+.signature-marque {
+  margin: 0;
+  font-weight: 600;
+  font-size: 0.9375rem;
+  letter-spacing: 0.01em;
+  background: var(--degrade-marque);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* ------------------------------------------------ maquettes de téléphone ---- */
+
+/* Cadre sobre : un liseré clair et une ombre haute. Une encoche dessinée imiterait un
+ * appareil précis, ce que l'application ne prétend pas être. */
+.telephone {
+  margin: 0;
+  border-radius: 2.5rem;
+  padding: 0.5rem;
+  background: linear-gradient(160deg, rgb(255 255 255 / 16%), rgb(255 255 255 / 4%));
+  box-shadow: var(--ombre-portee);
+  width: min(19rem, 100%);
+}
+
+.telephone img {
+  border-radius: 2.1rem;
+  width: 100%;
+}
+
+.heros__visuel {
+  position: relative;
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.75rem;
-  padding: 0.55rem 0.7rem;
-  border-radius: 0.4rem;
-  background: #eef2ff;
-  font-weight: 500;
-  animation: arrivee 0.5s ease-out both;
+  justify-content: center;
+  align-items: flex-start;
+  min-height: 32rem;
 }
 
-.reglements li:nth-child(1) {
-  animation-delay: 0.45s;
-}
-.reglements li:nth-child(2) {
-  animation-delay: 0.65s;
-}
-.reglements li:nth-child(3) {
-  animation-delay: 0.85s;
+.telephone--avant {
+  position: relative;
+  z-index: 2;
+  width: min(17.5rem, 78%);
+  transform: translateY(1.5rem);
 }
 
-@keyframes arrivee {
-  from {
-    opacity: 0;
-    transform: translateY(0.4rem);
+.telephone--arriere {
+  position: absolute;
+  top: 1.5rem;
+  right: -1rem;
+  z-index: 1;
+  width: min(12rem, 52%);
+  transform: rotate(6deg);
+  opacity: 0.55;
+  filter: blur(1px);
+}
+
+@media (max-width: 62rem) {
+  .heros__visuel {
+    min-height: 0;
+  }
+  .telephone--arriere {
+    display: none;
+  }
+  .telephone--avant {
+    transform: none;
   }
 }
 
-.reglements .qui {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4rem;
-  color: var(--encre);
-}
+/* --------------------------------------------------------------- sections ---- */
 
-.fleche {
-  color: var(--violet);
-  font-weight: 700;
-}
-
-.montant {
-  font-weight: 700;
-  font-variant-numeric: tabular-nums;
-  color: var(--violet);
-  white-space: nowrap;
-}
-
-.ticket__pied {
-  margin: 1.25rem 0 0;
-  font-size: 0.75rem;
-  line-height: 1.5;
-  color: #64748b;
-}
-
-/* ---------------------------------------------------------------- moments ---- */
-
-.moments {
-  padding-block: clamp(3rem, 6vw, 5rem);
-  border-top: 1px solid var(--bordure);
+.section__entete {
+  max-width: 44rem;
+  margin-bottom: clamp(2.5rem, 5vw, 4rem);
 }
 
 .section__titre {
-  margin: 0 0 2.5rem;
-  font-size: clamp(1.5rem, 1.2rem + 1.2vw, 2rem);
+  margin: 0 0 0.9rem;
+  font-size: clamp(1.85rem, 1.4rem + 2vw, 2.85rem);
+  line-height: 1.12;
   font-weight: 600;
   letter-spacing: var(--serrage-titre);
+  text-wrap: balance;
 }
 
-.moments__grille {
+.section__titre em {
+  font-style: normal;
+  background: linear-gradient(120deg, var(--violet-clair), var(--rose));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.section__chapo {
+  margin: 0;
+  max-width: var(--mesure);
+  color: #c6cfe3;
+}
+
+/* ------------------------------------------------------------- le déroulé ---- */
+
+.deroule {
+  padding-block: var(--section);
+  border-top: 1px solid var(--liseré);
+  background: linear-gradient(180deg, var(--creux), var(--nuit) 40%);
+}
+
+.moments {
   display: grid;
-  gap: 1.25rem;
-}
-
-@media (min-width: 48rem) {
-  .moments__grille {
-    grid-template-columns: repeat(3, 1fr);
-  }
+  gap: clamp(3.5rem, 7vw, 6rem);
 }
 
 .moment {
-  padding: 1.5rem;
-  border: 1px solid var(--bordure);
-  border-radius: var(--rayon-carte);
-  background: var(--surface);
-  box-shadow: var(--ombre-carte);
+  display: grid;
+  gap: clamp(2rem, 5vw, 4rem);
+  align-items: center;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 0.85fr);
 }
 
-/* « Avant / Pendant / Après » : la soirée est une chronologie, l'étiquette porte donc
- * une information et non un numéro décoratif. */
+.moment--inverse .moment__texte {
+  order: 2;
+}
+
+@media (max-width: 56rem) {
+  .moment,
+  .moment--inverse .moment__texte {
+    grid-template-columns: minmax(0, 1fr);
+    order: initial;
+  }
+}
+
+.moment figure {
+  justify-self: center;
+}
+
 .moment__quand {
-  display: block;
-  margin-bottom: 0.75rem;
+  display: inline-block;
+  margin-bottom: 0.9rem;
+  padding: 0.3rem 0.85rem;
+  border-radius: var(--rayon-capsule);
+  background: rgb(108 92 231 / 18%);
+  color: var(--violet-clair);
   font-size: 0.75rem;
-  font-weight: 700;
+  font-weight: 600;
   letter-spacing: 0.14em;
   text-transform: uppercase;
-  color: var(--violet-clair);
 }
 
 .moment h3 {
-  margin: 0 0 0.6rem;
-  font-size: 1.0625rem;
+  margin: 0 0 0.85rem;
+  font-size: clamp(1.5rem, 1.2rem + 1.2vw, 2rem);
   font-weight: 600;
-  letter-spacing: -0.01em;
+  letter-spacing: -0.02em;
 }
 
 .moment p {
-  margin: 0;
-  color: var(--texte-doux);
-  font-size: 0.9375rem;
+  margin: 0 0 1.5rem;
+  max-width: var(--mesure);
+  color: #c6cfe3;
 }
 
-/* ------------------------------------------------------------------ accès ---- */
+.puces {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 0.65rem;
+  max-width: var(--mesure);
+  font-size: 0.9375rem;
+  color: var(--texte-doux);
+}
+
+.puces li {
+  display: grid;
+  grid-template-columns: 1.1rem 1fr;
+  gap: 0.65rem;
+  align-items: start;
+}
+
+.puces li::before {
+  content: '';
+  margin-top: 0.55rem;
+  width: 1.1rem;
+  height: 0.125rem;
+  border-radius: 2px;
+  background: var(--violet-clair);
+}
+
+/* ---------------------------------------------------------- qui rend quoi ---- */
+
+.comptes {
+  padding-block: var(--section);
+  border-top: 1px solid var(--liseré);
+}
+
+.comptes__grille {
+  display: grid;
+  gap: clamp(2.5rem, 6vw, 5rem);
+  align-items: center;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 0.8fr);
+}
+
+@media (max-width: 56rem) {
+  .comptes__grille {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.comptes__visuel {
+  justify-self: center;
+}
+
+/* Un encart creusé — un cran sous le fond — pose les chiffres comme un relevé. */
+.calcul {
+  margin: 2rem 0 1.5rem;
+  max-width: var(--mesure);
+  border-radius: var(--rayon-carte);
+  background: var(--creux);
+  border: 1px solid var(--liseré);
+  overflow: hidden;
+}
+
+.calcul__ligne {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.95rem 1.35rem;
+  border-bottom: 1px solid var(--liseré);
+  font-size: 0.9375rem;
+  color: var(--texte-doux);
+}
+
+.calcul__ligne:last-child {
+  border-bottom: 0;
+}
+
+/* Chiffres tabulaires obligatoires sur tout montant : sans eux, une colonne de sommes
+ * semble bouger d'une ligne à l'autre. DESIGN.md. */
+.calcul__ligne b {
+  font-size: 1.0625rem;
+  font-weight: 600;
+  color: var(--texte);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.calcul__ligne--forte {
+  background: rgb(108 92 231 / 12%);
+}
+
+.calcul__ligne--forte b {
+  color: var(--violet-clair);
+}
+
+.note {
+  margin: 0;
+  max-width: var(--mesure);
+  font-size: 0.9375rem;
+  color: var(--texte-doux);
+}
+
+/* ------------------------------------------------------------- fonctions ---- */
+
+.fonctions {
+  padding-block: var(--section);
+  border-top: 1px solid var(--liseré);
+  background: linear-gradient(180deg, var(--creux), var(--nuit) 55%);
+}
+
+.fonctions__grille {
+  display: grid;
+  gap: 1.25rem;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 17rem), 1fr));
+}
+
+.carte {
+  padding: 1.75rem;
+  border-radius: var(--rayon-carte);
+  background: var(--surface);
+  border: 1px solid var(--liseré);
+  box-shadow: var(--ombre-carte);
+  transition: transform 0.25s ease, background-color 0.25s ease;
+}
+
+.carte:hover {
+  transform: translateY(-3px);
+  background: var(--surface-haute);
+}
+
+.carte__icone {
+  width: 2.75rem;
+  height: 2.75rem;
+  margin-bottom: 1.1rem;
+  padding: 0.6rem;
+  border-radius: var(--rayon-moyen);
+  background: rgb(108 92 231 / 16%);
+  color: var(--violet-clair);
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.carte h3 {
+  margin: 0 0 0.5rem;
+  font-size: 1.125rem;
+  font-weight: 600;
+}
+
+.carte p {
+  margin: 0;
+  font-size: 0.9375rem;
+  color: var(--texte-doux);
+}
+
+/* ----------------------------------------------------------------- écrans ---- */
+
+.ecrans {
+  padding-block: var(--section);
+  border-top: 1px solid var(--liseré);
+}
+
+.ecrans__scene {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  padding-bottom: 3rem;
+}
+
+.bureau {
+  margin: 0;
+  width: min(56rem, 100%);
+  border-radius: var(--rayon-carte);
+  padding: 0.5rem;
+  background: linear-gradient(160deg, rgb(255 255 255 / 14%), rgb(255 255 255 / 4%));
+  box-shadow: var(--ombre-portee);
+}
+
+.bureau img {
+  border-radius: 1rem;
+}
+
+.telephone--pose {
+  position: absolute;
+  right: 2%;
+  bottom: 0;
+  width: min(11rem, 26%);
+}
+
+@media (max-width: 48rem) {
+  .telephone--pose {
+    position: static;
+    width: min(12rem, 45%);
+    margin-top: -3rem;
+  }
+  .ecrans__scene {
+    flex-direction: column;
+    align-items: center;
+    padding-bottom: 0;
+  }
+}
+
+/* --------------------------------------------------------- privé par défaut ---- */
+
+.prive {
+  padding-block: var(--section);
+  border-top: 1px solid var(--liseré);
+  background: linear-gradient(180deg, var(--creux), var(--nuit) 55%);
+}
+
+.prive__grille {
+  display: grid;
+  gap: 1.25rem;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr));
+}
+
+.engagement {
+  padding: 1.75rem;
+  border-radius: var(--rayon-carte);
+  background: var(--surface);
+  border-left: 3px solid var(--succes);
+  box-shadow: var(--ombre-carte);
+}
+
+.engagement h3 {
+  margin: 0 0 0.6rem;
+  font-size: 1.0625rem;
+  font-weight: 600;
+}
+
+.engagement p {
+  margin: 0;
+  font-size: 0.9375rem;
+  color: var(--texte-doux);
+}
+
+/* -------------------------------------------------------------- commencer ---- */
 
 .acces {
-  padding-block: clamp(3rem, 6vw, 5rem);
-  border-top: 1px solid var(--bordure);
+  padding-block: var(--section);
+  border-top: 1px solid var(--liseré);
+}
+
+.acces__bloc {
+  position: relative;
+  overflow: hidden;
+  padding: clamp(2rem, 5vw, 3.5rem);
+  border-radius: clamp(var(--rayon-carte), 3vw, 2rem);
+  background: var(--surface);
+  border: 1px solid var(--liseré);
+  box-shadow: var(--ombre-carte);
+}
+
+.acces__bloc::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(24rem 20rem at 88% 8%, rgb(168 85 247 / 20%), transparent 72%);
+}
+
+.acces__bloc > * {
+  position: relative;
 }
 
 .acces__grille {
   display: grid;
   gap: 1rem;
   margin-top: 2rem;
-}
-
-@media (min-width: 48rem) {
-  .acces__grille {
-    grid-template-columns: repeat(3, 1fr);
-    align-items: stretch;
-  }
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr));
 }
 
 .sortie {
   display: flex;
   flex-direction: column;
-  gap: 0.35rem;
-  padding: 1.25rem 1.4rem;
+  gap: 0.2rem;
+  padding: 1.15rem 1.4rem;
   border-radius: var(--rayon-carte);
-  border: 1px solid var(--bordure);
-  background: var(--surface);
-  box-shadow: var(--ombre-carte);
-  color: var(--texte);
   text-decoration: none;
-  transition: border-color 0.18s ease, transform 0.18s ease;
+  background: var(--surface-haute);
+  border: 1px solid var(--liseré);
+  transition: transform 0.2s ease, background-color 0.2s ease;
 }
 
-.sortie:hover {
-  border-color: var(--violet-clair);
-  color: var(--texte);
-  transform: translateY(-2px);
-}
-
-/* Le dégradé de marque, réservé à l'action principale. C'est l'élément signature de
- * l'application — il n'y apparaît que sur l'annonce de la prochaine soirée et le bouton
- * principal. Étendu à d'autres surfaces, il cesserait de désigner quoi que ce soit. */
 .sortie--principale {
   background: var(--degrade-marque);
   border-color: transparent;
-  box-shadow: 0 1.5rem 2.5rem -0.75rem rgb(108 92 231 / 45%);
+  box-shadow: 0 1rem 2rem -0.5rem rgb(108 92 231 / 55%);
 }
 
 .sortie--principale:hover {
-  border-color: transparent;
-  filter: brightness(1.08);
+  transform: translateY(-3px);
 }
 
-/* Un magasin où l'application n'est pas encore publiée n'est pas un lien : le dire
- * vaut mieux qu'un bouton qui mène à une page d'erreur. */
+/* Ni Play ni App Store ne référencent encore l'application : la case est présente mais
+ * inerte, et le dit. */
 .sortie--attente {
-  opacity: 0.55;
+  opacity: 0.5;
   cursor: default;
 }
 
 .sortie__quoi {
   font-weight: 600;
-  font-size: 1rem;
-  letter-spacing: -0.01em;
+  color: var(--texte);
+}
+
+.sortie--principale .sortie__quoi,
+.sortie--principale .sortie__ou {
+  color: #fff;
 }
 
 .sortie__ou {
-  font-size: 0.8125rem;
+  font-size: 0.875rem;
   color: var(--texte-doux);
 }
 
 .sortie--principale .sortie__ou {
-  color: rgb(255 255 255 / 78%);
+  opacity: 0.85;
 }
 
-/* -------------------------------------------------------------------- pied ---- */
+/* ------------------------------------------------------------------- pied ---- */
 
 .pied {
-  padding-block: 2.5rem 3rem;
-  border-top: 1px solid var(--bordure);
+  padding-block: clamp(2.5rem, 5vw, 3.5rem);
+  border-top: 1px solid var(--liseré);
+  background: var(--creux);
+  font-size: 0.9375rem;
+  color: var(--texte-doux);
+}
+
+.pied__grille {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2rem;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 2rem;
+}
+
+.marque--pied {
+  margin-right: 0;
+}
+
+.pied__signature {
+  margin: 0.75rem 0 0;
   font-size: 0.875rem;
   color: var(--texte-doux);
 }
@@ -553,14 +929,26 @@ a:hover {
   display: flex;
   flex-wrap: wrap;
   gap: 0.5rem 1.5rem;
-  margin-bottom: 1.25rem;
+  margin: 0;
   padding: 0;
   list-style: none;
 }
 
-.pied p {
+.pied__liens a {
+  color: var(--texte-doux);
+  text-decoration: none;
+}
+
+.pied__liens a:hover {
+  color: var(--texte);
+}
+
+.pied__mention {
   margin: 0;
-  max-width: 40rem;
+  max-width: 44rem;
+  font-size: 0.875rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--liseré);
 }
 
 /* ------------------------------------------------- pages de texte long ---- */

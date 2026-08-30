@@ -10,13 +10,23 @@
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="PartyPlan">
   <meta property="og:title" content="PartyPlan — qui vient, qui apporte quoi, qui doit combien">
-  <meta property="og:description" content="Les présences, les courses, les dépenses et les remboursements d'une soirée entre amis, au même endroit.">
+  <meta property="og:description" content="Les présences, les courses, les dépenses et les remboursements d’une soirée entre amis, au même endroit.">
   <meta property="og:url" content="https://partyplan.maxencecoeur.fr/">
+  <meta property="og:image" content="https://partyplan.maxencecoeur.fr/images/app/remboursements.webp">
   <meta property="og:locale" content="fr_FR">
   <meta name="theme-color" content="#0f172a">
+  <link rel="icon" href="/favicon.ico" sizes="any">
   <link rel="icon" type="image/png" href="/favicon.png">
   <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  <link rel="preload" as="image" href="/images/app/remboursements.webp">
   <link rel="stylesheet" href="styles.css">
+  <script>
+    // Marque posée avant le rendu : la feuille de style ne masque les blocs à révéler
+    // que si le script tourne, et l'état masqué n'apparaît jamais après coup.
+    if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      document.documentElement.classList.add('js');
+    }
+  </script>
 </head>
 <body>
   <a class="saut-contenu" href="#contenu">Aller au contenu</a>
@@ -24,18 +34,31 @@
   <header class="entete">
     <div class="contenant entete__barre">
       <a class="marque" href="/">
-        <img class="marque__picto" src="/images/logo.png" alt="" width="76" height="96">
+        <img class="marque__picto" src="/images/logo.png"
+             srcset="/images/logo.png 1x, /images/logo@2x.png 2x"
+             alt="" width="76" height="96">
         <span class="marque__mot">Party<b>Plan</b></span>
       </a>
-      <a class="entete__lien" href="https://web.partyplan.maxencecoeur.fr">Ouvrir l’application</a>
+      <nav class="entete__nav" aria-label="Sections du site">
+        <a href="#deroule">Comment ça marche</a>
+        <a href="#comptes">Qui rend quoi</a>
+        <a href="#fonctions">Fonctions</a>
+        <a href="#prive">Confidentialité</a>
+      </nav>
+      <a class="bouton bouton--principal entete__lien" href="https://web.partyplan.maxencecoeur.fr">
+        Ouvrir l’application
+      </a>
     </div>
   </header>
 
   <main id="contenu">
 
+    <!-- ------------------------------------------------------------ héros -->
     <section class="heros">
+      <div class="lueur" aria-hidden="true"></div>
       <div class="contenant heros__grille">
-        <div>
+
+        <div class="heros__texte">
           <p class="surtitre">Soirées entre amis</p>
           <h1 class="titre">
             <strong>Qui doit combien</strong>,<br>
@@ -46,78 +69,255 @@
             qui rembourse qui. Le reste suit : les présences, les courses, ce
             qu’il manque encore.
           </p>
+
+          <div class="heros__actions">
+            <a class="bouton bouton--principal bouton--grand" href="https://web.partyplan.maxencecoeur.fr">
+              Ouvrir l’application
+            </a>
+            <a class="bouton bouton--discret bouton--grand" href="#deroule">
+              Voir les écrans
+            </a>
+          </div>
+
+          <ul class="gages">
+            <li>Rien à installer</li>
+            <li>Privé par défaut</li>
+            <li>Aucun paiement ne transite</li>
+          </ul>
+
           <p class="signature-marque">Organise. Partage. Profite !</p>
         </div>
 
-        <!-- Le ticket : les chiffres tombent juste, c'est vérifiable à la main.
-             47,30 + 28,90 + 15,60 = 91,80 pour quatre, soit 22,95 chacun. -->
-        <div class="ticket">
-          <div class="ticket__entete">
-            <h2 class="ticket__titre">Raclette chez Léa</h2>
-            <span class="ticket__date">14/02/2026</span>
+        <!-- Deux vraies captures de l'application, pas des maquettes dessinées :
+             ce qui est montré est ce qui est livré. -->
+        <div class="heros__visuel">
+          <figure class="telephone telephone--arriere">
+            <img src="/images/app/courses.webp" width="860" height="1864"
+                 alt="Écran des courses : treize articles répartis en boissons,
+                      nourriture et matériel, neuf déjà pris en charge.">
+          </figure>
+          <figure class="telephone telephone--avant">
+            <img src="/images/app/remboursements.webp" width="860" height="1864"
+                 alt="Écran « Qui rend quoi » : quatre virements listés et le
+                      solde de chaque participant.">
+          </figure>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ------------------------------------------------- trois moments -->
+    <section class="deroule" id="deroule">
+      <div class="contenant">
+        <header class="section__entete">
+          <p class="surtitre">Le déroulé</p>
+          <h2 class="section__titre">Une soirée, trois moments</h2>
+          <p class="section__chapo">
+            Une seule application du premier message au dernier remboursement.
+            Chaque écran ci-dessous est une capture de l’application, prise
+            telle quelle.
+          </p>
+        </header>
+
+        <div class="moments">
+
+          <article class="moment apparait">
+            <div class="moment__texte">
+              <span class="moment__quand">Avant</span>
+              <h3>Savoir qui vient</h3>
+              <p>
+                Un lien à partager, une réponse par personne. Présent,
+                peut-être, absent, arrive plus tard, part plus tôt — et le
+                compte des têtes à prévoir se met à jour tout seul.
+              </p>
+              <ul class="puces">
+                <li>Invitations par lien ou par code court</li>
+                <li>Accompagnants déclarés en un geste</li>
+                <li>Sondages pour trancher une date, un thème, un dessert</li>
+              </ul>
+            </div>
+            <figure class="telephone">
+              <img loading="lazy" src="/images/app/presences.webp" width="860" height="1864"
+                   alt="Écran d’accueil d’une soirée : date, adresse, réponse de
+                        chacun, cinq présents sur sept invités.">
+            </figure>
+          </article>
+
+          <article class="moment moment--inverse apparait">
+            <div class="moment__texte">
+              <span class="moment__quand">Pendant</span>
+              <h3>Ne pas racheter le pain</h3>
+              <p>
+                La liste de courses est commune et rangée par catégorie.
+                Chacun se déclare sur ce qu’il apporte, et tout le monde voit
+                d’un coup d’œil ce qu’il reste à couvrir.
+              </p>
+              <ul class="puces">
+                <li>Deux jauges : pris en charge, puis acheté</li>
+                <li>Le prix payé se saisit sur place</li>
+                <li>Un article acheté devient une dépense, sans double saisie</li>
+              </ul>
+            </div>
+            <figure class="telephone">
+              <img loading="lazy" src="/images/app/courses.webp" width="860" height="1864"
+                   alt="Liste de courses : bières, vin, coca et eau, avec la
+                        personne qui s’en charge et le prix payé.">
+            </figure>
+          </article>
+
+          <article class="moment apparait">
+            <div class="moment__texte">
+              <span class="moment__quand">Après</span>
+              <h3>Solder sans discuter</h3>
+              <p>
+                Les dépenses sont déjà là, réparties entre les présents.
+                PartyPlan affiche le total, votre part, et la liste des
+                virements à faire. Personne n’a à réclamer.
+              </p>
+              <ul class="puces">
+                <li>Part calculée sur les présents au moment de la dépense</li>
+                <li>Chiffres tabulaires : une colonne de montants reste lisible</li>
+                <li>Chaque remboursement se marque comme réglé</li>
+              </ul>
+            </div>
+            <figure class="telephone">
+              <img loading="lazy" src="/images/app/depenses.webp" width="860" height="1864"
+                   alt="Écran des dépenses : total de la soirée 334,80 €, ma part
+                        66,96 €, et le détail de chaque dépense.">
+            </figure>
+          </article>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- ------------------------------------------------- qui rend quoi -->
+    <section class="comptes" id="comptes">
+      <div class="contenant comptes__grille">
+
+        <div class="apparait">
+          <p class="surtitre">Le calcul</p>
+          <h2 class="section__titre">
+            Cinq personnes,<br><em>quatre virements</em>.
+          </h2>
+          <p class="section__chapo">
+            PartyPlan ne renvoie pas chacun vers chacun. Il cherche le plus
+            petit nombre de virements qui solde tout le monde, plutôt que de
+            faire tourner l’argent en rond.
+          </p>
+
+          <!-- Les chiffres sont ceux de la capture ci-contre, et ils tombent
+               juste : 334,80 pour cinq, soit 66,96 chacun. -->
+          <div class="calcul">
+            <div class="calcul__ligne">
+              <span>Total de la soirée</span>
+              <b>334,80 €</b>
+            </div>
+            <div class="calcul__ligne">
+              <span>Cinq participants</span>
+              <b>66,96 € chacun</b>
+            </div>
+            <div class="calcul__ligne calcul__ligne--forte">
+              <span>Deux doivent, trois attendent</span>
+              <b>4 virements</b>
+            </div>
           </div>
 
-          <ul class="lignes">
-            <li><span>Léa — fromage, charcuterie</span> <b>47,30 €</b></li>
-            <li><span>Tom — boissons</span> <b>28,90 €</b></li>
-            <li><span>Sarah — pommes de terre</span> <b>15,60 €</b></li>
-            <li><span>Malik — rien</span> <b>0,00 €</b></li>
-          </ul>
-
-          <p class="ticket__bascule">Remboursements — 3 virements</p>
-
-          <ul class="reglements">
-            <li>
-              <span class="qui">Malik <span class="fleche" aria-hidden="true">→</span> Léa</span>
-              <span class="montant">22,95 €</span>
-            </li>
-            <li>
-              <span class="qui">Sarah <span class="fleche" aria-hidden="true">→</span> Léa</span>
-              <span class="montant">1,40 €</span>
-            </li>
-            <li>
-              <span class="qui">Sarah <span class="fleche" aria-hidden="true">→</span> Tom</span>
-              <span class="montant">5,95 €</span>
-            </li>
-          </ul>
-
-          <p class="ticket__pied">
-            Quatre parts de 22,95 €. PartyPlan cherche le plus petit nombre de
-            virements plutôt que de faire tourner l’argent en rond.
+          <p class="note">
+            L’application calcule, elle ne paie pas : aucun montant ne transite
+            par PartyPlan, et aucune coordonnée bancaire ne lui est demandée.
           </p>
         </div>
+
+        <div class="comptes__visuel apparait">
+          <figure class="telephone">
+            <img loading="lazy" src="/images/app/remboursements.webp" width="860" height="1864"
+                 alt="Écran « Qui rend quoi » : on te doit 25,94 €, quatre
+                      virements à faire, et le solde de chaque participant.">
+          </figure>
+        </div>
+
       </div>
     </section>
 
-    <section class="moments">
+    <!-- ---------------------------------------------------- fonctions -->
+    <section class="fonctions" id="fonctions">
       <div class="contenant">
-        <h2 class="section__titre">Une soirée, trois moments</h2>
-        <div class="moments__grille">
+        <header class="section__entete">
+          <p class="surtitre">Dans l’application</p>
+          <h2 class="section__titre">Tout ce qu’une soirée réclame</h2>
+        </header>
 
-          <article class="moment">
-            <span class="moment__quand">Avant</span>
-            <h3>Savoir qui vient</h3>
+        <div class="fonctions__grille">
+
+          <article class="carte apparait">
+            <svg class="carte__icone" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M16 20v-2a4 4 0 0 0-8 0v2"/>
+              <circle cx="12" cy="8" r="3.5"/>
+              <path d="M4.5 20v-1.5a3 3 0 0 1 2.5-3M19.5 20v-1.5a3 3 0 0 0-2.5-3"/>
+            </svg>
+            <h3>Présences</h3>
             <p>
-              Un lien à partager, une réponse par personne. Plus de sondage
-              perdu dans une conversation de groupe à quarante messages.
+              Cinq réponses possibles, les accompagnants comptés, et le total
+              des têtes à prévoir toujours à jour.
             </p>
           </article>
 
-          <article class="moment">
-            <span class="moment__quand">Pendant</span>
-            <h3>Ne pas racheter le pain</h3>
+          <article class="carte apparait">
+            <svg class="carte__icone" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M3 5h2.2l2.1 10.2a2 2 0 0 0 2 1.6h7.6a2 2 0 0 0 2-1.6L20.5 8H6"/>
+              <circle cx="10" cy="20" r="1.2"/>
+              <circle cx="17" cy="20" r="1.2"/>
+            </svg>
+            <h3>Courses</h3>
             <p>
-              La liste de courses est commune. Chacun prend ce qu’il apporte,
-              et tout le monde voit ce qu’il reste à couvrir.
+              Liste commune rangée par catégorie, prise en charge nominative,
+              et prix payé saisi au passage en caisse.
             </p>
           </article>
 
-          <article class="moment">
-            <span class="moment__quand">Après</span>
-            <h3>Solder sans discuter</h3>
+          <article class="carte apparait">
+            <svg class="carte__icone" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M16.5 6.5A5.5 5.5 0 0 0 7 10v4a5.5 5.5 0 0 0 9.5 3.5"/>
+              <path d="M4.5 10.5h7M4.5 13.5h7"/>
+            </svg>
+            <h3>Dépenses</h3>
             <p>
-              Les dépenses sont déjà là. PartyPlan en tire la liste des
-              virements, et personne n’a à réclamer.
+              Réparties entre les présents, ou sur une sélection, ou à parts
+              choisies. Chaque modification laisse une trace.
+            </p>
+          </article>
+
+          <article class="carte apparait">
+            <svg class="carte__icone" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M4 8h13l-2.5-2.5M20 16H7l2.5 2.5"/>
+            </svg>
+            <h3>Remboursements</h3>
+            <p>
+              Le solde de chacun, la liste des virements, et un bouton pour
+              acter qu’un remboursement est réglé.
+            </p>
+          </article>
+
+          <article class="carte apparait">
+            <svg class="carte__icone" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M4 6.5A2.5 2.5 0 0 1 6.5 4h11A2.5 2.5 0 0 1 20 6.5v7a2.5 2.5 0 0 1-2.5 2.5H9l-5 4z"/>
+            </svg>
+            <h3>Discussion</h3>
+            <p>
+              Un fil par soirée, avec citations, réactions, images et messages
+              épinglés. Plus rien ne se perd dans la conversation de groupe.
+            </p>
+          </article>
+
+          <article class="carte apparait">
+            <svg class="carte__icone" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M5 19V9M12 19V5M19 19v-6"/>
+            </svg>
+            <h3>Sondages</h3>
+            <p>
+              Une question, des options, un vote par personne ou plusieurs.
+              Le résultat s’affiche au fil des réponses.
             </p>
           </article>
 
@@ -125,28 +325,99 @@
       </div>
     </section>
 
+    <!-- ------------------------------------------------------ écrans -->
+    <section class="ecrans">
+      <div class="contenant">
+        <header class="section__entete">
+          <p class="surtitre">Partout</p>
+          <h2 class="section__titre">Du téléphone au grand écran</h2>
+          <p class="section__chapo">
+            La même application, redessinée selon la largeur : barre d’onglets
+            sur téléphone, rail latéral sur ordinateur. Thème clair et thème
+            sombre suivent le réglage du système.
+          </p>
+        </header>
+
+        <div class="ecrans__scene apparait">
+          <figure class="bureau">
+            <img loading="lazy" src="/images/app/bureau.webp" width="1800" height="1125"
+                 alt="L’application dans un navigateur d’ordinateur : rail de
+                      navigation à gauche, détail de la soirée au centre.">
+          </figure>
+          <figure class="telephone telephone--pose">
+            <img loading="lazy" src="/images/app/courses-sombre.webp" width="860" height="1864"
+                 alt="La même liste de courses en thème sombre.">
+          </figure>
+        </div>
+      </div>
+    </section>
+
+    <!-- --------------------------------------------- privé par défaut -->
+    <section class="prive" id="prive">
+      <div class="contenant">
+        <header class="section__entete">
+          <p class="surtitre">Ce qui reste chez vous</p>
+          <h2 class="section__titre">Privé par défaut</h2>
+        </header>
+
+        <div class="prive__grille">
+          <article class="engagement apparait">
+            <h3>Aucune soirée publique</h3>
+            <p>
+              Un événement n’est ni indexable ni consultable sans invitation.
+              Connaître son identifiant ne suffit jamais à en voir le contenu.
+            </p>
+          </article>
+
+          <article class="engagement apparait">
+            <h3>Pas de regard par-dessus l’épaule</h3>
+            <p>
+              Un administrateur de la plateforme n’a pas accès au contenu de
+              vos soirées. S’il n’en est pas membre, il ne voit rien — comme
+              n’importe qui.
+            </p>
+          </article>
+
+          <article class="engagement apparait">
+            <h3>Pas de traceur tiers</h3>
+            <p>
+              Ce site n’appelle ni police d’écriture ni script hébergé
+              ailleurs. Rien de ce que vous lisez ici n’est transmis à un
+              service extérieur.
+            </p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <!-- ---------------------------------------------------- commencer -->
     <section class="acces">
       <div class="contenant">
-        <h2 class="section__titre">Commencer</h2>
-        <div class="acces__grille">
+        <div class="acces__bloc">
+          <h2 class="section__titre">Commencer</h2>
+          <p class="section__chapo">
+            Créez un compte, ouvrez une soirée, partagez le lien. Vos amis
+            répondent depuis leur navigateur.
+          </p>
 
-          <a class="sortie sortie--principale" href="https://web.partyplan.maxencecoeur.fr">
-            <span class="sortie__quoi">Ouvrir dans le navigateur</span>
-            <span class="sortie__ou">Rien à installer</span>
-          </a>
+          <div class="acces__grille">
+            <a class="sortie sortie--principale" href="https://web.partyplan.maxencecoeur.fr">
+              <span class="sortie__quoi">Ouvrir dans le navigateur</span>
+              <span class="sortie__ou">Rien à installer</span>
+            </a>
 
-          <!-- Ni Play ni App Store ne référencent encore l'application : un lien
-               mènerait à une page d'erreur. On l'annonce au lieu de le promettre. -->
-          <div class="sortie sortie--attente" aria-disabled="true">
-            <span class="sortie__quoi">Google Play</span>
-            <span class="sortie__ou">Bientôt</span>
+            <!-- Ni Play ni App Store ne référencent encore l'application : un lien
+                 mènerait à une page d'erreur. On l'annonce au lieu de le promettre. -->
+            <div class="sortie sortie--attente" aria-disabled="true">
+              <span class="sortie__quoi">Google Play</span>
+              <span class="sortie__ou">Bientôt</span>
+            </div>
+
+            <div class="sortie sortie--attente" aria-disabled="true">
+              <span class="sortie__quoi">App Store</span>
+              <span class="sortie__ou">Bientôt</span>
+            </div>
           </div>
-
-          <div class="sortie sortie--attente" aria-disabled="true">
-            <span class="sortie__quoi">App Store</span>
-            <span class="sortie__ou">Bientôt</span>
-          </div>
-
         </div>
       </div>
     </section>
@@ -154,19 +425,78 @@
   </main>
 
   <footer class="pied">
-    <div class="contenant">
+    <div class="contenant pied__grille">
+      <div>
+        <a class="marque marque--pied" href="/">
+          <img class="marque__picto" src="/images/logo.png"
+               srcset="/images/logo.png 1x, /images/logo@2x.png 2x"
+               alt="" width="76" height="96">
+          <span class="marque__mot">Party<b>Plan</b></span>
+        </a>
+        <p class="pied__signature">Organise. Partage. Profite !</p>
+      </div>
+
       <ul class="pied__liens">
         <li><a href="/confidentialite">Confidentialité</a></li>
         <li><a href="/conditions">Conditions d’utilisation</a></li>
         <li><a href="/mentions-legales">Mentions légales</a></li>
         <li><a href="/support">Support</a></li>
       </ul>
-      <p>
+    </div>
+
+    <div class="contenant">
+      <p class="pied__mention">
         PartyPlan ne détient, ne transfère et ne garantit aucun fonds. Les
         remboursements entre participants relèvent uniquement de leur relation
         privée : l’application calcule, elle ne paie pas.
       </p>
     </div>
   </footer>
+
+  <script>
+    // Apparition au défilement.
+    //
+    // Le calcul se refait à chaque défilement plutôt qu'à l'entrée dans le champ :
+    // un IntersectionObserver rate les blocs franchis d'un seul geste — arrivée sur
+    // une ancre, molette rapide, capture automatisée — et laisse alors des sections
+    // entières invisibles. Ici, n'importe quelle position de défilement rattrape.
+    (function () {
+      // L'apparition est facultative ; l'en-tête posé ne l'est pas. Les deux se
+      // suivent donc dans la même boucle, mais la liste des blocs à révéler reste
+      // vide quand le mouvement est refusé.
+      var anime = document.documentElement.classList.contains('js');
+      var cibles = anime ? [].slice.call(document.querySelectorAll('.apparait')) : [];
+      var entete = document.querySelector('.entete');
+      var enAttente = false;
+
+      function relever() {
+        enAttente = false;
+        var seuil = window.innerHeight * 0.92;
+
+        cibles = cibles.filter(function (el) {
+          if (el.getBoundingClientRect().top > seuil) return true;
+          el.classList.add('apparu');
+          return false;
+        });
+
+        // L'en-tête se pose sur un fond opaque dès que la page a défilé, sans quoi
+        // les titres passent au travers.
+        entete.classList.toggle('entete--posee', window.scrollY > 12);
+      }
+
+      function planifier() {
+        if (enAttente) return;
+        enAttente = true;
+        window.requestAnimationFrame(relever);
+      }
+
+      relever();
+      window.addEventListener('scroll', planifier, { passive: true });
+      window.addEventListener('resize', planifier);
+      // Les images en chargement différé rallongent la page après coup : sans ce
+      // rattrapage, un bloc devenu visible resterait masqué jusqu'au geste suivant.
+      window.addEventListener('load', relever);
+    })();
+  </script>
 </body>
 </html>
