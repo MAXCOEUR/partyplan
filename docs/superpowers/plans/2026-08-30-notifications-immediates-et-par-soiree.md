@@ -436,9 +436,39 @@ public sealed class ReveilNotifications : IReveilNotifications, IDisposable
 }
 ```
 
+- [ ] **Étape 4 bis : enregistrer le réveil en singleton**
+
+Dans `api/src/PartyPlan.Infrastructure/DependencyInjection.cs` :
+
+```csharp
+        // Singleton, et c'est la seule portée qui marche : le service métier qui
+        // réveille vit dans la portée d'une requête HTTP, l'ordonnanceur qui attend vit
+        // pour la durée du processus. En portée de requête, chacun tiendrait son propre
+        // sémaphore et le signal n'arriverait jamais — sans erreur, sans journal, avec
+        // pour seul symptôme des notifications qui repassent à la cadence d'une minute.
+        services.AddSingleton<ReveilNotifications>();
+        services.AddSingleton<IReveilNotifications>(f => f.GetRequiredService<ReveilNotifications>());
+```
+
+Le double enregistrement donne à l'ordonnanceur la classe concrète, dont il appelle
+`AttendreAsync` — `internal`, donc visible depuis le même assemblage — pendant que les
+modules métier ne voient que l'interface.
+
 - [ ] **Étape 5 : la boucle de l'ordonnanceur**
 
-Remplacer l'attente fixe des lignes 82-93 :
+Ajouter `ReveilNotifications reveil` au constructeur primaire de la classe, qui ne le
+porte pas encore :
+
+```csharp
+public sealed class OrdonnanceurNotifications(
+    IServiceScopeFactory portees,
+    IClock clock,
+    IOptions<OrdonnanceurOptions> options,
+    ReveilNotifications reveil,
+    ILogger<OrdonnanceurNotifications> logger) : BackgroundService
+```
+
+Puis remplacer l'attente fixe :
 
 ```csharp
             try
@@ -561,7 +591,9 @@ public sealed class MessageService(
             ? corps.Length <= 120 ? corps : corps[..117] + "…"
             : "a envoyé une image";
 
-        foreach (var membre in await membership.ListActiveAsync(eventId, cancellationToken))
+        // `membres` est déjà en portée : `EnvoyerAsync` a appelé `ListActiveAsync` plus
+        // haut pour valider les personnes citées. Ne pas rappeler le contrat.
+        foreach (var membre in membres)
         {
             if (membre.MemberId == moi.MemberId || membre.UserId is not { } compte)
             {
