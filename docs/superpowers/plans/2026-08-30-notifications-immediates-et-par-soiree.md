@@ -29,6 +29,12 @@ l'appareil.
 - **Voix de l'interface** (`DESIGN.md`) : tutoiement, phrases courtes, aucun point
   d'exclamation dans une erreur, jamais de tiret cadratin dans une chaîne d'interface.
 - **Commits conventionnels avec périmètre** : `feat(notifications):`, `fix(messages):`.
+- **Assertions en Shouldly**, jamais `Assert.*` : 57 fichiers de test du dépôt
+  emploient `ShouldBe`, aucun n'emploie `Assert`. Correspondances —
+  `ShouldBeTrue()`, `ShouldBeFalse()`, `x.ShouldBe(attendu)`,
+  `collection.ShouldContain(prédicat)`, `.ShouldNotContain(…)`,
+  `.ShouldHaveSingleItem()`. Si un extrait de ce plan porte encore un `Assert.`,
+  c'est une coquille : transposer, ne pas recopier.
 - `make verif` avant tout push.
 
 ---
@@ -51,14 +57,14 @@ l'appareil.
 [Fact]
 public void Les_categories_immediates_sont_celles_declenchees_par_un_geste_humain()
 {
-    Assert.True(NotificationCategories.EstImmediate(NotificationCategories.DiscussionMessage));
-    Assert.True(NotificationCategories.EstImmediate(NotificationCategories.DiscussionMention));
-    Assert.True(NotificationCategories.EstImmediate(NotificationCategories.PollNew));
-    Assert.True(NotificationCategories.EstImmediate(NotificationCategories.ExpenseNew));
-    Assert.True(NotificationCategories.EstImmediate(NotificationCategories.Activity));
+    NotificationCategories.EstImmediate(NotificationCategories.DiscussionMessage).ShouldBeTrue();
+    NotificationCategories.EstImmediate(NotificationCategories.DiscussionMention).ShouldBeTrue();
+    NotificationCategories.EstImmediate(NotificationCategories.PollNew).ShouldBeTrue();
+    NotificationCategories.EstImmediate(NotificationCategories.ExpenseNew).ShouldBeTrue();
+    NotificationCategories.EstImmediate(NotificationCategories.Activity).ShouldBeTrue();
 
-    Assert.False(NotificationCategories.EstImmediate(NotificationCategories.EventStartingSoon));
-    Assert.False(NotificationCategories.EstImmediate(NotificationCategories.BalanceDue));
+    NotificationCategories.EstImmediate(NotificationCategories.EventStartingSoon).ShouldBeFalse();
+    NotificationCategories.EstImmediate(NotificationCategories.BalanceDue).ShouldBeFalse();
 }
 
 [Fact]
@@ -66,11 +72,11 @@ public void Toute_categorie_est_declaree_dans_All()
 {
     // `All` sert l'écran des préférences : une catégorie absente devient invisible
     // et donc non désactivable, ce que EF-NOT-07 interdit.
-    Assert.Contains(NotificationCategories.DiscussionMessage, NotificationCategories.All);
-    Assert.Contains(NotificationCategories.DiscussionMention, NotificationCategories.All);
-    Assert.Contains(NotificationCategories.PollNew, NotificationCategories.All);
-    Assert.Contains(NotificationCategories.ExpenseNew, NotificationCategories.All);
-    Assert.Equal(11, NotificationCategories.All.Length);
+    NotificationCategories.All.ShouldContain(NotificationCategories.DiscussionMessage);
+    NotificationCategories.All.ShouldContain(NotificationCategories.DiscussionMention);
+    NotificationCategories.All.ShouldContain(NotificationCategories.PollNew);
+    NotificationCategories.All.ShouldContain(NotificationCategories.ExpenseNew);
+    NotificationCategories.All.Length.ShouldBe(11);
 }
 ```
 
@@ -178,7 +184,7 @@ public async Task Un_ecart_de_soiree_l_emporte_sur_la_preference_globale()
 
     var partis = await EnvoyerAsync(NotificationCategories.DiscussionMessage);
 
-    Assert.Equal(1, partis);
+    partis.ShouldBe(1);
 }
 
 [Fact]
@@ -189,7 +195,7 @@ public async Task La_sourdine_l_emporte_sur_un_ecart_qui_autorise()
 
     var partis = await EnvoyerAsync(NotificationCategories.DiscussionMessage);
 
-    Assert.Equal(0, partis);
+    partis.ShouldBe(0);
 }
 
 [Fact]
@@ -199,7 +205,7 @@ public async Task Sans_ecart_la_preference_globale_s_applique()
 
     var partis = await EnvoyerAsync(NotificationCategories.DiscussionMessage);
 
-    Assert.Equal(0, partis);
+    partis.ShouldBe(0);
 }
 
 [Fact]
@@ -207,7 +213,7 @@ public async Task Sans_rien_de_pose_la_notification_part()
 {
     var partis = await EnvoyerAsync(NotificationCategories.DiscussionMessage);
 
-    Assert.Equal(1, partis);
+    partis.ShouldBe(1);
 }
 ```
 
@@ -363,8 +369,8 @@ public async Task Le_reveil_envoie_sans_relancer_la_planification()
     pile.Reveil.Reveiller();
     await pile.AttendreEnvoiAsync();
 
-    Assert.Equal(1, pile.NotificationsParties);
-    Assert.Equal(0, planificateur.Appels);
+    pile.NotificationsParties.ShouldBe(1);
+    planificateur.Appels.ShouldBe(0);
 }
 ```
 
@@ -487,8 +493,8 @@ public async Task Un_message_notifie_les_autres_membres_jamais_son_auteur()
 
     var notifs = await NotificationsAsync();
 
-    Assert.DoesNotContain(notifs, n => n.UserId == _auteur.UserId);
-    Assert.Contains(notifs, n => n.UserId == _lucas.UserId
+    notifs.ShouldNotContain(n => n.UserId == _auteur.UserId);
+    notifs.ShouldContain(n => n.UserId == _lucas.UserId
         && n.Category == NotificationCategories.DiscussionMessage);
 }
 
@@ -503,7 +509,7 @@ public async Task Une_personne_citee_recoit_sa_mention_meme_si_le_bavardage_est_
 
     var partis = await EnvoyerLesDuesAsync();
 
-    Assert.Equal(1, partis);
+    partis.ShouldBe(1);
 }
 
 [Fact]
@@ -513,8 +519,8 @@ public async Task Une_personne_citee_ne_recoit_pas_aussi_le_message_simple()
 
     var notifs = await NotificationsAsync();
 
-    Assert.Single(notifs.Where(n => n.UserId == _lucas.UserId));
-    Assert.Equal(NotificationCategories.DiscussionMention, notifs.Single(n => n.UserId == _lucas.UserId).Category);
+    notifs.Where(n => n.UserId == _lucas.UserId).ShouldHaveSingleItem();
+    notifs.Single(n => n.UserId == _lucas.UserId).Category.ShouldBe(NotificationCategories.DiscussionMention);
 }
 
 [Fact]
@@ -524,7 +530,7 @@ public async Task Un_membre_sans_compte_n_est_jamais_notifie()
 
     var notifs = await NotificationsAsync();
 
-    Assert.DoesNotContain(notifs, n => n.UserId is null);
+    notifs.ShouldNotContain(n => n.UserId is null);
 }
 ```
 
@@ -555,7 +561,7 @@ public sealed class MessageService(
             ? corps.Length <= 120 ? corps : corps[..117] + "…"
             : "a envoyé une image";
 
-        foreach (var membre in await membership.ListerAsync(eventId, cancellationToken))
+        foreach (var membre in await membership.ListActiveAsync(eventId, cancellationToken))
         {
             if (membre.MemberId == moi.MemberId || membre.UserId is not { } compte)
             {
@@ -619,8 +625,8 @@ public async Task Un_sondage_notifie_tous_les_membres_sauf_son_auteur()
 
     var notifs = await NotificationsAsync();
 
-    Assert.DoesNotContain(notifs, n => n.UserId == _auteur.UserId);
-    Assert.Contains(notifs, n => n.UserId == _lucas.UserId
+    notifs.ShouldNotContain(n => n.UserId == _auteur.UserId);
+    notifs.ShouldContain(n => n.UserId == _lucas.UserId
         && n.Category == NotificationCategories.PollNew);
 }
 ```
@@ -636,7 +642,7 @@ Injecter `IFileNotifications notifications, IReveilNotifications reveil` dans
 `PollService`, puis à la création, avant `SaveChangesAsync` :
 
 ```csharp
-        foreach (var membre in await membership.ListerAsync(eventId, cancellationToken))
+        foreach (var membre in await membership.ListActiveAsync(eventId, cancellationToken))
         {
             if (membre.MemberId == moi.MemberId || membre.UserId is not { } compte)
             {
@@ -692,8 +698,8 @@ public async Task Une_depense_ne_notifie_que_les_porteurs_d_une_part()
 
     var notifs = await NotificationsAsync();
 
-    Assert.Contains(notifs, n => n.UserId == _lucas.UserId);
-    Assert.DoesNotContain(notifs, n => n.UserId == _emma.UserId);
+    notifs.ShouldContain(n => n.UserId == _lucas.UserId);
+    notifs.ShouldNotContain(n => n.UserId == _emma.UserId);
 }
 
 [Fact]
@@ -703,7 +709,7 @@ public async Task Le_payeur_n_est_pas_notifie_de_sa_propre_depense()
 
     var notifs = await NotificationsAsync();
 
-    Assert.DoesNotContain(notifs, n => n.UserId == _maxence.UserId);
+    notifs.ShouldNotContain(n => n.UserId == _maxence.UserId);
 }
 ```
 
@@ -776,7 +782,7 @@ public async Task Un_achat_previent_les_autres_membres()
 
     var notifs = await NotificationsAsync();
 
-    Assert.Contains(notifs, n => n.UserId == _maxence.UserId
+    notifs.ShouldContain(n => n.UserId == _maxence.UserId
         && n.Category == NotificationCategories.Activity);
 }
 
@@ -789,7 +795,7 @@ public async Task Deux_activites_dans_le_meme_quart_d_heure_produisent_deux_noti
 
     var notifs = await NotificationsAsync();
 
-    Assert.Equal(2, notifs.Count(n => n.UserId == _maxence.UserId));
+    notifs.Count(n => n.UserId == _maxence.UserId).ShouldBe(2);
 }
 ```
 
@@ -856,7 +862,7 @@ public async Task Une_notification_immediate_part_a_23h()
 {
     var partis = await EnvoyerAsync(NotificationCategories.DiscussionMessage, heureLocale: 23);
 
-    Assert.Equal(1, partis);
+    partis.ShouldBe(1);
 }
 
 [Fact]
@@ -864,7 +870,7 @@ public async Task Un_rappel_planifie_a_23h_est_reporte()
 {
     var partis = await EnvoyerAsync(NotificationCategories.InvitationPending, heureLocale: 23);
 
-    Assert.Equal(0, partis);
+    partis.ShouldBe(0);
 }
 ```
 
@@ -926,8 +932,8 @@ public async Task La_lecture_rend_la_valeur_resolue_et_dit_si_c_est_un_ecart()
     var vues = await LirePreferencesDeSoireeAsync(_evenement);
 
     var vue = vues.Single(v => v.Category == NotificationCategories.DiscussionMessage);
-    Assert.False(vue.Enabled);
-    Assert.False(vue.EstUnEcart);
+    vue.Enabled.ShouldBeFalse();
+    vue.EstUnEcart.ShouldBeFalse();
 }
 
 [Fact]
@@ -938,7 +944,7 @@ public async Task Une_valeur_nulle_retire_l_ecart()
 
     var vues = await LirePreferencesDeSoireeAsync(_evenement);
 
-    Assert.False(vues.Single(v => v.Category == NotificationCategories.DiscussionMessage).EstUnEcart);
+    vues.Single(v => v.Category == NotificationCategories.DiscussionMessage).EstUnEcart.ShouldBeFalse();
 }
 
 [Fact]
@@ -946,7 +952,7 @@ public async Task Un_non_membre_recoit_404()
 {
     var reponse = await ClientDe(_etranger).GetAsync($"/v1/events/{_evenement}/notifications/preferences");
 
-    Assert.Equal(HttpStatusCode.NotFound, reponse.StatusCode);
+    reponse.StatusCode.ShouldBe(HttpStatusCode.NotFound);
 }
 ```
 
@@ -1006,22 +1012,35 @@ git commit -m "feat(notifications): endpoints de réglage par soirée"
 ### Tâche 10 : la clé de groupe sur l'appareil
 
 **Fichiers :**
-- Modifier : `api/src/PartyPlan.Infrastructure/Push/FirebasePushSender.cs`
+- Modifier : `api/src/PartyPlan.Infrastructure/Notifications/FirebasePushSender.cs`
 - Modifier : `app/lib/features/notifications/` — la réception
 - Test : `api/tests/PartyPlan.UnitTests/FirebasePushSenderTests.cs`
 
 **Interfaces :**
+- Consomme : `PushMessage(string DeviceToken, string Title, string Body, string? DeepLink,
+  string? GroupKey)` — le champ `GroupKey` est **ajouté par cette tâche** au contrat
+  `api/src/PartyPlan.SharedKernel/Contracts/IPushSender.cs`, et rempli par
+  `EnvoiNotifications.cs:109` depuis l'`EventId` de la notification. L'émetteur ne peut
+  pas le déduire seul : il ne lit pas la table des notifications (règle 6).
 - Produit : le message Firebase porte `data.groupe = "event:{eventId}"`.
 
 - [ ] **Étape 1 : écrire le test rouge**
 
 ```csharp
 [Fact]
-public void Le_message_porte_une_cle_de_groupe_par_evenement()
+public async Task Le_message_porte_une_cle_de_groupe_par_evenement()
 {
-    var charge = FirebasePushSender.Composer(NotificationDeTest(evenement: _evenement));
+    // Même couture que les tests existants de ce fichier : la frontière est le
+    // HttpClient (NF-DEV-10), et ce qui se vérifie est le corps envoyé.
+    var stub = Stub(HttpStatusCode.OK, """{"name":"projects/p/messages/1"}""");
+    var emetteur = Creer(stub, new RegistreDeTest());
 
-    Assert.Equal($"event:{_evenement}", charge.Data["groupe"]);
+    await emetteur.SendAsync(
+        new PushMessage(Jeton, "Lucas", "On arrive.", "/events/42", GroupKey: "event:42"),
+        CancellationToken.None);
+
+    var corps = JsonDocument.Parse(stub.Appels[1].Corps).RootElement.GetProperty("message");
+    corps.GetProperty("data").GetProperty("groupe").GetString().ShouldBe("event:42");
 }
 ```
 
@@ -1079,7 +1098,7 @@ public async Task Un_membre_sans_reponse_est_relance_a_J_moins_7()
 
     var notifs = await NotificationsAsync();
 
-    Assert.Contains(notifs, n => n.Category == NotificationCategories.InvitationPending);
+    notifs.ShouldContain(n => n.Category == NotificationCategories.InvitationPending);
 }
 ```
 
