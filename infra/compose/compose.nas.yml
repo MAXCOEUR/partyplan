@@ -311,8 +311,9 @@ services:
   # domaine statique n'existe pas. Ce conteneur reprend le rôle que Caddy tient
   # dans `compose.example.yml`.
   #
-  # La configuration nginx par défaut sert /usr/share/nginx/html telle quelle :
-  # aucun fichier à déposer. Le montage est en lecture seule.
+  # Le montage des photos est en lecture seule : ce service les sert, il ne les
+  # écrit jamais. Sa configuration nginx est en bas de ce fichier, en `configs` —
+  # il n'y a donc toujours aucun fichier à déposer à côté du compose.
   cdn:
     image: nginx:1.27-alpine
     restart: unless-stopped
