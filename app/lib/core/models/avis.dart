@@ -103,3 +103,29 @@ class PreferenceAvis {
     courriel: courriel,
   );
 }
+
+/// Réglage résolu d'une catégorie pour une soirée donnée (`EF-NOT-09`).
+///
+/// [actif] porte la valeur déjà résolue côté serveur — sourdine, écart de soirée,
+/// préférence globale, valeur d'usine — et non le seul écart : l'écran ne doit pas
+/// rejouer cette résolution de son côté, sous peine de diverger un jour de la règle
+/// serveur. [estUnEcart] distingue une ligne posée pour cette soirée d'une valeur
+/// simplement héritée.
+class PreferenceDeSoiree {
+  const PreferenceDeSoiree({
+    required this.categorie,
+    required this.actif,
+    required this.estUnEcart,
+  });
+
+  factory PreferenceDeSoiree.depuisJson(Map<String, dynamic> json) =>
+      PreferenceDeSoiree(
+        categorie: json['category'] as String? ?? '',
+        actif: json['enabled'] as bool? ?? true,
+        estUnEcart: json['estUnEcart'] as bool? ?? false,
+      );
+
+  final String categorie;
+  final bool actif;
+  final bool estUnEcart;
+}

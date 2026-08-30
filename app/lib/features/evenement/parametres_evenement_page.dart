@@ -101,6 +101,8 @@ class _ParametresEvenementPageState
                 // cherche là où l'on gère la soirée qui parle trop.
                 _Sourdine(evenementId: widget.evenementId),
                 const SizedBox(height: PpSpacing.md),
+                _notifications(l10n),
+                const SizedBox(height: PpSpacing.md),
                 // Le transfert vient AVANT « quitter » : voir la note de classe.
                 if (role == RoleMembre.proprietaire) ...[
                   _transfert(l10n),
@@ -165,6 +167,24 @@ class _ParametresEvenementPageState
           enCours: _enCours,
           onPressed: _enCours ? null : _enregistrer,
         ),
+      ],
+    ),
+  );
+
+  Widget _notifications(PpL10n l10n) => PpCard(
+    onTap: () =>
+        context.push(PpRoutes.versNotificationsDeSoiree(widget.evenementId)),
+    child: Row(
+      children: [
+        const Icon(Icons.notifications_outlined, color: PpColors.violet),
+        const SizedBox(width: PpSpacing.md),
+        Expanded(
+          child: Text(
+            l10n.paramNotifTitre,
+            style: Theme.of(context).textTheme.titleMedium,
+          ),
+        ),
+        const Icon(Icons.chevron_right_rounded),
       ],
     ),
   );

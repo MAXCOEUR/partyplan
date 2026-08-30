@@ -732,6 +732,13 @@ et les écrans arrivent avec ce lot — voir
   - → les catégories sont nommées par ce qu'elles apportent, jamais par leur identifiant
 - [x] Recette locale sans clé FCM, le 26/08/2026 : soirée à 90 minutes du début,
       rappel produit et envoyé dans la minute, toujours un seul après une seconde passe
+- [x] **Notifications immédiates et réglage par soirée**, ajouté le 30/08/2026 : voir
+      `docs/superpowers/specs/2026-08-30-notifications-immediates-et-par-soiree-design.md`
+  - → déclencheurs de discussion, de sondage, de dépense et d'achat, réveillés à la
+    validation plutôt qu'attendus au tour d'horloge
+  - → réglage par soirée sur onze catégories, écran dédié affichant aussi l'état de
+    sourdine à côté des catégories
+  - → rappel de non-réponse ajouté à J-7, en plus de J-3 et J-1
 - [ ] `EF-NOT-09` Repli par courriel — `P1`, hors périmètre de ce lot
 - [ ] **Recette sur un appareil réel, avec une vraie clé FCM** — la chaîne est vérifiée
       avec l'émetteur en repli console (règle 5). Qu'une notification s'affiche sur un

@@ -69,4 +69,30 @@ class AvisApi {
     differable: true,
     analyser: (_) {},
   );
+
+  /// Réglages résolus des onze catégories, pour cette soirée (`EF-NOT-09`).
+  Future<List<PreferenceDeSoiree>> preferencesDeSoiree(String evenementId) =>
+      _client.get(
+        '/events/$evenementId/notifications/preferences',
+        analyser: (corps) => (corps! as List<dynamic>)
+            .map(
+              (e) => PreferenceDeSoiree.depuisJson(e as Map<String, dynamic>),
+            )
+            .toList(),
+      );
+
+  /// Pose un écart pour cette soirée, ou le retire si [actif] est nul.
+  ///
+  /// Différable : comme [definirPreference], c'est une valeur et non un incrément, et
+  /// le rejeu réécrit la même chose.
+  Future<void> definirPreferenceDeSoiree(
+    String evenementId,
+    String categorie,
+    bool? actif,
+  ) => _client.patch<void>(
+    '/events/$evenementId/notifications/preferences',
+    differable: true,
+    corps: {'category': categorie, 'enabled': actif},
+    analyser: (_) {},
+  );
 }

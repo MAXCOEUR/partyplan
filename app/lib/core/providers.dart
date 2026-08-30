@@ -386,6 +386,14 @@ final sourdineProvider = FutureProvider.family<bool, String>(
   (ref, evenementId) => ref.watch(avisApiProvider).sourdine(evenementId),
 );
 
+/// Réglages de notification d'une soirée, valeurs résolues par catégorie
+/// (`EF-NOT-09`).
+final preferencesDeSoireeProvider =
+    FutureProvider.family<List<PreferenceDeSoiree>, String>(
+      (ref, evenementId) =>
+          ref.watch(avisApiProvider).preferencesDeSoiree(evenementId),
+    );
+
 // ---------------------------------------------------------------- activité ----
 
 final activiteApiProvider = Provider<ActiviteApi>(

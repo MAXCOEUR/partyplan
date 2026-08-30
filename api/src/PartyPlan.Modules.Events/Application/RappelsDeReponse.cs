@@ -6,7 +6,7 @@ using PartyPlan.SharedKernel.Contracts;
 using PartyPlan.SharedKernel.Enums;
 
 /// <summary>
-/// Rappels de non-réponse à J-3 et J-1 (<c>EF-NOT-03</c>).
+/// Rappels de non-réponse à J-7, J-3 et J-1 (<c>EF-NOT-03</c>).
 /// <para>
 /// Adressés aux seuls membres restés au statut <c>Unknown</c> : relancer quelqu'un qui a
 /// déjà répondu est le meilleur moyen de lui faire couper les notifications.
@@ -17,12 +17,15 @@ public sealed class RappelsDeReponse(
     IFileNotifications notifications) : IPlanificateurRappels
 {
     /// <summary>
-    /// Les deux échéances de la règle. Un rappel n'est inscrit qu'une fois sa date
+    /// Les trois échéances de la règle. Un rappel n'est inscrit qu'une fois sa date
     /// atteinte : l'inscrire d'avance rendrait la file illisible et obligerait à la
     /// nettoyer quand quelqu'un répond entre-temps.
     /// </summary>
     private static readonly (int Jours, string Occurrence)[] Echeances =
     [
+        // J-7 ajouté le 30/08/2026 : à trois jours, une soirée à organiser est déjà
+        // tard pour qui doit poser un congé ou trouver un moyen de transport.
+        (7, "j-7"),
         (3, "j-3"),
         (1, "j-1"),
     ];
@@ -72,9 +75,12 @@ public sealed class RappelsDeReponse(
                 evenement.EventId,
                 NotificationCategories.InvitationPending,
                 "Tu n'as pas encore répondu",
-                echeance.Jours == 1
-                    ? "La soirée est demain. Dis si tu viens."
-                    : "La soirée est dans trois jours. Dis si tu viens.",
+                echeance.Jours switch
+                {
+                    1 => "La soirée est demain. Dis si tu viens.",
+                    3 => "La soirée est dans trois jours. Dis si tu viens.",
+                    _ => "La soirée est dans une semaine. Dis si tu viens.",
+                },
                 $"/events/{evenement.EventId}",
                 maintenant,
                 Cle(evenement.EventId, destinataire, echeance.Occurrence)));

@@ -51,6 +51,18 @@ class _AvisApiDouble implements AvisApi {
     String evenementId, {
     required bool enSourdine,
   }) async {}
+
+  @override
+  Future<List<PreferenceDeSoiree>> preferencesDeSoiree(
+    String evenementId,
+  ) async => const [];
+
+  @override
+  Future<void> definirPreferenceDeSoiree(
+    String evenementId,
+    String categorie,
+    bool? actif,
+  ) async {}
 }
 
 Avis _avis() => Avis(

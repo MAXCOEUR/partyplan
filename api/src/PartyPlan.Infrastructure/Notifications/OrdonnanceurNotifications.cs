@@ -25,8 +25,12 @@ public sealed class OrdonnanceurOptions
     /// </summary>
     public TimeSpan Cadence { get; set; } = TimeSpan.FromMinutes(1);
 
-    /// <summary>Jusqu'où regarder devant. Le rappel le plus lointain est J-3.</summary>
-    public TimeSpan Horizon { get; set; } = TimeSpan.FromDays(4);
+    /// <summary>
+    /// Jusqu'où regarder devant. Le rappel le plus lointain est désormais J-7 : un
+    /// horizon resté à quatre jours écarterait ces soirées de la liste avant même que
+    /// <c>RappelsDeReponse</c> ait la main.
+    /// </summary>
+    public TimeSpan Horizon { get; set; } = TimeSpan.FromDays(8);
 
     /// <summary>
     /// Jusqu'où regarder derrière. <c>EF-NOT-06</c> notifie le lendemain de la fin.

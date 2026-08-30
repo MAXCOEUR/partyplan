@@ -37,6 +37,22 @@ public sealed class PlanificateursDeRappelsTests(PartyPlanApiFixture fixture)
     }
 
     [Fact]
+    public async Task EF_NOT_03_a_J_7_un_sans_reponse_est_relance()
+    {
+        // Ajouté le 30/08/2026 : à trois jours, une soirée à organiser est déjà tard
+        // pour qui doit poser un congé ou trouver un moyen de transport.
+        var soiree = await SoireeAsync(debutDansJours: 7);
+
+        await PasserAsync(soiree.Maintenant);
+
+        var avis = await fixture.NotificationsAsync(
+            soiree.EventId, NotificationCategories.InvitationPending);
+
+        avis.ShouldContain(n => n.UserId == soiree.CompteCamille);
+        avis.ShouldAllBe(n => n.DedupKey.EndsWith("j-7", StringComparison.Ordinal));
+    }
+
+    [Fact]
     public async Task EF_NOT_03_la_veille_le_rappel_est_bien_celui_de_J_1()
     {
         // Le rappel de la veille est celui qui sert. Sans échéance distincte, la clé de

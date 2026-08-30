@@ -21,6 +21,7 @@ import '../features/evenement/creation_evenement_page.dart';
 import '../features/evenement/invitation_page.dart';
 import '../features/evenement/invites_page.dart';
 import '../features/evenement/parametres_evenement_page.dart';
+import '../features/evenement/parametres_notifications_page.dart';
 import '../features/profil/confidentialite_page.dart';
 import '../features/profil/connexions_page.dart';
 import '../features/profil/profil_edition_page.dart';
@@ -78,6 +79,7 @@ abstract final class PpRoutes {
   static const evenementInvites = '/events/:eventId/invites';
   static const evenementInvitation = '/events/:eventId/inviter';
   static const evenementParametres = '/events/:eventId/parametres';
+  static const evenementNotifications = '/events/:eventId/notifications';
   static const evenementReglements = '/events/:eventId/reglements';
   static const evenementEpingles = '/events/:eventId/epingle';
   static const evenementActivite = '/events/:eventId/activite';
@@ -95,6 +97,9 @@ abstract final class PpRoutes {
   static String versInvitation(String eventId) => '/events/$eventId/inviter';
 
   static String versParametres(String eventId) => '/events/$eventId/parametres';
+
+  static String versNotificationsDeSoiree(String eventId) =>
+      '/events/$eventId/notifications';
 
   static String versReglements(String eventId) => '/events/$eventId/reglements';
 
@@ -322,6 +327,12 @@ GoRouter creerRouteur(Ref ref) => GoRouter(
     GoRoute(
       path: PpRoutes.evenementParametres,
       builder: (context, state) => ParametresEvenementPage(
+        evenementId: state.pathParameters['eventId']!,
+      ),
+    ),
+    GoRoute(
+      path: PpRoutes.evenementNotifications,
+      builder: (context, state) => ParametresNotificationsPage(
         evenementId: state.pathParameters['eventId']!,
       ),
     ),
