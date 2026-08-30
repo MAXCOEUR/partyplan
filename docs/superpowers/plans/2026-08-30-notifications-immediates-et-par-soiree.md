@@ -963,10 +963,16 @@ Attendu : ÉCHEC, 404 sur une route inexistante.
 
 - [ ] **Étape 3 : implémenter les deux endpoints**
 
-Dans `NotificationEndpoints.cs`, sur le groupe des événements :
+Dans `NotificationEndpoints.cs`. Il n'existe **pas** de groupe des événements : le
+fichier déclare `routes.MapGroup("/notifications")` et, séparément,
+`routes.MapGroup("/events/{eventId:guid}/mute")`. Créer un troisième groupe sur le même
+modèle que celui de la sourdine :
 
 ```csharp
-        groupe.MapGet("/events/{eventId:guid}/notifications/preferences", async (
+        var parSoiree = routes.MapGroup("/events/{eventId:guid}/notifications")
+            .WithTags("Notifications");
+
+        parSoiree.MapGet("/preferences", async (
                 Guid eventId,
                 NotificationService service,
                 CancellationToken cancellationToken) =>
@@ -977,7 +983,7 @@ Dans `NotificationEndpoints.cs`, sur le groupe des événements :
             .WithSummary("Réglages de notification de cette soirée, valeurs résolues.")
             .RequireAuthorization();
 
-        groupe.MapPatch("/events/{eventId:guid}/notifications/preferences", async (
+        parSoiree.MapPatch("/preferences", async (
                 Guid eventId,
                 PreferenceDeSoireeBody corps,
                 NotificationService service,
@@ -1109,10 +1115,31 @@ Attendu : ÉCHEC, seuls J-3 et J-1 relancent.
 
 - [ ] **Étape 3 : ajouter l'échéance**
 
+`Echeances` est un tableau de tuples `(int Jours, string Occurrence)`, et non d'entiers :
+l'occurrence entre dans la clé de déduplication, sans quoi les trois rappels d'une même
+soirée se prendraient l'un pour l'autre.
+
 ```csharp
-    // J-7 ajouté le 30/08/2026 : à trois jours, une soirée à organiser est déjà tard
-    // pour qui doit poser un congé ou trouver un moyen de transport.
-    private static readonly int[] Echeances = [7, 3, 1];
+    private static readonly (int Jours, string Occurrence)[] Echeances =
+    [
+        // J-7 ajouté le 30/08/2026 : à trois jours, une soirée à organiser est déjà
+        // tard pour qui doit poser un congé ou trouver un moyen de transport.
+        (7, "j-7"),
+        (3, "j-3"),
+        (1, "j-1"),
+    ];
+```
+
+Le libellé est aujourd'hui un ternaire binaire sur `echeance.Jours == 1`, qu'une
+troisième échéance rend faux — J-7 y hériterait du texte de J-3. Le remplacer :
+
+```csharp
+                echeance.Jours switch
+                {
+                    1 => "La soirée est demain. Dis si tu viens.",
+                    3 => "La soirée est dans trois jours. Dis si tu viens.",
+                    _ => "La soirée est dans une semaine. Dis si tu viens.",
+                },
 ```
 
 - [ ] **Étape 4 : exécuter, vérifier le succès**
