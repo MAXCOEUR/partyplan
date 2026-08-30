@@ -77,6 +77,24 @@ public sealed class EventMuteSetting
     public DateTimeOffset MutedAt { get; set; }
 }
 
+/// <summary>
+/// Écart au réglage global, pour une soirée et une catégorie.
+/// <para>
+/// La table ne contient <b>que les écarts</b> : une soirée réglée comme d'habitude n'y
+/// a aucune ligne. Y écrire l'état résolu de chaque catégorie ferait d'un changement de
+/// préférence globale un changement sans effet sur les soirées déjà ouvertes.
+/// </para>
+/// </summary>
+public sealed class EventNotificationPreference
+{
+    public Guid Id { get; set; }
+    public Guid UserId { get; set; }
+    public Guid EventId { get; set; }
+    public string Category { get; set; } = string.Empty;
+    public bool Enabled { get; set; }
+    public DateTimeOffset UpdatedAt { get; set; }
+}
+
 /// <summary>Appareil enregistré pour les notifications poussées.</summary>
 public sealed class PushDevice
 {

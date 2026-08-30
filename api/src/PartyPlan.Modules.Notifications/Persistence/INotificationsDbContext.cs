@@ -11,6 +11,8 @@ public interface INotificationsDbContext
 
     DbSet<EventMuteSetting> EventMuteSettings { get; }
 
+    DbSet<EventNotificationPreference> EventNotificationPreferences { get; }
+
     DbSet<PushDevice> PushDevices { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);

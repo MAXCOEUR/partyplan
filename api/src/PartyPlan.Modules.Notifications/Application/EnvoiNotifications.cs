@@ -1,5 +1,6 @@
 namespace PartyPlan.Modules.Notifications.Application;
 
+using System.Diagnostics.CodeAnalysis;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using PartyPlan.Modules.Notifications.Domain;
@@ -61,11 +62,25 @@ public sealed class EnvoiNotifications(
             .ToListAsync(cancellationToken)
             .ConfigureAwait(false);
 
-        var sourdines = await db.EventMuteSettings
+        var globales = preferences.ToDictionary(
+            p => (p.UserId, p.Category),
+            p => p.PushEnabled);
+
+        var ecarts = await db.EventNotificationPreferences
+            .Where(p => destinataires.Contains(p.UserId))
+            .ToDictionaryAsync(
+                p => (p.UserId, p.EventId, p.Category),
+                p => p.Enabled,
+                cancellationToken)
+            .ConfigureAwait(false);
+
+        var sourdines = (await db.EventMuteSettings
             .Where(m => destinataires.Contains(m.UserId))
             .Select(m => new { m.UserId, m.EventId })
             .ToListAsync(cancellationToken)
-            .ConfigureAwait(false);
+            .ConfigureAwait(false))
+            .Select(m => (m.UserId, m.EventId))
+            .ToHashSet();
 
         var appareils = await db.PushDevices
             .Where(d => destinataires.Contains(d.UserId) && d.DisabledAt == null)
@@ -78,16 +93,7 @@ public sealed class EnvoiNotifications(
         {
             var destinataire = notification.UserId!.Value;
 
-            var desactivee = preferences.Any(p =>
-                p.UserId == destinataire
-                && p.Category == notification.Category
-                && !p.PushEnabled);
-
-            var enSourdine = notification.EventId is { } evenement
-                             && sourdines.Any(s => s.UserId == destinataire
-                                                   && s.EventId == evenement);
-
-            if (desactivee || enSourdine)
+            if (!EstAutorisee(notification, ecarts, globales, sourdines))
             {
                 // Horodatée sans partir : la personne a demandé le silence, et laisser la
                 // ligne en file la ferait réexaminer à chaque réveil pour rien.
@@ -173,5 +179,44 @@ public sealed class EnvoiNotifications(
         var heureLocale = TimeZoneInfo.ConvertTime(maintenant, zone).Hour;
 
         return heureLocale >= DebutDuSilence || heureLocale < FinDuSilence;
+    }
+
+    /// <summary>
+    /// La notification est-elle autorisée à partir ?
+    /// <para>
+    /// L'ordre est la règle : sourdine de la soirée, puis écart de la soirée pour cette
+    /// catégorie, puis préférence globale, puis valeur d'usine (autorisé). La sourdine
+    /// reste une notion distincte plutôt qu'une liste de « non » — une catégorie ajoutée
+    /// demain doit rester muette sur une soirée mise en sourdine, ce qu'une liste figée
+    /// laisserait passer.
+    /// </para>
+    /// </summary>
+    [SuppressMessage("Performance", "CA1859",
+        Justification = "La signature est le contrat public de la tâche (interfaces réduites " +
+            "à l'essentiel plutôt qu'aux types concrets utilisés par l'unique appelant actuel).")]
+    private static bool EstAutorisee(
+        Notification n,
+        IReadOnlyDictionary<(Guid UserId, Guid EventId, string Category), bool> ecarts,
+        IReadOnlyDictionary<(Guid UserId, string Category), bool> globales,
+        IReadOnlySet<(Guid UserId, Guid EventId)> sourdines)
+    {
+        var destinataire = n.UserId!.Value;
+
+        if (n.EventId is { } evenement && sourdines.Contains((destinataire, evenement)))
+        {
+            return false;
+        }
+
+        if (ecarts.TryGetValue((destinataire, n.EventId ?? Guid.Empty, n.Category), out var ecart))
+        {
+            return ecart;
+        }
+
+        if (globales.TryGetValue((destinataire, n.Category), out var globale))
+        {
+            return globale;
+        }
+
+        return true;
     }
 }

@@ -132,6 +132,9 @@ public sealed class PartyPlanDbContext(
 
     public DbSet<EventMuteSetting> EventMuteSettings => Set<EventMuteSetting>();
 
+    public DbSet<EventNotificationPreference> EventNotificationPreferences
+        => Set<EventNotificationPreference>();
+
     public DbSet<PushDevice> PushDevices => Set<PushDevice>();
 
     // --- Technique ---

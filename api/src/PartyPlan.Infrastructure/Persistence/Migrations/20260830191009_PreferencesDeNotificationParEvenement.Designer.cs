@@ -3,6 +3,7 @@ using System;
 using System.Net;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using PartyPlan.Infrastructure.Persistence;
@@ -12,9 +13,11 @@ using PartyPlan.Infrastructure.Persistence;
 namespace PartyPlan.Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(PartyPlanDbContext))]
-    partial class PartyPlanDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260830191009_PreferencesDeNotificationParEvenement")]
+    partial class PreferencesDeNotificationParEvenement
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder

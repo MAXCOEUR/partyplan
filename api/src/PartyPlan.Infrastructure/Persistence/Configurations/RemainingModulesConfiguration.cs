@@ -272,6 +272,17 @@ internal sealed class EventMuteSettingConfiguration : IEntityTypeConfiguration<E
     }
 }
 
+internal sealed class EventNotificationPreferenceConfiguration
+    : IEntityTypeConfiguration<EventNotificationPreference>
+{
+    public void Configure(EntityTypeBuilder<EventNotificationPreference> builder)
+    {
+        builder.HasKey(p => p.Id);
+        builder.Property(p => p.Category).HasMaxLength(64);
+        builder.HasIndex(p => new { p.UserId, p.EventId, p.Category }).IsUnique();
+    }
+}
+
 internal sealed class PushDeviceConfiguration : IEntityTypeConfiguration<PushDevice>
 {
     public void Configure(EntityTypeBuilder<PushDevice> builder)

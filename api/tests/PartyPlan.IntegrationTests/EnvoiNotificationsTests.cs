@@ -20,7 +20,7 @@ using Xunit;
 /// </para>
 /// </summary>
 [Collection(ApiTestSuite.Name)]
-public sealed class EnvoiNotificationsTests(PartyPlanApiFixture fixture)
+public sealed class EnvoiNotificationsTests(PartyPlanApiFixture fixture) : IAsyncLifetime
 {
     /// <summary>18 h à Paris : hors plage de silence. 4 h à Auckland : dedans.</summary>
     private static readonly DateTimeOffset SoireeAParis =
@@ -29,6 +29,20 @@ public sealed class EnvoiNotificationsTests(PartyPlanApiFixture fixture)
     /// <summary>23 h à Paris : dans la plage de silence.</summary>
     private static readonly DateTimeOffset NuitAParis =
         new(2026, 9, 12, 21, 0, 0, TimeSpan.Zero);
+
+    /// <summary>Compte et soirée partagés par les tests de résolution par soirée.</summary>
+    private Guid _utilisateur;
+
+    private Guid _evenement;
+
+    public async Task InitializeAsync()
+    {
+        var jeu = await JeuAsync();
+        _utilisateur = jeu.Compte;
+        _evenement = jeu.EventId;
+    }
+
+    public Task DisposeAsync() => Task.CompletedTask;
 
     [Fact]
     public async Task Une_notification_due_part_et_est_horodatee()
@@ -154,6 +168,98 @@ public sealed class EnvoiNotificationsTests(PartyPlanApiFixture fixture)
         await EnvoyerAsync(SoireeAParis);
 
         (await LireAsync(jeu.EventId)).ShouldHaveSingleItem().SentAt.ShouldBeNull();
+    }
+
+    [Fact]
+    public async Task Un_ecart_de_soiree_l_emporte_sur_la_preference_globale()
+    {
+        // Globalement coupée, autorisée sur cette soirée : la notification part.
+        await PoserPreferenceGlobaleAsync(_utilisateur, NotificationCategories.DiscussionMessage, actif: false);
+        await PoserEcartDeSoireeAsync(_utilisateur, _evenement, NotificationCategories.DiscussionMessage, actif: true);
+
+        var partis = await EnvoyerAsync(NotificationCategories.DiscussionMessage);
+
+        partis.ShouldBe(1);
+    }
+
+    [Fact]
+    public async Task La_sourdine_l_emporte_sur_un_ecart_qui_autorise()
+    {
+        await PoserEcartDeSoireeAsync(_utilisateur, _evenement, NotificationCategories.DiscussionMessage, actif: true);
+        await MettreEnSourdineAsync(_utilisateur, _evenement);
+
+        var partis = await EnvoyerAsync(NotificationCategories.DiscussionMessage);
+
+        partis.ShouldBe(0);
+    }
+
+    [Fact]
+    public async Task Sans_ecart_la_preference_globale_s_applique()
+    {
+        await PoserPreferenceGlobaleAsync(_utilisateur, NotificationCategories.DiscussionMessage, actif: false);
+
+        var partis = await EnvoyerAsync(NotificationCategories.DiscussionMessage);
+
+        partis.ShouldBe(0);
+    }
+
+    [Fact]
+    public async Task Sans_rien_de_pose_la_notification_part()
+    {
+        var partis = await EnvoyerAsync(NotificationCategories.DiscussionMessage);
+
+        partis.ShouldBe(1);
+    }
+
+    private async Task PoserEcartDeSoireeAsync(
+        Guid utilisateur,
+        Guid evenement,
+        string categorie,
+        bool actif)
+    {
+        await fixture.WithDatabaseAsync(async db =>
+        {
+            db.EventNotificationPreferences.Add(new EventNotificationPreference
+            {
+                Id = Guid.CreateVersion7(),
+                UserId = utilisateur,
+                EventId = evenement,
+                Category = categorie,
+                Enabled = actif,
+                UpdatedAt = DateTimeOffset.UtcNow,
+            });
+
+            await db.SaveChangesAsync();
+        });
+    }
+
+    private async Task PoserPreferenceGlobaleAsync(Guid utilisateur, string categorie, bool actif)
+    {
+        await fixture.WithDatabaseAsync(async db =>
+        {
+            db.NotificationPreferences.Add(new NotificationPreference
+            {
+                Id = Guid.CreateVersion7(),
+                UserId = utilisateur,
+                Category = categorie,
+                PushEnabled = actif,
+                EmailEnabled = actif,
+                UpdatedAt = DateTimeOffset.UtcNow,
+            });
+
+            await db.SaveChangesAsync();
+        });
+    }
+
+    /// <summary>
+    /// Enfile une notification pour la soirée partagée du test, puis déclenche la passe
+    /// d'envoi. Renvoie le nombre de notifications réellement parties.
+    /// </summary>
+    private async Task<int> EnvoyerAsync(string categorie)
+    {
+        await EnfilerAsync(new Jeu(_utilisateur, _evenement), categorie);
+
+        return await EnvoyerAsync(SoireeAParis);
     }
 
     private async Task<int> EnvoyerAsync(DateTimeOffset instant)
