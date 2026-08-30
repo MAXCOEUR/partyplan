@@ -30,11 +30,15 @@ public sealed record PreferenceView(string Category, bool PushEnabled, bool Emai
 /// <summary>
 /// Réglage résolu d'une catégorie pour une soirée donnée.
 /// <para>
-/// <c>Enabled</c> porte la valeur déjà résolue par les quatre étapes de
-/// <see cref="EnvoiNotifications"/> — sourdine, écart de soirée, préférence globale,
-/// valeur d'usine — et non le seul écart : l'écran ne doit pas rejouer cette résolution
-/// de son côté, sous peine de diverger un jour de la règle serveur. <c>EstUnEcart</c>
-/// distingue une ligne posée pour cette soirée d'une valeur simplement héritée.
+/// <c>Enabled</c> porte la valeur déjà résolue par <see cref="ResolutionPreference"/> —
+/// écart de soirée, puis préférence globale, puis valeur d'usine — et non le seul écart :
+/// l'écran ne doit pas rejouer cette résolution de son côté, sous peine de diverger un
+/// jour de la règle serveur. <c>EstUnEcart</c> distingue une ligne posée pour cette
+/// soirée d'une valeur simplement héritée.
+/// </para>
+/// <para>
+/// La sourdine n'entre pas dans <c>Enabled</c> : voir
+/// <see cref="NotificationService.PreferencesDeSoireeAsync"/>.
 /// </para>
 /// </summary>
 public sealed record PreferenceDeSoireeView(string Category, bool Enabled, bool EstUnEcart);
@@ -266,6 +270,19 @@ public sealed class NotificationService(
         return Result.Success();
     }
 
+    /// <summary>
+    /// Réglages résolus, catégorie par catégorie, pour cette soirée.
+    /// <para>
+    /// <b>Décision</b> : la sourdine de la soirée reste hors de cette résolution — elle
+    /// n'est pas repliée dans les onze catégories, qui restent « activées » même sur une
+    /// soirée en sourdine. La replier ferait afficher onze « non » sur une soirée
+    /// muette, et la remise en son ressemblerait à un changement de onze préférences
+    /// alors que la personne n'en a touché aucune. La sourdine est un interrupteur
+    /// général, déjà exposé séparément par <c>GET /events/{eventId}/mute</c> : c'est à
+    /// l'écran d'afficher cet état à côté des catégories, pas à cet endpoint de le
+    /// simuler dans chacune d'elles.
+    /// </para>
+    /// </summary>
     public async Task<Result<IReadOnlyList<PreferenceDeSoireeView>>> PreferencesDeSoireeAsync(
         Guid eventId,
         CancellationToken cancellationToken)
@@ -290,18 +307,16 @@ public sealed class NotificationService(
             .ToDictionaryAsync(p => p.Category, p => p.PushEnabled, cancellationToken)
             .ConfigureAwait(false);
 
-        // Même ordre de résolution qu'à l'envoi (hors sourdine, hors du périmètre d'une
-        // catégorie) : écart de la soirée, puis préférence globale, puis valeur d'usine.
         return NotificationCategories.All
             .Select(categorie =>
             {
-                if (ecarts.TryGetValue(categorie, out var ecart))
-                {
-                    return new PreferenceDeSoireeView(categorie, ecart, EstUnEcart: true);
-                }
+                var ecart = ecarts.TryGetValue(categorie, out var e) ? (bool?)e : null;
+                var globale = globales.TryGetValue(categorie, out var g) ? (bool?)g : null;
 
-                var resolue = globales.TryGetValue(categorie, out var globale) ? globale : true;
-                return new PreferenceDeSoireeView(categorie, resolue, EstUnEcart: false);
+                return new PreferenceDeSoireeView(
+                    categorie,
+                    ResolutionPreference.EstActivee(ecart, globale),
+                    EstUnEcart: ecart is not null);
             })
             .ToList();
     }
@@ -317,14 +332,17 @@ public sealed class NotificationService(
             return NonAuthentifie;
         }
 
-        if (!NotificationCategories.All.Contains(categorie))
-        {
-            return CategorieInconnue;
-        }
-
+        // Appartenance avant validation de la catégorie, comme à la lecture : sans
+        // conséquence de sécurité ici, mais les deux méthodes de ce fichier vérifient
+        // le périmètre événement dans le même ordre.
         if (await membership.FindCurrentAsync(eventId, cancellationToken).ConfigureAwait(false) is null)
         {
             return EvenementIntrouvable;
+        }
+
+        if (!NotificationCategories.All.Contains(categorie))
+        {
+            return CategorieInconnue;
         }
 
         var ligne = await db.EventNotificationPreferences

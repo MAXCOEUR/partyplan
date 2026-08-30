@@ -121,11 +121,11 @@ public sealed class EnvoiNotifications(
     /// <summary>
     /// La notification est-elle autorisée à partir ?
     /// <para>
-    /// L'ordre est la règle : sourdine de la soirée, puis écart de la soirée pour cette
-    /// catégorie, puis préférence globale, puis valeur d'usine (autorisé). La sourdine
-    /// reste une notion distincte plutôt qu'une liste de « non » — une catégorie ajoutée
-    /// demain doit rester muette sur une soirée mise en sourdine, ce qu'une liste figée
-    /// laisserait passer.
+    /// L'ordre est la règle : sourdine de la soirée, puis <see cref="ResolutionPreference"/>
+    /// (écart de la soirée pour cette catégorie, puis préférence globale, puis valeur
+    /// d'usine). La sourdine reste une notion distincte plutôt qu'une liste de « non » —
+    /// une catégorie ajoutée demain doit rester muette sur une soirée mise en sourdine, ce
+    /// qu'une liste figée laisserait passer.
     /// </para>
     /// </summary>
     private static bool EstAutorisee(
@@ -141,16 +141,12 @@ public sealed class EnvoiNotifications(
             return false;
         }
 
-        if (ecarts.TryGetValue((destinataire, n.EventId ?? Guid.Empty, n.Category), out var ecart))
-        {
-            return ecart;
-        }
+        var ecart = ecarts.TryGetValue((destinataire, n.EventId ?? Guid.Empty, n.Category), out var e)
+            ? (bool?)e
+            : null;
 
-        if (globales.TryGetValue((destinataire, n.Category), out var globale))
-        {
-            return globale;
-        }
+        var globale = globales.TryGetValue((destinataire, n.Category), out var g) ? (bool?)g : null;
 
-        return true;
+        return ResolutionPreference.EstActivee(ecart, globale);
     }
 }
