@@ -51,6 +51,7 @@ public sealed class OrdonnanceurNotifications(
     IServiceScopeFactory portees,
     IClock clock,
     IOptions<OrdonnanceurOptions> options,
+    ReveilNotifications reveil,
     ILogger<OrdonnanceurNotifications> logger) : BackgroundService
 {
     private readonly OrdonnanceurOptions _options = options.Value;
@@ -70,24 +71,37 @@ public sealed class OrdonnanceurNotifications(
 
         while (!stoppingToken.IsCancellationRequested)
         {
+            bool reveille;
+
             try
             {
-                await PasseAsync(clock.UtcNow, stoppingToken).ConfigureAwait(false);
+                // Réveillé : on n'envoie que. Non réveillé au bout de la cadence : passe
+                // complète, planification comprise.
+                reveille = await reveil
+                    .AttendreAsync(_options.Cadence, stoppingToken)
+                    .ConfigureAwait(false);
+            }
+            catch (OperationCanceledException)
+            {
+                return;
+            }
+
+            try
+            {
+                if (reveille)
+                {
+                    await PasseDEnvoiAsync(clock.UtcNow, stoppingToken).ConfigureAwait(false);
+                }
+                else
+                {
+                    await PasseAsync(clock.UtcNow, stoppingToken).ConfigureAwait(false);
+                }
             }
             catch (Exception erreur) when (erreur is not OperationCanceledException)
             {
                 // Une passe qui échoue ne doit pas arrêter la boucle : le calcul est
                 // idempotent, la suivante reprendra là où celle-ci s'est interrompue.
                 logger.LogError(erreur, "Passe de l'ordonnanceur interrompue.");
-            }
-
-            try
-            {
-                await Task.Delay(_options.Cadence, stoppingToken).ConfigureAwait(false);
-            }
-            catch (OperationCanceledException)
-            {
-                return;
             }
         }
     }
@@ -152,7 +166,20 @@ public sealed class OrdonnanceurNotifications(
         // L'envoi vient après la planification, et dans la même passe : un rappel calculé
         // à l'instant est dû à l'instant, et attendre le réveil suivant lui ferait perdre
         // une minute pour rien.
-        await fournisseur.GetRequiredService<IEnvoiNotifications>()
+        await PasseDEnvoiAsync(maintenant, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// La passe d'envoi seule, sans planification. C'est celle que
+    /// <see cref="SharedKernel.Contracts.IReveilNotifications"/> réveille : un service
+    /// métier qui vient d'inscrire une notification n'a pas à recalculer les rappels de
+    /// toutes les soirées pour la faire partir.
+    /// </summary>
+    public async Task PasseDEnvoiAsync(DateTimeOffset maintenant, CancellationToken cancellationToken)
+    {
+        using var portee = portees.CreateScope();
+
+        await portee.ServiceProvider.GetRequiredService<IEnvoiNotifications>()
             .EnvoyerLesDuesAsync(maintenant, cancellationToken)
             .ConfigureAwait(false);
     }

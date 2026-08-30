@@ -172,6 +172,16 @@ public static class DependencyInjection
         services.AddHostedService(sp =>
             sp.GetRequiredService<Notifications.OrdonnanceurNotifications>());
 
+        // Réveil de l'envoi. Singleton, et c'est la seule portée qui marche : le service
+        // métier qui réveille vit dans la portée d'une requête HTTP, l'ordonnanceur qui
+        // attend vit pour la durée du processus. En portée de requête, chacun tiendrait
+        // son propre sémaphore et le signal n'arriverait jamais — sans erreur, sans
+        // journal, avec pour seul symptôme des notifications qui repassent à la cadence
+        // d'une minute.
+        services.AddSingleton<Notifications.ReveilNotifications>();
+        services.AddSingleton<PartyPlan.SharedKernel.Contracts.IReveilNotifications>(f =>
+            f.GetRequiredService<Notifications.ReveilNotifications>());
+
         services.AddHealthChecks()
             .AddDbContextCheck<PartyPlanDbContext>("database", tags: ["ready"]);
 
