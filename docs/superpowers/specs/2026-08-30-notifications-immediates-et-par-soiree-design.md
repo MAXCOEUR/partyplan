@@ -128,11 +128,18 @@ catégories pour deux gestes de la même liste se régleraient toujours ensemble
 
 ## 5. Trois règles du cahier des charges changent
 
-**`RG-NOT-01` — le silence 22 h – 8 h ne vaut plus que pour le chemin planifié.** Une
-notification immédiate part quelle que soit l'heure. Motif : la soirée est justement ce
-qui se passe le soir, et une conversation à 23 h est le cas d'usage, pas le dérangement.
-Le silence garde tout son sens pour un rappel calculé, que personne n'a demandé à cet
-instant.
+**`RG-NOT-01` — la plage de silence est retirée, pas restreinte.** *Décidé le
+30/08/2026, en cours de lot ; la première version de ce document la restreignait au
+chemin planifié.*
+
+Le serveur n'applique plus aucune plage horaire. Deux motifs. Le premier : tout téléphone
+offre un mode « ne pas déranger », mieux fait, déjà réglé par la personne, et qui vaut
+pour toutes ses applications — le dupliquer côté serveur, c'est décider à sa place.
+Le second : la règle retardait à 8 h du matin des notifications de soirée qui ne servent
+plus à rien à cette heure-là.
+
+Le drapeau « immédiat » des catégories survit : il ne sert plus à contourner un silence,
+mais à décider si l'envoi est réveillé après validation ou attend le tour d'horloge.
 
 **`RG-NOT-02` — le regroupement par quart d'heure disparaît**, remplacé par une clé de
 groupe par soirée sur l'appareil. Android empile les notifications d'une même clé sous un

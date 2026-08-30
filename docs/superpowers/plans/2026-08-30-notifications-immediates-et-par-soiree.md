@@ -877,20 +877,27 @@ git commit -m "feat(shopping): un achat prévient, et le plafond au quart d'heur
 
 ---
 
-### Tâche 8 : le silence nocturne restreint au planifié
+### Tâche 8 : supprimer la plage de silence
 
 **Fichiers :**
-- Modifier : `api/src/PartyPlan.Modules.Notifications/Application/EnvoiNotifications.cs:136-176`
+- Modifier : `api/src/PartyPlan.Modules.Notifications/Application/EnvoiNotifications.cs`
+- Modifier : `docs/cahier-des-charges.md`
 - Test : `api/tests/PartyPlan.IntegrationTests/EnvoiNotificationsTests.cs`
 
 **Interfaces :**
-- Consomme : `NotificationCategories.EstImmediate` (tâche 1).
+- Retire : `EnvoiNotifications.EnHeureCreuse`, les constantes `DebutDuSilence` et
+  `FinDuSilence`, et le report qui en découlait.
+
+**Pourquoi.** `RG-NOT-01` réimplémentait, moins bien, une fonction que tout téléphone
+possède : qui ne veut pas être dérangé active « ne pas déranger ». Pire, la règle
+retardait à 8 h du matin des notifications de soirée qui ne servent plus à rien à cette
+heure-là. Le système d'exploitation décide, l'application n'a pas à en juger.
 
 - [ ] **Étape 1 : écrire les tests rouges**
 
 ```csharp
 [Fact]
-public async Task Une_notification_immediate_part_a_23h()
+public async Task Une_notification_part_a_23h()
 {
     var partis = await EnvoyerAsync(NotificationCategories.DiscussionMessage, heureLocale: 23);
 
@@ -898,43 +905,53 @@ public async Task Une_notification_immediate_part_a_23h()
 }
 
 [Fact]
-public async Task Un_rappel_planifie_a_23h_est_reporte()
+public async Task Un_rappel_part_aussi_a_23h()
 {
+    // Plus aucune catégorie n'est reportée : le téléphone tranche, pas le serveur.
     var partis = await EnvoyerAsync(NotificationCategories.InvitationPending, heureLocale: 23);
 
-    partis.ShouldBe(0);
+    partis.ShouldBe(1);
 }
 ```
+
+Et **supprimer** les tests existants qui affirment le report nocturne — ils figent une
+règle qui n'existe plus. Les repérer par `SentAt.ShouldBeNull()` associé à une heure
+locale nocturne.
 
 - [ ] **Étape 2 : exécuter, vérifier l'échec**
 
 `cd api && dotnet test tests/PartyPlan.IntegrationTests --filter EnvoiNotificationsTests`
-Attendu : ÉCHEC, l'immédiat est reporté comme le reste.
+Attendu : ÉCHEC, `Un_rappel_part_aussi_a_23h` obtient 0.
 
-- [ ] **Étape 3 : implémenter**
+- [ ] **Étape 3 : retirer le silence**
 
-Remplacer le test de la ligne 149 :
-
-```csharp
-        // Le silence ne vaut que pour ce que personne n'a demandé à cet instant
-        // (RG-NOT-01, amendée le 30/08/2026). Un geste humain part quelle que soit
-        // l'heure : la soirée est ce qui se passe le soir.
-        if (NotificationCategories.EstImmediate(notification.Category)
-            || notification.Category == NotificationCategories.EventStartingSoon)
-        {
-            return false;
-        }
-```
+Supprimer la méthode `EnHeureCreuse`, son appel, les constantes `DebutDuSilence` et
+`FinDuSilence`, et la branche qui laissait la notification sans horodatage pour la
+reporter. Le fuseau du destinataire n'est plus lu pour cette raison — vérifier s'il sert
+encore ailleurs avant de retirer la lecture des profils.
 
 - [ ] **Étape 4 : exécuter, vérifier le succès**
 
 `cd api && dotnet test tests/PartyPlan.IntegrationTests --filter EnvoiNotificationsTests` → SUCCÈS.
 
-- [ ] **Étape 5 : commit**
+- [ ] **Étape 5 : amender le cahier des charges**
+
+Dans `docs/cahier-des-charges.md`, remplacer `RG-NOT-01` par :
+
+```markdown
+**RG-NOT-01** — *Retirée le 30/08/2026.* Aucune plage de silence n'est appliquée par le
+serveur. Les systèmes mobiles offrent tous un mode « ne pas déranger », mieux fait et
+déjà réglé par la personne ; le dupliquer côté serveur retardait en outre les
+notifications d'une soirée jusqu'au lendemain matin, quand elles ne servaient plus.
+```
+
+Retirer aussi la mention de l'exception du rappel de début, devenue sans objet.
+
+- [ ] **Étape 6 : commit**
 
 ```bash
-git add api/src api/tests
-git commit -m "feat(notifications): le silence nocturne ne vaut plus que pour les rappels"
+git add api docs
+git commit -m "feat(notifications)!: retirer la plage de silence, le téléphone la fait mieux"
 ```
 
 ---
