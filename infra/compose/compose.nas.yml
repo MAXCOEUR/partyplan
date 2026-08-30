@@ -22,14 +22,19 @@
 #  Docker : sur un NAS, on veut pouvoir les parcourir, les sauvegarder avec les
 #  outils de la machine, et les copier ailleurs sans passer par Docker.
 #
-#      mkdir -p donnees/db donnees/media donnees/sauvegardes
-#      chown -R 1654:1654 donnees/media
 #      docker compose pull && docker compose up -d
 #
-#  Le `chown` n'est pas optionnel. L'API tourne sans privilèges, sous
-#  l'utilisateur `app` d'identifiant 1654, et Docker ne change jamais les droits
-#  d'un dossier monté depuis l'hôte. Sans lui, l'API démarre normalement et
-#  l'envoi d'une photo de profil échoue — un défaut qui n'apparaît qu'à l'usage.
+#  Rien d'autre à préparer : le service `media-init` crée `donnees/media` et
+#  l'attribue à l'identifiant du conteneur avant que l'API démarre.
+#
+#  Pourquoi un dossier monté plutôt qu'un volume Docker, alors qu'un volume
+#  vide hériterait des droits de l'image toute seule : sur un NAS, les photos
+#  doivent pouvoir être parcourues, sauvegardées par les outils de la machine et
+#  recopiées ailleurs sans passer par Docker. Un volume les enfermerait dans
+#  `/var/lib/docker/volumes`. Le prix est le réglage des droits — Docker ne
+#  touche jamais à ceux d'un dossier de l'hôte — et `media-init` le paie une
+#  fois pour toutes. Y compris après une restauration de sauvegarde, qui les
+#  remet à root et referait échouer l'envoi de photos sans rien dire.
 #
 #  Une nuance sur `donnees/db` : PostgreSQL ajuste ce dossier tout seul au
 #  premier démarrage, mais il exige des droits 0700 et se l'attribue. Le dossier
@@ -159,6 +164,30 @@ services:
       retries: 5
       start_period: 30s
 
+  # ------------------------------------------------- préparation du média ----
+  # Aligne le dossier de l'hôte sur l'identité du conteneur d'API, qui tourne
+  # sans privilèges sous l'utilisateur `app` — identifiant 1654 dans les images
+  # .NET. Docker ne change jamais les droits d'un dossier monté depuis l'hôte :
+  # sans ce service, l'API démarre, `/health/ready` répond vert, et seul le
+  # premier envoi de photo échoue en 500. Un défaut qui n'apparaît qu'à l'usage,
+  # longtemps après le déploiement.
+  #
+  # `a+rX` en plus du propriétaire : le service `cdn` sert ce même dossier en
+  # lecture seule sous l'utilisateur `nginx`, et doit donc pouvoir traverser les
+  # dossiers et lire les fichiers. Le `X` majuscule ne pose le bit d'exécution
+  # que sur les dossiers. Aucune exposition supplémentaire : ces fichiers sont
+  # déjà servis publiquement par le CDN, leur adresse valant autorisation.
+  #
+  # Le conteneur vit une seconde puis s'arrête ; `service_completed_successfully`
+  # retient l'API jusque-là.
+  media-init:
+    image: alpine:3.20
+    logging: *logging
+    command: ["sh", "-c", "mkdir -p /media && chown -R 1654:1654 /media && chmod -R a+rX /media"]
+    volumes:
+      - ${DATA_PATH:-./donnees}/media:/media
+    restart: "no"
+
   # ----------------------------------------------------------------- api ----
   api:
     image: ghcr.io/${GHCR_OWNER:-maxcoeur}/partyplan-api:${API_TAG:-latest}
@@ -167,6 +196,8 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      media-init:
+        condition: service_completed_successfully
     ports:
       - "${API_PORT:-1001}:8080"
     environment:
@@ -292,6 +323,12 @@ services:
     image: nginx:1.27-alpine
     restart: unless-stopped
     logging: *logging
+    # Attend la même préparation que l'API : démarrer avant elle ferait créer le
+    # dossier par Docker, en root, et `media-init` corrigerait ensuite des droits
+    # que nginx aurait déjà lus.
+    depends_on:
+      media-init:
+        condition: service_completed_successfully
     ports:
       - "${CDN_PORT:-1002}:80"
     volumes:
