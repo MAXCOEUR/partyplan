@@ -82,7 +82,9 @@ public sealed class ExpenseService(
     IClock clock,
     IIdGenerator ids,
     IDiffusionEvenement diffusion,
-    IJournalActivite journal)
+    IJournalActivite journal,
+    IFileNotifications notifications,
+    IReveilNotifications reveil)
     : IExpenseLedger, IExpenseFromPurchase
 {
     public static readonly DomainError NotFound = DomainError.NotFound(
@@ -310,7 +312,37 @@ public sealed class ExpenseService(
             ActivityKinds.ExpenseCreated,
             new { libelle = depense.Label, montant = depense.Amount });
 
+        // Seuls les porteurs d'une part sont notifiés : être averti d'une dépense dont
+        // on ne porte aucune part est du bruit, et le bruit fait couper la catégorie
+        // entière. Jamais le payeur, jamais un membre sans compte.
+        var payeurDisplayName = membres.First(m => m.MemberId == payeur).DisplayName;
+        var montant = depense.Amount.ToString("0.00", CultureInfo.GetCultureInfo("fr-FR"));
+
+        foreach (var part in depense.Participants)
+        {
+            var membre = membres.FirstOrDefault(m => m.MemberId == part.MemberId);
+
+            if (membre is null || membre.MemberId == payeur || membre.UserId is not { } compte)
+            {
+                continue;
+            }
+
+            notifications.Enfiler(new NotificationAEnvoyer(
+                compte,
+                eventId,
+                NotificationCategories.ExpenseNew,
+                "Nouvelle dépense",
+                $"{payeurDisplayName} a ajouté {depense.Label} pour {montant} €.",
+                $"/events/{eventId}",
+                clock.UtcNow,
+                $"{eventId}:{NotificationCategories.ExpenseNew}:{compte}:{depense.Id}"));
+        }
+
         await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+
+        // Après validation, jamais avant : une transaction en échec ne doit réveiller
+        // personne pour une dépense qui n'existera pas.
+        reveil.Reveiller();
 
         await journal.PublierEnAttenteAsync(cancellationToken).ConfigureAwait(false);
 
