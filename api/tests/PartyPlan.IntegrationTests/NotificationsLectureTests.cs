@@ -175,6 +175,80 @@ public sealed class NotificationsLectureTests(PartyPlanApiFixture fixture)
         (await client.GetFromJsonAsync<bool>($"/v1/events/{eventId}/mute")).ShouldBeFalse();
     }
 
+    [Fact]
+    public async Task La_lecture_rend_la_valeur_resolue_et_dit_si_c_est_un_ecart()
+    {
+        // L'écran ne doit pas refaire la résolution : deux implémentations d'une même
+        // règle finissent toujours par diverger.
+        var (client, _, eventId) = await CompteAvecEvenementAsync();
+
+        (await client.PatchAsJsonAsync(
+            "/v1/notifications/preferences",
+            new
+            {
+                category = NotificationCategories.DiscussionMessage,
+                pushEnabled = false,
+                emailEnabled = false,
+            })).EnsureSuccessStatusCode();
+
+        var vues = await LirePreferencesDeSoireeAsync(client, eventId);
+
+        var vue = vues.Single(v => v.Category == NotificationCategories.DiscussionMessage);
+        vue.Enabled.ShouldBeFalse();
+        vue.EstUnEcart.ShouldBeFalse();
+    }
+
+    [Fact]
+    public async Task Une_valeur_nulle_retire_l_ecart()
+    {
+        var (client, _, eventId) = await CompteAvecEvenementAsync();
+
+        (await EcrirePreferenceDeSoireeAsync(
+            client, eventId, NotificationCategories.DiscussionMessage, actif: true))
+            .EnsureSuccessStatusCode();
+
+        (await EcrirePreferenceDeSoireeAsync(
+            client, eventId, NotificationCategories.DiscussionMessage, actif: null))
+            .EnsureSuccessStatusCode();
+
+        var vues = await LirePreferencesDeSoireeAsync(client, eventId);
+
+        vues.Single(v => v.Category == NotificationCategories.DiscussionMessage)
+            .EstUnEcart.ShouldBeFalse();
+    }
+
+    [Fact]
+    public async Task Un_non_membre_recoit_404()
+    {
+        var (_, _, eventId) = await CompteAvecEvenementAsync();
+        var etranger = await fixture.CompteAsync("Etranger");
+
+        (await etranger.GetAsync(
+            new Uri($"/v1/events/{eventId}/notifications/preferences", UriKind.Relative)))
+            .StatusCode.ShouldBe(HttpStatusCode.NotFound);
+    }
+
+    private static Task<HttpResponseMessage> EcrirePreferenceDeSoireeAsync(
+        HttpClient client,
+        Guid eventId,
+        string categorie,
+        bool? actif) =>
+        client.PatchAsJsonAsync(
+            $"/v1/events/{eventId}/notifications/preferences",
+            new { category = categorie, enabled = actif });
+
+    private static async Task<List<PreferenceDeSoireeLue>> LirePreferencesDeSoireeAsync(
+        HttpClient client,
+        Guid eventId)
+    {
+        var reponse = await client.GetAsync(
+            new Uri($"/v1/events/{eventId}/notifications/preferences", UriKind.Relative));
+        reponse.EnsureSuccessStatusCode();
+
+        return (await reponse.Content.ReadFromJsonAsync<List<PreferenceDeSoireeLue>>(
+            new JsonSerializerOptions(JsonSerializerDefaults.Web)))!;
+    }
+
     private static async Task<PageLue> LireAsync(HttpClient client)
     {
         var reponse = await client.GetAsync(new Uri("/v1/notifications", UriKind.Relative));
@@ -228,4 +302,6 @@ public sealed class NotificationsLectureTests(PartyPlanApiFixture fixture)
         int UnreadCount);
 
     private sealed record PreferenceLue(string Category, bool PushEnabled, bool EmailEnabled);
+
+    private sealed record PreferenceDeSoireeLue(string Category, bool Enabled, bool EstUnEcart);
 }

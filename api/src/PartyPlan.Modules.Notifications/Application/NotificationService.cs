@@ -28,6 +28,18 @@ public sealed record NotificationPage(
 public sealed record PreferenceView(string Category, bool PushEnabled, bool EmailEnabled);
 
 /// <summary>
+/// Réglage résolu d'une catégorie pour une soirée donnée.
+/// <para>
+/// <c>Enabled</c> porte la valeur déjà résolue par les quatre étapes de
+/// <see cref="EnvoiNotifications"/> — sourdine, écart de soirée, préférence globale,
+/// valeur d'usine — et non le seul écart : l'écran ne doit pas rejouer cette résolution
+/// de son côté, sous peine de diverger un jour de la règle serveur. <c>EstUnEcart</c>
+/// distingue une ligne posée pour cette soirée d'une valeur simplement héritée.
+/// </para>
+/// </summary>
+public sealed record PreferenceDeSoireeView(string Category, bool Enabled, bool EstUnEcart);
+
+/// <summary>
 /// Notifications reçues et préférences (§5.12).
 /// <para>
 /// Chacun ne lit que les siennes. Aucun rôle plateforme n'y donne accès : un
@@ -39,7 +51,8 @@ public sealed class NotificationService(
     INotificationsDbContext db,
     ICurrentUser appelant,
     IClock clock,
-    IIdGenerator ids)
+    IIdGenerator ids,
+    IEventMembership membership)
 {
     public const int LimiteParDefaut = 30;
 
@@ -60,6 +73,12 @@ public sealed class NotificationService(
     public static readonly DomainError Introuvable = DomainError.NotFound(
         "notifications.not_found",
         "Cette notification est introuvable.");
+
+    // 404 et non 403 sur une soirée dont on n'est pas membre : confirmer son existence
+    // renseignerait sur ce qui s'y passe (RG-SEC-01, cloisonnement).
+    public static readonly DomainError EvenementIntrouvable = DomainError.NotFound(
+        "notifications.event_not_found",
+        "Cet événement est introuvable.");
 
     public async Task<Result<NotificationPage>> ListerAsync(
         Guid? avant,
@@ -239,6 +258,106 @@ public sealed class NotificationService(
         {
             ligne.PushEnabled = pousseeActivee;
             ligne.EmailEnabled = courrielActive;
+            ligne.UpdatedAt = clock.UtcNow;
+        }
+
+        await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+
+        return Result.Success();
+    }
+
+    public async Task<Result<IReadOnlyList<PreferenceDeSoireeView>>> PreferencesDeSoireeAsync(
+        Guid eventId,
+        CancellationToken cancellationToken)
+    {
+        if (appelant.UserId is not { } moi)
+        {
+            return NonAuthentifie;
+        }
+
+        if (await membership.FindCurrentAsync(eventId, cancellationToken).ConfigureAwait(false) is null)
+        {
+            return EvenementIntrouvable;
+        }
+
+        var ecarts = await db.EventNotificationPreferences
+            .Where(p => p.UserId == moi && p.EventId == eventId)
+            .ToDictionaryAsync(p => p.Category, p => p.Enabled, cancellationToken)
+            .ConfigureAwait(false);
+
+        var globales = await db.NotificationPreferences
+            .Where(p => p.UserId == moi)
+            .ToDictionaryAsync(p => p.Category, p => p.PushEnabled, cancellationToken)
+            .ConfigureAwait(false);
+
+        // Même ordre de résolution qu'à l'envoi (hors sourdine, hors du périmètre d'une
+        // catégorie) : écart de la soirée, puis préférence globale, puis valeur d'usine.
+        return NotificationCategories.All
+            .Select(categorie =>
+            {
+                if (ecarts.TryGetValue(categorie, out var ecart))
+                {
+                    return new PreferenceDeSoireeView(categorie, ecart, EstUnEcart: true);
+                }
+
+                var resolue = globales.TryGetValue(categorie, out var globale) ? globale : true;
+                return new PreferenceDeSoireeView(categorie, resolue, EstUnEcart: false);
+            })
+            .ToList();
+    }
+
+    public async Task<Result> DefinirPreferenceDeSoireeAsync(
+        Guid eventId,
+        string categorie,
+        bool? actif,
+        CancellationToken cancellationToken)
+    {
+        if (appelant.UserId is not { } moi)
+        {
+            return NonAuthentifie;
+        }
+
+        if (!NotificationCategories.All.Contains(categorie))
+        {
+            return CategorieInconnue;
+        }
+
+        if (await membership.FindCurrentAsync(eventId, cancellationToken).ConfigureAwait(false) is null)
+        {
+            return EvenementIntrouvable;
+        }
+
+        var ligne = await db.EventNotificationPreferences
+            .FirstOrDefaultAsync(
+                p => p.UserId == moi && p.EventId == eventId && p.Category == categorie,
+                cancellationToken)
+            .ConfigureAwait(false);
+
+        if (actif is not { } valeur)
+        {
+            // Valeur nulle : retire l'écart, la soirée redevient réglée comme d'habitude.
+            // Ce n'est pas une route de suppression distincte : l'écran a trois états à
+            // écrire pour la discussion, dont l'un est « comme d'habitude ».
+            if (ligne is not null)
+            {
+                db.EventNotificationPreferences.Remove(ligne);
+            }
+        }
+        else if (ligne is null)
+        {
+            db.EventNotificationPreferences.Add(new EventNotificationPreference
+            {
+                Id = ids.NewId(),
+                UserId = moi,
+                EventId = eventId,
+                Category = categorie,
+                Enabled = valeur,
+                UpdatedAt = clock.UtcNow,
+            });
+        }
+        else
+        {
+            ligne.Enabled = valeur;
             ligne.UpdatedAt = clock.UtcNow;
         }
 

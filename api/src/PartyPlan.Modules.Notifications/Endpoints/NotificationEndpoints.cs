@@ -16,6 +16,14 @@ public sealed record PreferenceBody(
 /// <summary>Mise en sourdine d'un événement (EF-NOT-08).</summary>
 public sealed record SourdineBody(bool Muted);
 
+/// <summary>
+/// Écart pour une soirée. <c>Enabled</c> nul retire l'écart : la soirée redevient réglée
+/// comme d'habitude, plutôt que de passer par une route de suppression distincte.
+/// </summary>
+public sealed record PreferenceDeSoireeBody(
+    [Required][MaxLength(60)] string Category,
+    bool? Enabled);
+
 /// <summary>Endpoints des notifications reçues et des préférences (§8.2).</summary>
 internal static class NotificationEndpoints
 {
@@ -23,6 +31,7 @@ internal static class NotificationEndpoints
     {
         MapNotifications(routes);
         MapSourdine(routes);
+        MapPreferencesDeSoiree(routes);
     }
 
     private static void MapNotifications(IEndpointRouteBuilder routes)
@@ -123,5 +132,36 @@ internal static class NotificationEndpoints
                 .ConfigureAwait(false)))
             .WithName("SetEventMute")
             .WithSummary("Met l'événement en sourdine, ou l'en sort. Idempotent.");
+    }
+
+    private static void MapPreferencesDeSoiree(IEndpointRouteBuilder routes)
+    {
+        var parSoiree = routes.MapGroup("/events/{eventId:guid}/notifications")
+            .WithTags("Notifications");
+
+        parSoiree.MapGet("/preferences", async (
+                Guid eventId,
+                NotificationService service,
+                CancellationToken cancellationToken) =>
+            ResultatHttp.Repondre(await service
+                .PreferencesDeSoireeAsync(eventId, cancellationToken)
+                .ConfigureAwait(false)))
+            .WithName("ListEventNotificationPreferences")
+            .WithSummary("Réglages de notification de cette soirée, valeurs résolues.")
+            .RequireAuthorization()
+            .Produces<IReadOnlyList<PreferenceDeSoireeView>>();
+
+        parSoiree.MapPatch("/preferences", async (
+                Guid eventId,
+                PreferenceDeSoireeBody corps,
+                NotificationService service,
+                CancellationToken cancellationToken) =>
+            ResultatHttp.Repondre(await service
+                .DefinirPreferenceDeSoireeAsync(eventId, corps.Category, corps.Enabled, cancellationToken)
+                .ConfigureAwait(false)))
+            .WithName("SetEventNotificationPreference")
+            .WithSummary("Pose un écart pour cette soirée, ou le retire si `enabled` est nul.")
+            .RequireAuthorization()
+            .ProducesValidationProblem();
     }
 }

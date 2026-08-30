@@ -2309,6 +2309,91 @@
         ]
       }
     },
+    "/v1/events/{eventId}/notifications/preferences": {
+      "get": {
+        "tags": [
+          "Notifications"
+        ],
+        "summary": "Réglages de notification de cette soirée, valeurs résolues.",
+        "operationId": "ListEventNotificationPreferences",
+        "parameters": [
+          {
+            "name": "eventId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PreferenceDeSoireeView"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "Bearer": []
+          }
+        ]
+      },
+      "patch": {
+        "tags": [
+          "Notifications"
+        ],
+        "summary": "Pose un écart pour cette soirée, ou le retire si `enabled` est nul.",
+        "operationId": "SetEventNotificationPreference",
+        "parameters": [
+          {
+            "name": "eventId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PreferenceDeSoireeBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpValidationProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "Bearer": []
+          }
+        ]
+      }
+    },
     "/v1/events/{eventId}/polls": {
       "get": {
         "tags": [
@@ -5336,6 +5421,45 @@
           }
         },
         "description": "Réglage d'une catégorie (EF-NOT-07)."
+      },
+      "PreferenceDeSoireeBody": {
+        "required": [
+          "category",
+          "enabled"
+        ],
+        "type": "object",
+        "properties": {
+          "category": {
+            "type": "string"
+          },
+          "enabled": {
+            "type": [
+              "null",
+              "boolean"
+            ]
+          }
+        },
+        "description": "Écart pour une soirée. `Enabled` nul retire l'écart : la soirée redevient réglée\ncomme d'habitude, plutôt que de passer par une route de suppression distincte."
+      },
+      "PreferenceDeSoireeView": {
+        "required": [
+          "category",
+          "enabled",
+          "estUnEcart"
+        ],
+        "type": "object",
+        "properties": {
+          "category": {
+            "type": "string"
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "estUnEcart": {
+            "type": "boolean"
+          }
+        },
+        "description": "Réglage résolu d'une catégorie pour une soirée donnée.\nEnabled porte la valeur déjà résolue par les quatre étapes de\nEnvoiNotifications — sourdine, écart de soirée, préférence globale,\nvaleur d'usine — et non le seul écart : l'écran ne doit pas rejouer cette résolution\nde son côté, sous peine de diverger un jour de la règle serveur. EstUnEcart\ndistingue une ligne posée pour cette soirée d'une valeur simplement héritée."
       },
       "PreferenceView": {
         "required": [
