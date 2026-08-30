@@ -1,6 +1,5 @@
 namespace PartyPlan.Modules.Notifications.Application;
 
-using System.Diagnostics.CodeAnalysis;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using PartyPlan.Modules.Notifications.Domain;
@@ -191,14 +190,11 @@ public sealed class EnvoiNotifications(
     /// laisserait passer.
     /// </para>
     /// </summary>
-    [SuppressMessage("Performance", "CA1859",
-        Justification = "La signature est le contrat public de la tâche (interfaces réduites " +
-            "à l'essentiel plutôt qu'aux types concrets utilisés par l'unique appelant actuel).")]
     private static bool EstAutorisee(
         Notification n,
-        IReadOnlyDictionary<(Guid UserId, Guid EventId, string Category), bool> ecarts,
-        IReadOnlyDictionary<(Guid UserId, string Category), bool> globales,
-        IReadOnlySet<(Guid UserId, Guid EventId)> sourdines)
+        Dictionary<(Guid UserId, Guid EventId, string Category), bool> ecarts,
+        Dictionary<(Guid UserId, string Category), bool> globales,
+        HashSet<(Guid UserId, Guid EventId)> sourdines)
     {
         var destinataire = n.UserId!.Value;
 
