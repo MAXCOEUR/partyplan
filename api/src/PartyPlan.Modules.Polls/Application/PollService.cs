@@ -49,7 +49,9 @@ public sealed class PollService(
     IPollAnnouncement annonce,
     IClock clock,
     IIdGenerator ids,
-    IDiffusionEvenement diffusion)
+    IDiffusionEvenement diffusion,
+    IFileNotifications notifications,
+    IReveilNotifications reveil)
 {
     /// <summary>Nombre minimal d'options. Une seule réponse n'est pas un choix.</summary>
     private const int OptionsMinimales = 2;
@@ -225,7 +227,30 @@ public sealed class PollService(
         }
 
         db.Polls.Add(sondage);
+
+        foreach (var membre in await membership.ListActiveAsync(eventId, cancellationToken))
+        {
+            if (membre.MemberId == moi.MemberId || membre.UserId is not { } compte)
+            {
+                continue;
+            }
+
+            notifications.Enfiler(new NotificationAEnvoyer(
+                compte,
+                eventId,
+                NotificationCategories.PollNew,
+                "Nouveau sondage",
+                sondage.Question,
+                $"/events/{eventId}/sondages",
+                clock.UtcNow,
+                $"{eventId}:{NotificationCategories.PollNew}:{compte}:{sondage.Id}"));
+        }
+
         await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+
+        // Après validation, jamais avant : une transaction en échec ne doit réveiller
+        // personne pour un sondage qui n'existera pas.
+        reveil.Reveiller();
 
         // L'annonce passe par le contrat public du module Messages : Polls n'accède
         // jamais à la table des messages (ADR 0002).
