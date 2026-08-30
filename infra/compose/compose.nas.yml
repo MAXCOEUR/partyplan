@@ -316,6 +316,17 @@ services:
       - ${DATA_PATH:-./donnees}/media:/usr/share/nginx/html:ro
     networks:
       - edge
+    # L'en-tête doit venir d'ici, et pas de l'onglet « Advanced » de NPM : celui-ci
+    # le pose au niveau `server`, or NPM a déjà un `add_header` dans son bloc
+    # `location /`, qui écrase alors tout le niveau supérieur. La ligne est
+    # chargée, valide, et sans effet. Émis par le serveur d'origine, l'en-tête
+    # traverse le proxy sans être touché.
+    command:
+      - sh
+      - -ec
+      - |
+        echo 'server { listen 80; root /usr/share/nginx/html; add_header Access-Control-Allow-Origin * always; }' > /etc/nginx/conf.d/default.conf
+        exec nginx -g 'daemon off;'
 
   # ----------------------------------------------------------- sauvegardes ----
   # Vidage quotidien, rétention 30 jours (NF-OPS-04).
