@@ -81,9 +81,7 @@
 #  │ api.partyplan.maxencecoeur.fr        │ 192.168.0.248:1001 │ idem, plus    │
 #  │                                      │                    │ Websockets    │
 #  ├──────────────────────────────────────┼────────────────────┼───────────────┤
-#  │ cdn.partyplan.maxencecoeur.fr        │ 192.168.0.248:1002 │ idem, plus    │
-#  │                                      │                    │ l'en-tête de  │
-#  │                                      │                    │ cache ci-bas  │
+#  │ cdn.partyplan.maxencecoeur.fr        │ 192.168.0.248:1002 │ idem          │
 #  └──────────────────────────────────────┴────────────────────┴───────────────┘
 #
 #  Websockets sur l'API : obligatoire. Le hub SignalR vit sur `/hubs/*` du
@@ -96,12 +94,8 @@
 #  sont déjà émis par l'API et par les images web et vitrine — ne pas les
 #  redéclarer dans NPM, ils seraient dupliqués.
 #
-#  Sur l'hôte du CDN uniquement, onglet « Advanced » :
-#
-#      add_header Cache-Control "public, max-age=31536000, immutable" always;
-#
-#  Les photos portent une empreinte du contenu dans leur nom (RG-USR-03) : un
-#  cache d'un an est sans risque, une nouvelle photo a une nouvelle adresse.
+#  Rien à ajouter dans l'onglet « Advanced » du CDN : le service pose lui-même
+#  son cache et son autorisation d'origine, en bas de ce fichier.
 #
 # ---------------------------------------------------------------------------
 #  3. CE QUI N'EST PAS ENCORE ACTIF, ET POURQUOI CE N'EST PAS BLOQUANT
@@ -333,6 +327,9 @@ services:
       - "${CDN_PORT:-1002}:80"
     volumes:
       - ${DATA_PATH:-./donnees}/media:/usr/share/nginx/html:ro
+    configs:
+      - source: cdn-nginx
+        target: /etc/nginx/conf.d/default.conf
     networks:
       - edge
 
@@ -373,3 +370,37 @@ networks:
     internal: true
   # Services que Nginx Proxy Manager doit atteindre par les ports publiés.
   edge: {}
+
+# Configuration du CDN, écrite ici plutôt que dans un second fichier à déposer :
+# la promesse de ce déploiement est « un compose et un .env », et un fichier de
+# plus est un fichier qu'on oublie de copier.
+configs:
+  cdn-nginx:
+    content: |
+      server {
+          listen 80;
+          root /usr/share/nginx/html;
+
+          # L'application est sur un domaine, les photos sur un autre : les lire
+          # est une requête inter-domaines. Flutter Web en récupère les octets
+          # par « fetch », si bien qu'une réponse sans cette autorisation est
+          # rejetée par le navigateur — ERR_FAILED, alors que le statut est 200
+          # et que le fichier est bien servi. L'image apparaît alors comme
+          # « indisponible » sans qu'aucun journal ne signale d'erreur.
+          #
+          # Une origine précise plutôt que « * » : c'est la seule qui en a
+          # besoin. L'application Android n'applique pas la politique d'origine.
+          # Pas de « Vary: Origin » non plus, la valeur ne dépendant pas de la
+          # requête — l'ajouter fragmenterait les caches pour rien.
+          add_header Access-Control-Allow-Origin "https://${DOMAIN_APP}" always;
+
+          # Les photos portent une empreinte de leur contenu dans leur nom
+          # (RG-USR-03) : un cache d'un an est sans risque, une nouvelle photo
+          # ayant une nouvelle adresse.
+          add_header Cache-Control "public, max-age=31536000, immutable" always;
+
+          # Ce service ne sert que des images déposées par l'API, mais il les
+          # sert à un navigateur : sans cela, un fichier au type inattendu
+          # pourrait être interprété autrement que comme une image.
+          add_header X-Content-Type-Options "nosniff" always;
+      }
