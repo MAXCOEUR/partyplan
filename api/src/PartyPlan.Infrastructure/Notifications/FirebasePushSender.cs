@@ -68,28 +68,62 @@ public sealed class FirebasePushSender(
     }
 
     /// <summary>
-    /// Corps du message. Le lien profond voyage dans <c>data</c> et non dans
-    /// <c>notification</c> : c'est le client qui décide quoi ouvrir, le système
-    /// d'exploitation n'a pas à connaître nos routes.
+    /// Corps du message. Le lien profond et la clé de groupe voyagent dans <c>data</c> et
+    /// non dans <c>notification</c> : c'est le client qui décide quoi ouvrir et comment
+    /// empiler, le système d'exploitation n'a pas à connaître nos routes.
     /// </summary>
-    private static object Corps(PushMessage message) => message.DeepLink is null
-        ? new
-        {
-            message = new
+    private static object Corps(PushMessage message)
+    {
+        var donnees = DonneesMessage(message);
+
+        return donnees is null
+            ? new
             {
-                token = message.DeviceToken,
-                notification = new { title = message.Title, body = message.Body },
-            },
+                message = new
+                {
+                    token = message.DeviceToken,
+                    notification = new { title = message.Title, body = message.Body },
+                },
+            }
+            : new
+            {
+                message = new
+                {
+                    token = message.DeviceToken,
+                    notification = new { title = message.Title, body = message.Body },
+                    data = donnees,
+                },
+            };
+    }
+
+    /// <summary>
+    /// Champ <c>data</c>, ou <c>null</c> lorsqu'il n'y a rien à y mettre : un champ vide
+    /// n'a pas de sens à envoyer.
+    /// </summary>
+    private static Dictionary<string, string>? DonneesMessage(PushMessage message)
+    {
+        if (message.DeepLink is null && message.GroupKey is null)
+        {
+            return null;
         }
-        : new
+
+        var donnees = new Dictionary<string, string>();
+
+        if (message.DeepLink is not null)
         {
-            message = new
-            {
-                token = message.DeviceToken,
-                notification = new { title = message.Title, body = message.Body },
-                data = new { deepLink = message.DeepLink },
-            },
-        };
+            donnees["deepLink"] = message.DeepLink;
+        }
+
+        if (message.GroupKey is not null)
+        {
+            // Empilement sur l'appareil, en remplacement du plafond serveur retiré le
+            // 30/08/2026. Android range les notifications d'une même clé sous un seul
+            // bandeau ; le Web remplace au lieu d'empiler, ce qui est accepté.
+            donnees["groupe"] = message.GroupKey;
+        }
+
+        return donnees;
+    }
 
     private async Task TraiterEchecAsync(
         HttpResponseMessage reponse,

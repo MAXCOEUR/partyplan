@@ -48,6 +48,22 @@ public sealed class FirebasePushSenderTests
     }
 
     [Fact]
+    public async Task Le_message_porte_une_cle_de_groupe_par_evenement()
+    {
+        // Même couture que les tests existants de ce fichier : la frontière est le
+        // HttpClient (NF-DEV-10), et ce qui se vérifie est le corps envoyé.
+        var stub = Stub(HttpStatusCode.OK, """{"name":"projects/p/messages/1"}""");
+        var emetteur = Creer(stub, new RegistreDeTest());
+
+        await emetteur.SendAsync(
+            new PushMessage(Jeton, "Lucas", "On arrive.", "/events/42", GroupKey: "event:42"),
+            CancellationToken.None);
+
+        var corps = JsonDocument.Parse(stub.Appels[1].Corps).RootElement.GetProperty("message");
+        corps.GetProperty("data").GetProperty("groupe").GetString().ShouldBe("event:42");
+    }
+
+    [Fact]
     public async Task Un_message_sans_lien_ne_porte_pas_de_champ_vide()
     {
         var stub = Stub(HttpStatusCode.OK, """{"name":"n"}""");

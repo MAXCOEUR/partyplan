@@ -96,7 +96,8 @@ public sealed class EnvoiNotifications(
                             appareil.Token,
                             notification.Title,
                             notification.Body,
-                            notification.DeepLink),
+                            notification.DeepLink,
+                            notification.EventId is { } evenement ? $"event:{evenement}" : null),
                         cancellationToken)
                     .ConfigureAwait(false);
             }
