@@ -2,6 +2,7 @@ namespace PartyPlan.UnitTests;
 
 using PartyPlan.Modules.Events.Domain;
 using PartyPlan.Modules.Shopping.Domain;
+using PartyPlan.SharedKernel.Contracts;
 using PartyPlan.SharedKernel.Enums;
 using Shouldly;
 using Xunit;
@@ -67,5 +68,30 @@ public sealed class DomainRulesTests
         };
 
         article.RemainingQuantity.ShouldBe(attendu);
+    }
+
+    [Fact]
+    public void Les_categories_immediates_sont_celles_declenchees_par_un_geste_humain()
+    {
+        NotificationCategories.EstImmediate(NotificationCategories.DiscussionMessage).ShouldBeTrue();
+        NotificationCategories.EstImmediate(NotificationCategories.DiscussionMention).ShouldBeTrue();
+        NotificationCategories.EstImmediate(NotificationCategories.PollNew).ShouldBeTrue();
+        NotificationCategories.EstImmediate(NotificationCategories.ExpenseNew).ShouldBeTrue();
+        NotificationCategories.EstImmediate(NotificationCategories.Activity).ShouldBeTrue();
+
+        NotificationCategories.EstImmediate(NotificationCategories.EventStartingSoon).ShouldBeFalse();
+        NotificationCategories.EstImmediate(NotificationCategories.BalanceDue).ShouldBeFalse();
+    }
+
+    [Fact]
+    public void Toute_categorie_est_declaree_dans_All()
+    {
+        // `All` sert l'écran des préférences : une catégorie absente devient invisible
+        // et donc non désactivable, ce que EF-NOT-07 interdit.
+        NotificationCategories.All.ShouldContain(NotificationCategories.DiscussionMessage);
+        NotificationCategories.All.ShouldContain(NotificationCategories.DiscussionMention);
+        NotificationCategories.All.ShouldContain(NotificationCategories.PollNew);
+        NotificationCategories.All.ShouldContain(NotificationCategories.ExpenseNew);
+        NotificationCategories.All.Length.ShouldBe(11);
     }
 }

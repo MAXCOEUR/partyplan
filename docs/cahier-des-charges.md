@@ -651,22 +651,26 @@ bout, groupes hors événement) n'entre dans le périmètre.
 |---|---|---|
 | EF-NOT-01 | P0 | Notifier l'organisateur des réponses aux invitations. |
 | EF-NOT-02 | P0 | Notifier les membres des modifications de date ou de lieu. |
-| EF-NOT-03 | P0 | Rappeler à un membre qu'il n'a pas répondu à l'invitation (J-3 et J-1). |
+| EF-NOT-03 | P0 | Rappeler à un membre qu'il n'a pas répondu à l'invitation (J-7, J-3 et J-1). |
 | EF-NOT-04 | P0 | Signaler à l'organisateur les articles non attribués (J-1). |
 | EF-NOT-05 | P0 | Rappeler l'événement 2 heures avant le début. |
 | EF-NOT-06 | P0 | Notifier chaque débiteur du montant qu'il doit, le lendemain de l'événement. |
 | EF-NOT-07 | P0 | Permettre la désactivation individuelle de chaque catégorie de notification. |
 | EF-NOT-08 | P0 | Permettre la mise en sourdine d'un événement. |
 | EF-NOT-09 | P1 | Notifications par courriel en repli lorsque les notifications poussées sont indisponibles. |
-| EF-NOT-10 | P0 | Notifier l'activité de l'événement : article pris en charge, message posté. Regroupée par RG-NOT-02. |
+| EF-NOT-10 | P0 | Notifier l'activité de l'événement : article pris en charge, article acheté, message posté, sondage créé, dépense ajoutée. |
 
-**RG-NOT-01** — Aucune notification n'est envoyée entre 22 h et 8 h heure locale du
-destinataire, sauf le rappel de début d'événement.
+**RG-NOT-01** — Aucune notification **planifiée** n'est envoyée entre 22 h et 8 h heure
+locale du destinataire, sauf le rappel de début d'événement. Une notification déclenchée
+par un geste humain — message, sondage, dépense, achat — part quelle que soit l'heure :
+la soirée est ce qui se passe le soir, et une conversation à 23 h est le cas d'usage.
+*Amendée le 30/08/2026.*
 
-**RG-NOT-02** — Les notifications d'activité (`EF-NOT-10` : article pris, message) sont
-regroupées : au maximum une notification par événement, par destinataire et par tranche
-de 15 minutes. Sans ce plafond, une liste de courses remplie à plusieurs produirait une
-notification par article.
+**RG-NOT-02** — Les notifications d'activité ne sont pas regroupées par le serveur. Elles
+portent une clé de groupe par événement, et c'est l'appareil qui les empile sous un seul
+bandeau. Sur le Web, la notion équivalente remplace au lieu d'empiler : le navigateur
+montre la dernière. *Amendée le 30/08/2026 ; le plafond d'une notification par quart
+d'heure retardait la discussion au-delà de la conversation qu'elle annonçait.*
 
 **RG-NOT-03** — Le consentement aux notifications poussées est demandé au moment où
 il devient utile, jamais au premier lancement.

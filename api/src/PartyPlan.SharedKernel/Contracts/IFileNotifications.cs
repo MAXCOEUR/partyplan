@@ -58,6 +58,15 @@ public static class NotificationCategories
     public const string BalanceDue = "balance.due";
     public const string Activity = "activity";
 
+    /// <summary>Message posté dans la discussion, sans citation.</summary>
+    public const string DiscussionMessage = "discussion.message";
+
+    /// <summary>Message citant nommément le destinataire.</summary>
+    public const string DiscussionMention = "discussion.mention";
+
+    public const string PollNew = "poll.new";
+    public const string ExpenseNew = "expense.new";
+
     public static readonly string[] All =
     [
         InvitationAnswer,
@@ -67,5 +76,21 @@ public static class NotificationCategories
         EventStartingSoon,
         BalanceDue,
         Activity,
+        DiscussionMessage,
+        DiscussionMention,
+        PollNew,
+        ExpenseNew,
     ];
+
+    /// <summary>
+    /// La catégorie part-elle sans attendre le tour d'horloge ?
+    /// <para>
+    /// Vrai lorsqu'un humain vient d'agir : la notification annonce un geste que son
+    /// auteur croit déjà connu des autres. Faux pour un rappel calculé, que personne
+    /// n'a demandé à cet instant — d'où le silence nocturne qui ne vaut que pour lui
+    /// (RG-NOT-01, amendée le 30/08/2026).
+    /// </para>
+    /// </summary>
+    public static bool EstImmediate(string categorie) => categorie is
+        DiscussionMessage or DiscussionMention or PollNew or ExpenseNew or Activity;
 }
