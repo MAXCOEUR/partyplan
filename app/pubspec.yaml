@@ -1,7 +1,7 @@
 name: partyplan
 description: "PartyPlan — organisation d'événements entre amis."
 publish_to: 'none'
-version: 1.0.0+1
+version: 1.0.0+2
 
 environment:
   sdk: ^3.10.0
