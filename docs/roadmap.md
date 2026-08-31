@@ -303,10 +303,13 @@ d'administration — et les conditions d'un retour.
     donnerait un bouton condamné
   - → rattachement depuis l'écran des moyens de connexion, et oubli du compte Google à la
     déconnexion — sans quoi un appareil partagé reconnecterait le titulaire précédent
-  - → Android et Web. La **forme** du bouton dépend de la plateforme, pas son
-    existence : Android accepte le parcours programmatique et utilise le bouton de
-    l'application ; le Web le refuse et impose celui du SDK Google, dont l'apparence
-    n'est pas négociable. Le jeton arrive alors par `authenticationEvents`
+  - → Android et Web. L'**origine** du bouton dépend de la plateforme, pas sa forme :
+    Android accepte le parcours programmatique et dessine le bouton ; le Web le refuse et
+    impose celui du SDK Google. Le jeton arrive alors par `authenticationEvents`
+  - → **apparence unifiée le 31/08/2026** (`PpBoutonGoogle`) : Android reprend la forme
+    officielle de la marque, celle que le SDK rend déjà sur le Web — logo quadrichrome
+    tracé au `CustomPainter` plutôt qu'importé, contour et couleurs de Google, `Roboto`.
+    Le bouton d'application, sans logo, ne se reconnaissait pas d'un coup d'œil
   - → `serverClientId` est interdit sur le Web par une assertion du greffon, et
     `clientId` ignoré sur Android : les deux paramètres sont posés séparément
   - → reste à faire par l'exploitant : déclarer les origines JavaScript autorisées du
@@ -738,11 +741,28 @@ et les écrans arrivent avec ce lot — voir
   - → réglage par soirée sur onze catégories, écran dédié affichant aussi l'état de
     sourdine à côté des catégories
   - → rappel de non-réponse ajouté à J-7, en plus de J-3 et J-1
+- [x] **Notifications au premier plan** (`RG-NOT-04`), ajouté le 31/08/2026 : voir
+      `docs/superpowers/specs/2026-08-31-notifications-au-premier-plan-design.md`
+  - → au premier plan, Android n'affiche rien de lui-même : FCM remet le message à
+    l'application. Rien n'écoutait `onMessage`, donc une notification reçue pendant que
+    l'application était ouverte n'existait pas — au moment précis où elle compte le plus
+  - → bandeau interne plutôt que `flutter_local_notifications` : l'application est déjà
+    sous les yeux, et le bandeau fonctionne aussi sur le Web
+  - → **suppression par écran et par soirée** : masquée seulement si l'écran ouvert
+    montre déjà la chose, pour la même soirée. Une autre soirée s'affiche toujours, et
+    une catégorie inconnue de la table s'affiche — sinon toute catégorie ajoutée plus
+    tard naîtrait muette
+  - → le message porte désormais sa catégorie et sa soirée dans `data` : sans elles,
+    aucune règle de suppression n'était possible
+- [x] `RG-NOT-03` **amendée le 31/08/2026** : la carte de consentement est proposée sur
+      l'accueil autant que sur le tableau de bord d'une soirée, tant que la question n'est
+      pas tranchée. Ce qui reste interdit est d'ouvrir la boîte système d'autorité — elle
+      ne se présente qu'une fois, et un refus réflexe est définitif
 - [ ] **Empilement des notifications d'activité sur l'appareil** (`RG-NOT-02`) — la clé de
       groupe (`event:{id}`) part bien dans `data.groupe` de chaque message, mais rien ne
       la lit côté application aujourd'hui, et l'émetteur envoie un message de
       notification, pas un message de données : sans handler client, l'empilement promis
-      par la règle n'existe pas encore
+      par la règle n'existe pas encore. Distinct du premier plan, traité lui le 31/08/2026
 - [ ] `EF-NOT-09` Repli par courriel — `P1`, hors périmètre de ce lot
 - [ ] **Recette sur un appareil réel, avec une vraie clé FCM** — la chaîne est vérifiée
       avec l'émetteur en repli console (règle 5). Qu'une notification s'affiche sur un

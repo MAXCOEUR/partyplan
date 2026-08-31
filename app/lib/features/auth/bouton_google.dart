@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/providers.dart';
+import '../../design/components/pp_bouton_google.dart';
 import 'bouton_google_rendu_stub.dart'
     if (dart.library.js_interop) 'bouton_google_rendu_web.dart';
 
@@ -13,10 +14,10 @@ import 'bouton_google_rendu_stub.dart'
 /// l'application embarque un identifiant client. Il en manque une et le bouton serait
 /// condamné à échouer.
 ///
-/// Sa **forme** dépend de la plateforme, pas son existence. Android accepte d'ouvrir le
-/// parcours à la demande, donc le bouton est celui de l'application. Le Web le refuse
-/// et impose celui du SDK Google — moins joli, mais c'est le seul qui fonctionne, et
-/// c'est celui que les gens reconnaissent partout ailleurs.
+/// Son **origine** dépend de la plateforme, pas sa forme. Android accepte d'ouvrir le
+/// parcours à la demande, donc le bouton est dessiné par l'application ; le Web le refuse
+/// et impose celui du SDK Google. Les deux ont désormais la même apparence, celle de la
+/// marque : un bouton de connexion tierce se reconnaît avant d'être lu.
 class BoutonGoogle extends ConsumerStatefulWidget {
   const BoutonGoogle({
     required this.onJeton,
@@ -88,11 +89,7 @@ class _BoutonGoogleState extends ConsumerState<BoutonGoogle> {
     }
 
     if (service.parcoursProgrammatique) {
-      return OutlinedButton(
-        key: const Key('connexion-google'),
-        onPressed: widget.desactive ? null : _demander,
-        child: const Text('Continuer avec Google'),
-      );
+      return PpBoutonGoogle(onPressed: widget.desactive ? null : _demander);
     }
 
     final rendu = boutonRenduGoogle();
