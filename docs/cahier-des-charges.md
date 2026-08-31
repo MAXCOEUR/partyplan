@@ -674,8 +674,23 @@ remplacera au lieu d'empiler, une fois construite : le navigateur montrera la de
 *Amendée le 30/08/2026 ; le plafond d'une notification par quart d'heure retardait la
 discussion au-delà de la conversation qu'elle annonçait.*
 
-**RG-NOT-03** — Le consentement aux notifications poussées est demandé au moment où
-il devient utile, jamais au premier lancement.
+**RG-NOT-03** — La boîte de dialogue système n'est jamais ouverte d'autorité au
+lancement : elle ne s'ouvre qu'après un geste explicite. L'invitation à faire ce geste,
+elle, est proposée dans l'application aussi longtemps que la question n'est pas tranchée —
+sur l'accueil et sur le tableau de bord d'une soirée.
+*Amendée le 31/08/2026.* La rédaction précédente — « demandé au moment où il devient
+utile, jamais au premier lancement » — n'était proposée que sur le tableau de bord d'une
+soirée. Quelqu'un qui n'y passait pas ne voyait jamais la question et n'avait aucune
+notification sans savoir pourquoi. Ce qui est irréversible reste la boîte système, refusée
+par réflexe elle ne se redemande jamais ; une carte dans l'application est réversible,
+donc elle peut insister.
+
+**RG-NOT-04** — Une notification reçue pendant que l'application est ouverte est annoncée
+par un bandeau interne, sauf si l'écran affiché montre déjà ce qu'elle annonce, pour la
+même soirée. Une notification portant sur une autre soirée est toujours annoncée, de même
+qu'une catégorie qu'aucun écran ne rend redondante. Une catégorie inconnue de la table est
+annoncée : le défaut est de ne rien masquer, sinon toute catégorie ajoutée plus tard naît
+muette sans que personne s'en aperçoive.
 
 ### 5.13 Groupes permanents
 

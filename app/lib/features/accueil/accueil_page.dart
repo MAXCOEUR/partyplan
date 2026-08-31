@@ -22,6 +22,7 @@ import '../../design/tokens.dart';
 import '../../l10n/generated/pp_localisations.dart';
 import '../../l10n/marque.dart';
 import '../evenement/presence_vers_pastille.dart';
+import '../evenement/sections/section_notifications.dart';
 
 /// Écran d'accueil : les événements de la personne, à venir puis passés (EF-EVT-05).
 class AccueilPage extends ConsumerWidget {
@@ -63,6 +64,20 @@ class AccueilPage extends ConsumerWidget {
         children: [
           PpBandeauHorsLigne(
             onReessayer: () => ref.invalidate(mesEvenementsProvider),
+          ),
+          // Proposée ici autant que sur le tableau de bord d'une soirée : quelqu'un qui
+          // n'ouvre jamais celui-ci ne voyait jamais la question, et n'avait aucune
+          // notification sans savoir pourquoi (RG-NOT-03).
+          const PpRail(
+            child: Padding(
+              padding: EdgeInsets.fromLTRB(
+                PpSpacing.lg,
+                PpSpacing.sm,
+                PpSpacing.lg,
+                0,
+              ),
+              child: SectionNotifications(),
+            ),
           ),
           const _ActionsAccueil(),
           Expanded(

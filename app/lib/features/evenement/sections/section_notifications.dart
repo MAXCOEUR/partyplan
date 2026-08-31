@@ -8,11 +8,13 @@ import '../../../design/tokens.dart';
 
 /// Proposition d'activer les notifications — `RG-NOT-03`.
 ///
-/// Placée sur le tableau de bord d'un événement, et nulle part ailleurs : c'est là qu'on
-/// vient d'acquérir quelque chose à être notifié. Demander au premier lancement fait
-/// refuser par réflexe, et un refus système ne se redemande pas.
+/// Posée sur l'accueil et sur le tableau de bord d'une soirée, et visible tant que la
+/// question n'est pas tranchée. Ce qui est irréversible, c'est la boîte système : refusée
+/// par réflexe, elle ne se redemande jamais. C'est pourquoi elle ne s'ouvre qu'après un
+/// geste explicite — mais l'invitation à faire ce geste, elle, peut insister.
 ///
-/// La section disparaît dès que la question est tranchée, dans un sens ou dans l'autre.
+/// La section disparaît dès que la question est tranchée, dans un sens ou dans l'autre,
+/// et n'apparaît jamais si Firebase n'est pas configuré (règle 5).
 class SectionNotifications extends ConsumerStatefulWidget {
   const SectionNotifications({super.key});
 
