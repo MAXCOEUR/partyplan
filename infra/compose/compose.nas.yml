@@ -24,8 +24,10 @@
 #
 #      docker compose pull && docker compose up -d
 #
-#  Rien d'autre à préparer : le service `media-init` crée `donnees/media` et
-#  l'attribue à l'utilisateur du conteneur d'API avant que celui-ci démarre.
+#  Rien d'autre à préparer : le service `preparation` crée `donnees/media` et
+#  `secrets/`, et les attribue à l'utilisateur du conteneur d'API avant que
+#  celui-ci démarre. Sans lui, un dossier déposé depuis le partage réseau
+#  appartient à un autre utilisateur et l'API ne peut pas le lire.
 #
 #  Une nuance sur `donnees/db` : PostgreSQL ajuste ce dossier tout seul au
 #  premier démarrage, mais il exige des droits 0700 et se l'attribue. Le dossier
@@ -156,17 +158,44 @@ services:
       retries: 5
       start_period: 30s
 
-  # ------------------------------------------------- préparation du média ----
-  # L'API écrit les photos sans privilèges, sous l'uid 1654, et Docker ne change
-  # jamais les droits d'un dossier monté depuis l'hôte. Sans ce service, l'API
-  # démarre normalement et seul le premier envoi de photo échoue en 500.
-  # `a+rX` en plus : le CDN lit ce même dossier sous un autre utilisateur.
-  media-init:
+  # ----------------------------------------- préparation des dossiers hôte ----
+  # L'API tourne sans privilèges, sous l'uid 1654, et Docker ne change jamais les
+  # droits d'un dossier monté depuis l'hôte. Un dossier créé depuis un partage
+  # réseau ou une session d'administration appartient à quelqu'un d'autre, en
+  # 0700 : l'API ne peut alors même pas le traverser.
+  #
+  # Deux dossiers, deux pannes qui ne se ressemblent pas :
+  #
+  #   media   — sans ce service, l'API démarre et seul le premier envoi de photo
+  #             échoue en 500. `a+rX` en plus : le CDN lit ce même dossier sous
+  #             un autre utilisateur.
+  #
+  #   secrets — sans ce service, l'API démarre, annonce « aucune clé Firebase
+  #             configurée » alors que le fichier est bien là, et toutes les
+  #             notifications partent au journal. C'est la panne du 31/08/2026 :
+  #             la clé, déposée par le partage SMB, était en 0700 pour un autre
+  #             utilisateur. Rien ne manquait, rien n'était lisible.
+  #
+  # Les secrets ne reçoivent pas `a+rX` : ils restent lisibles du seul compte qui
+  # en a besoin. Redéposer une clé depuis le partage la remet aux droits du
+  # partage — le prochain démarrage la corrigera d'elle-même.
+  preparation:
     image: alpine:3.20
     logging: *logging
-    command: ["sh", "-c", "mkdir -p /media && chown -R 1654:1654 /media && chmod -R a+rX /media"]
+    command:
+      - sh
+      - -c
+      - >-
+        mkdir -p /media /secrets
+        && chown -R 1654:1654 /media /secrets
+        && chmod -R a+rX /media
+        && chmod 700 /secrets
+        && find /secrets -type f -exec chmod 600 {} +
     volumes:
       - ${DATA_PATH:-./donnees}/media:/media
+      # En écriture, contrairement au montage de l'API : c'est ce service qui
+      # corrige les droits.
+      - ./secrets:/secrets
     restart: "no"
 
   # ----------------------------------------------------------------- api ----
@@ -177,7 +206,7 @@ services:
     depends_on:
       db:
         condition: service_healthy
-      media-init:
+      preparation:
         condition: service_completed_successfully
     ports:
       - "${API_PORT:-1001}:8080"
@@ -315,9 +344,9 @@ services:
     image: nginx:1.27-alpine
     restart: unless-stopped
     logging: *logging
-    # Démarrer avant `media-init` ferait créer le dossier par Docker, en root.
+    # Démarrer avant `preparation` ferait créer le dossier par Docker, en root.
     depends_on:
-      media-init:
+      preparation:
         condition: service_completed_successfully
     ports:
       - "${CDN_PORT:-1002}:80"
