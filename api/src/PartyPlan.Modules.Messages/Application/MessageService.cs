@@ -489,7 +489,7 @@ public sealed class MessageService(
                 clock.UtcNow,
                 // L'identifiant du message, et non un quart d'heure : chaque message a
                 // sa notification, l'appareil se chargeant de les empiler.
-                $"{eventId}:{(citee ? "mention" : "message")}:{compte}:{message.Id}"));
+                $"{eventId}:{(citee ? NotificationCategories.DiscussionMention : NotificationCategories.DiscussionMessage)}:{compte}:{message.Id}"));
         }
 
         await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);

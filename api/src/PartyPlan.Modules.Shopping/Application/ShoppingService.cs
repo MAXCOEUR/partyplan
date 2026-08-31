@@ -32,6 +32,28 @@ public sealed record ShoppingProgress(int Total, int Claimed, int Purchased);
 /// <summary>Liste de courses complète.</summary>
 public sealed record ShoppingList(ShoppingProgress Progress, IReadOnlyList<ShoppingItemView> Items);
 
+/// <summary>
+/// Clé de déduplication d'une notification d'activité (<c>RG-NOT-02</c>, <c>EF-NOT-10</c>).
+/// <para>
+/// Porte l'article et la nature du geste, jamais l'instant : deux prises en charge
+/// simultanées, par deux personnes différentes, destinées au même tiers, ne doivent
+/// jamais s'effacer l'une l'autre parce qu'elles sont arrivées à la même milliseconde.
+/// Les trois autres modules qui notifient une activité emploient déjà l'identifiant de
+/// leur entité pour la même raison.
+/// </para>
+/// </summary>
+public static class ClesActivite
+{
+    /// <summary>Un article vient d'être pris en charge.</summary>
+    public const string PriseEnCharge = "claim";
+
+    /// <summary>Un article vient d'être acheté.</summary>
+    public const string Achat = "purchase";
+
+    public static string Deduplication(Guid eventId, Guid destinataire, Guid itemId, string geste) =>
+        $"{eventId}:{NotificationCategories.Activity}:{destinataire}:{itemId}:{geste}";
+}
+
 /// <summary>Création ou modification d'un article (EF-CRS-01, EF-CRS-08).</summary>
 public sealed record ShoppingItemRequest(
     string Name,
@@ -332,6 +354,8 @@ public sealed class ShoppingService(
         await PrevenirDeLActiviteAsync(
                 eventId,
                 contexte.MoiId,
+                itemId,
+                ClesActivite.PriseEnCharge,
                 $"{contexte.MonNom} s'occupe de {contexte.Article.Name}.",
                 cancellationToken)
             .ConfigureAwait(false);
@@ -465,6 +489,8 @@ public sealed class ShoppingService(
         await PrevenirDeLActiviteAsync(
                 eventId,
                 contexte.MoiId,
+                itemId,
+                ClesActivite.Achat,
                 $"{contexte.MonNom} a acheté {article.Name}.",
                 cancellationToken)
             .ConfigureAwait(false);
@@ -519,6 +545,8 @@ public sealed class ShoppingService(
     private async Task PrevenirDeLActiviteAsync(
         Guid eventId,
         Guid acteur,
+        Guid itemId,
+        string geste,
         string corps,
         CancellationToken cancellationToken)
     {
@@ -542,7 +570,7 @@ public sealed class ShoppingService(
                 corps,
                 $"/events/{eventId}/courses",
                 instant,
-                $"{eventId}:{NotificationCategories.Activity}:{compte}:{instant.ToUnixTimeMilliseconds()}"));
+                ClesActivite.Deduplication(eventId, compte, itemId, geste)));
         }
     }
 
