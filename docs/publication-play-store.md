@@ -9,6 +9,49 @@ paquet.
 
 ---
 
+## Les valeurs de ton application
+
+Tout ce que la Play Console, Google Cloud et Firebase te redemanderont. Recopie d'ici
+plutôt que de chercher dans le code.
+
+| | Valeur |
+|---|---|
+| **Nom du paquet** | `fr.maxencecoeur.partyplan` |
+| Nom affiché sous l'icône | PartyPlan |
+| Version à publier | `1.0.0+1` (aujourd'hui `0.1.0` dans `app/pubspec.yaml`) |
+| Projet Firebase et Google Cloud | `partyplan-99106` |
+| Client OAuth **Web** | `146275272251-adq6bsorokpqd9fqknmafhpckns9ijts.apps.googleusercontent.com` |
+| Domaine de l'application | `web.partyplan.maxencecoeur.fr` |
+| Domaine de l'API | `api.partyplan.maxencecoeur.fr` |
+| Vitrine et documents légaux | `partyplan.maxencecoeur.fr` |
+| Politique de confidentialité | `https://partyplan.maxencecoeur.fr/confidentialite.html` |
+| Conditions d'utilisation | `https://partyplan.maxencecoeur.fr/conditions.html` |
+| Assistance | `https://partyplan.maxencecoeur.fr/support.html` |
+
+**Le nom du paquet est définitif.** Une fois la première version publiée, il ne se change
+plus : le modifier reviendrait à publier une autre application, sans les avis ni les
+installations de la première. Il est fixé dans `app/android/app/build.gradle.kts`
+(`namespace` et `applicationId`) et ne doit plus bouger.
+
+Empreintes de ta **clé de débogage**, celle qui signe les APK que tu installes en direct.
+Elles restent utiles après publication : garde-les déclarées à côté de celles de Play,
+sinon tes builds locaux perdent la connexion Google et les liens d'invitation.
+
+```
+SHA-1    2D:D7:AD:DF:B0:3E:89:06:04:86:3D:4F:22:02:D2:DC:0F:FC:CB:68
+SHA-256  99:AB:98:70:F1:32:06:6A:2D:48:66:05:4F:F3:F1:C6:46:3C:3E:5E:67:CB:82:77:54:CF:AB:E8:48:0D:20:B4
+```
+
+Elles se recalculent à tout moment :
+
+```bash
+keytool -J-Duser.language=en -J-Duser.country=US \
+  -list -v -keystore ~/.android/debug.keystore -alias androiddebugkey \
+  -storepass android -keypass android | grep -E 'SHA1:|SHA256:'
+```
+
+---
+
 ## 0. Le parcours imposé : test fermé, puis production
 
 Ton compte est un compte **personnel**, et Google impose à ces comptes une phase de test
