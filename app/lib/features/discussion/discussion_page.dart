@@ -683,6 +683,7 @@ class _ContenuBulle extends StatelessWidget {
             evenementId: evenementId,
             message: message,
             surLien: surLien,
+            surAplat: mien,
           ),
         ),
         // L'heure passe sous le texte pour les miens : sans nom d'auteur au-dessus, elle
@@ -723,11 +724,15 @@ class _Corps extends StatelessWidget {
     required this.evenementId,
     required this.message,
     required this.surLien,
+    required this.surAplat,
   });
 
   final String evenementId;
   final Message message;
   final void Function(String) surLien;
+
+  /// Le corps est-il posé sur l'aplat d'une bulle « mienne » ?
+  final bool surAplat;
 
   @override
   Widget build(BuildContext context) {
@@ -763,6 +768,7 @@ class _Corps extends StatelessWidget {
             texte: message.corps!,
             mentions: message.mentions,
             surLien: surLien,
+            surAplat: surAplat,
           ),
         // Le sondage se répond dans le fil : quitter la conversation pour voter
         // ferait perdre le contexte de la question.

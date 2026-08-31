@@ -19,6 +19,7 @@ class PpTexteMessage extends StatelessWidget {
     required this.surLien,
     this.mentions = const [],
     this.style,
+    this.surAplat = false,
     super.key,
   });
 
@@ -33,6 +34,13 @@ class PpTexteMessage extends StatelessWidget {
 
   final TextStyle? style;
 
+  /// Vrai lorsque le texte est posé sur un aplat de la couleur d'accent — la bulle de
+  /// ses propres messages.
+  ///
+  /// Sans cette distinction, mentions et liens se peignent de la couleur exacte du fond
+  /// et disparaissent : ce qui les met en évidence ailleurs est ici ce qui les efface.
+  final bool surAplat;
+
   /// Reconnaît une adresse commençant par un protocole explicite.
   ///
   /// Le protocole est exigé : sans lui, « rendez-vous à 20h.30 » deviendrait un lien,
@@ -44,6 +52,18 @@ class PpTexteMessage extends StatelessWidget {
   /// « Regarde https://exemple.fr. » ne doit pas produire un lien terminé par un
   /// point, qui ne mènerait nulle part.
   static const _ponctuationFinale = '.,;:!?)»"\'';
+
+  /// Couleur de mise en évidence, selon le fond.
+  ///
+  /// Sur l'aplat, `onPrimary` est la seule qui garantisse le contraste — c'est la
+  /// couleur que le thème associe à cet aplat, et le reste du message l'emploie déjà.
+  static Color _accent(BuildContext context, {required bool surAplat}) {
+    final theme = Theme.of(context);
+
+    return surAplat
+        ? theme.colorScheme.onPrimary
+        : PpColors.texteSur(PpColors.violet, theme.brightness);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -75,10 +95,9 @@ class PpTexteMessage extends StatelessWidget {
         TextSpan(
           text: url,
           style: base.copyWith(
-            color: PpColors.texteSur(
-              PpColors.violet,
-              Theme.of(context).brightness,
-            ),
+            color: _accent(context, surAplat: surAplat),
+            // Le soulignement ne dépend pas du fond : sur l'aplat, la couleur ne peut
+            // plus distinguer le lien du texte, et il reste seul à le signaler.
             decoration: TextDecoration.underline,
             fontWeight: FontWeight.w500,
           ),
@@ -146,6 +165,7 @@ class PpTexteMessage extends StatelessWidget {
           child: _Mention(
             key: Key('mention-${prochaine.mention.membreId}'),
             nom: prochaine.mention.nom,
+            surAplat: surAplat,
           ),
         ),
       );
@@ -170,24 +190,29 @@ class PpTexteMessage extends StatelessWidget {
 
 /// Nom cité, sur un fond léger. Assez visible pour qu'on se sache appelé.
 class _Mention extends StatelessWidget {
-  const _Mention({required this.nom, super.key});
+  const _Mention({required this.nom, required this.surAplat, super.key});
 
   final String nom;
+
+  final bool surAplat;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final accent = PpTexteMessage._accent(context, surAplat: surAplat);
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
       decoration: BoxDecoration(
-        color: PpColors.violet.withValues(alpha: 0.14),
+        // Le fond se teinte de l'accent lui-même : sur un aplat violet, un voile violet
+        // ne se distingue pas, là où un voile clair détache la puce.
+        color: accent.withValues(alpha: surAplat ? 0.22 : 0.14),
         borderRadius: BorderRadius.circular(PpRadius.sm),
       ),
       child: Text(
         '@$nom',
         style: theme.textTheme.bodyMedium?.copyWith(
-          color: PpColors.texteSur(PpColors.violet, theme.brightness),
+          color: accent,
           fontWeight: FontWeight.w600,
         ),
       ),
