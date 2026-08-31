@@ -28,9 +28,22 @@ public interface IPushSender
 /// table des notifications (règle 6, frontières de modules). Elle voyage donc depuis
 /// <c>EnvoiNotifications</c>, qui tient la notification et son événement.
 /// </param>
+/// <param name="Category">
+/// Constante de <see cref="NotificationCategories"/>. Voyage jusqu'au client parce que
+/// lui seul sait ce qu'il affiche à l'instant où la notification arrive : sans elle, une
+/// application ouverte ne peut pas distinguer le message qu'elle montre déjà de celui
+/// qu'elle doit annoncer.
+/// </param>
+/// <param name="EventId">
+/// Soirée concernée, ou <c>null</c> pour une notification qui n'en relève pas. Distincte
+/// de <paramref name="GroupKey"/>, qui la porte préfixée pour l'empilement : le client a
+/// besoin de l'identifiant nu pour le comparer à la soirée qu'il affiche.
+/// </param>
 public sealed record PushMessage(
     string DeviceToken,
     string Title,
     string Body,
     string? DeepLink = null,
-    string? GroupKey = null);
+    string? GroupKey = null,
+    string? Category = null,
+    string? EventId = null);

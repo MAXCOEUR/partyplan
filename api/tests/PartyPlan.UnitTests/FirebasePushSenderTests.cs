@@ -64,6 +64,53 @@ public sealed class FirebasePushSenderTests
     }
 
     [Fact]
+    public async Task Le_message_porte_sa_categorie_et_sa_soiree()
+    {
+        // Sans ces deux champs, l'application ne peut pas décider si la notification
+        // qu'elle reçoit au premier plan est déjà visible à l'écran : le lien profond
+        // seul ne dit pas de quelle catégorie elle relève.
+        var stub = Stub(HttpStatusCode.OK, """{"name":"projects/p/messages/1"}""");
+        var emetteur = Creer(stub, new RegistreDeTest());
+
+        await emetteur.SendAsync(
+            new PushMessage(
+                Jeton,
+                "Nouvelle dépense",
+                "Maxence a ajouté « Courses »",
+                "/events/42/depenses",
+                GroupKey: "event:42",
+                Category: NotificationCategories.ExpenseNew,
+                EventId: "42"),
+            CancellationToken.None);
+
+        var donnees = JsonDocument.Parse(stub.Appels[1].Corps)
+            .RootElement.GetProperty("message").GetProperty("data");
+        donnees.GetProperty("categorie").GetString().ShouldBe("expense.new");
+        donnees.GetProperty("evenement").GetString().ShouldBe("42");
+    }
+
+    [Fact]
+    public async Task Une_notification_hors_soiree_n_envoie_pas_de_champ_evenement()
+    {
+        var stub = Stub(HttpStatusCode.OK, """{"name":"n"}""");
+        var emetteur = Creer(stub, new RegistreDeTest());
+
+        await emetteur.SendAsync(
+            new PushMessage(
+                Jeton,
+                "Invitation",
+                "Camille t'invite",
+                "/notifications",
+                Category: NotificationCategories.InvitationPending),
+            CancellationToken.None);
+
+        var donnees = JsonDocument.Parse(stub.Appels[1].Corps)
+            .RootElement.GetProperty("message").GetProperty("data");
+        donnees.GetProperty("categorie").GetString().ShouldBe("invitation.pending");
+        donnees.TryGetProperty("evenement", out _).ShouldBeFalse();
+    }
+
+    [Fact]
     public async Task Un_message_sans_lien_ne_porte_pas_de_champ_vide()
     {
         var stub = Stub(HttpStatusCode.OK, """{"name":"n"}""");

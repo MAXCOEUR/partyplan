@@ -102,7 +102,10 @@ public sealed class FirebasePushSender(
     /// </summary>
     private static Dictionary<string, string>? DonneesMessage(PushMessage message)
     {
-        if (message.DeepLink is null && message.GroupKey is null)
+        if (message.DeepLink is null
+            && message.GroupKey is null
+            && message.Category is null
+            && message.EventId is null)
         {
             return null;
         }
@@ -112,6 +115,18 @@ public sealed class FirebasePushSender(
         if (message.DeepLink is not null)
         {
             donnees["deepLink"] = message.DeepLink;
+        }
+
+        if (message.Category is not null)
+        {
+            // Lue par l'application au premier plan, pour savoir si l'écran ouvert montre
+            // déjà ce que la notification annonce.
+            donnees["categorie"] = message.Category;
+        }
+
+        if (message.EventId is not null)
+        {
+            donnees["evenement"] = message.EventId;
         }
 
         if (message.GroupKey is not null)

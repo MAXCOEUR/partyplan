@@ -92,12 +92,7 @@ public sealed class EnvoiNotifications(
             {
                 await emetteur
                     .SendAsync(
-                        new PushMessage(
-                            appareil.Token,
-                            notification.Title,
-                            notification.Body,
-                            notification.DeepLink,
-                            notification.EventId is { } evenement ? $"event:{evenement}" : null),
+                        MessagePousse.Depuis(notification, appareil.Token),
                         cancellationToken)
                     .ConfigureAwait(false);
             }
