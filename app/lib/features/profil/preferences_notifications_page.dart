@@ -15,9 +15,6 @@ import '../../l10n/generated/pp_localisations.dart';
 /// Chaque catégorie est nommée par ce qu'elle apporte, jamais par son identifiant :
 /// « Réponses aux invitations » et non `invitation.answer`. Une personne coupe ce qui
 /// l'importune, elle ne configure pas un système.
-///
-/// La plage de silence est annoncée en pied d'écran plutôt que cachée dans une aide :
-/// savoir que rien n'arrive la nuit évite de tout couper par précaution.
 class PreferencesNotificationsPage extends ConsumerWidget {
   const PreferencesNotificationsPage({super.key});
 
@@ -57,15 +54,6 @@ class PreferencesNotificationsPage extends ConsumerWidget {
                   ],
                 ),
               ),
-              const SizedBox(height: PpSpacing.lg),
-              Text(
-                l10n.preferencesAvisSilence,
-                style: theme.textTheme.labelMedium?.copyWith(
-                  color: theme.brightness == Brightness.dark
-                      ? PpColors.texteSecondaireSombre
-                      : PpColors.texteSecondaireClair,
-                ),
-              ),
             ],
           ),
         ),
@@ -98,6 +86,10 @@ class PreferencesNotificationsPage extends ConsumerWidget {
     'event.starting_soon' => l10n.categorieDebut,
     'balance.due' => l10n.categorieDettes,
     'activity' => l10n.categorieActivite,
+    'discussion.message' => l10n.categorieDiscussionMessages,
+    'discussion.mention' => l10n.categorieDiscussionMentions,
+    'poll.new' => l10n.categorieSondages,
+    'expense.new' => l10n.categorieDepenses,
     _ => categorie,
   };
 }

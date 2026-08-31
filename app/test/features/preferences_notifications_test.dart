@@ -15,6 +15,10 @@ const _categories = [
   'event.starting_soon',
   'balance.due',
   'activity',
+  'discussion.message',
+  'discussion.mention',
+  'poll.new',
+  'expense.new',
 ];
 
 Future<void> _monter(
@@ -57,8 +61,16 @@ void main() {
 
       expect(find.text('Réponses aux invitations'), findsOneWidget);
       expect(find.text('Montants à rembourser'), findsOneWidget);
+      expect(find.text('Messages de la discussion'), findsOneWidget);
+      expect(find.text('Quand on te cite'), findsOneWidget);
+      expect(find.text('Nouveaux sondages'), findsOneWidget);
+      expect(find.text('Nouvelles dépenses'), findsOneWidget);
       expect(find.text('invitation.answer'), findsNothing);
       expect(find.text('balance.due'), findsNothing);
+      expect(find.text('discussion.message'), findsNothing);
+      expect(find.text('discussion.mention'), findsNothing);
+      expect(find.text('poll.new'), findsNothing);
+      expect(find.text('expense.new'), findsNothing);
     });
 
     testWidgets('reflète une catégorie déjà coupée', (tester) async {
@@ -71,17 +83,6 @@ void main() {
       );
 
       expect(interrupteur.value, isFalse);
-    });
-
-    testWidgets('annonce la plage de silence plutôt que de la cacher', (
-      tester,
-    ) async {
-      // Savoir que rien n'arrive la nuit évite de tout couper par précaution.
-      await _monter(tester, const [
-        PreferenceAvis(categorie: 'activity', poussee: true, courriel: true),
-      ]);
-
-      expect(find.textContaining('22 h et 8 h'), findsOneWidget);
     });
 
     testWidgets('une catégorie inconnue reste réglable', (tester) async {
