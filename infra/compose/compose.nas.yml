@@ -243,16 +243,21 @@ services:
       # ---------- Notifications poussées ----------
       # Vide : les notifications sont journalisées et rien ne part (NF-DEV-04).
       #
-      # Pour les activer, déposer la clé de compte de service Firebase dans
-      # `secrets/firebase.json` à côté de ce fichier, mettre
-      # FIREBASE_SERVICE_ACCOUNT_PATH=/run/secrets/firebase.json dans .env, ET
-      # décommenter le montage ci-dessous. L'ordre importe : monter un fichier
-      # absent fait créer un répertoire à sa place par Docker, et l'API n'y lit
-      # alors aucune clé.
+      # Pour les activer, deux gestes et aucune retouche de ce fichier :
+      #   1. déposer la clé de compte de service Firebase dans `secrets/firebase.json`,
+      #      à côté de ce compose — elle reste hors dépôt (.gitignore) et se transfère
+      #      par scp, jamais par git ;
+      #   2. mettre FIREBASE_SERVICE_ACCOUNT_PATH=/run/secrets/firebase.json dans .env.
+      #
+      # Le montage ci-dessous porte sur le **répertoire** et non sur le fichier, et il
+      # n'est plus commenté. Monter un fichier absent fait créer un répertoire à sa
+      # place par Docker, ce qui obligeait à respecter un ordre — donc à se tromper un
+      # jour. Un répertoire absent, lui, est créé vide : l'API n'y trouve aucune clé et
+      # retombe sur la console, ce qui est exactement le comportement voulu.
       Push__FirebaseServiceAccountPath: ${FIREBASE_SERVICE_ACCOUNT_PATH}
     volumes:
       - ${DATA_PATH:-./donnees}/media:/var/lib/partyplan/media
-      # - ./secrets/firebase.json:/run/secrets/firebase.json:ro
+      - ./secrets:/run/secrets:ro
     networks:
       - internal
       - edge

@@ -40,7 +40,7 @@ GOOGLE_ANDROID_CLIENT_ID := $(shell grep -E '^GOOGLE_ANDROID_CLIENT_ID=' .env 2>
 
 .PHONY: aide init up down restart logs ps api app web test test-api test-app \
         migration migrate reset-db seed mail openapi frontieres fmt lint verif clean \
-        android emulateur lan devices inotify stop-api variables
+        android apk emulateur lan devices inotify stop-api variables
 
 aide: ## Affiche cette aide
 	@echo "PartyPlan — cibles disponibles :"
@@ -142,6 +142,21 @@ web: ## Compile l'application Flutter Web en production, en local
 	cd app && flutter build web --release \
 	  --dart-define=API_BASE_URL=http://localhost:5080 \
 	  --dart-define=GOOGLE_CLIENT_ID=$(GOOGLE_CLIENT_ID)
+
+# L'adresse de l'API est obligatoire : sans elle, `AppConfig` retombe sur
+# `http://localhost:5080`, qui depuis un téléphone désigne le téléphone lui-même.
+# L'application s'installe, s'ouvre, et rien ne charge — sans message expliquant pourquoi.
+API_PROD ?= https://api.partyplan.maxencecoeur.fr
+
+apk: ## Construit l'APK de production à installer sur un téléphone Android
+	cd app && flutter build apk --release \
+	  --dart-define=API_BASE_URL=$(API_PROD) \
+	  --dart-define=GOOGLE_CLIENT_ID=$(GOOGLE_CLIENT_ID)
+	@echo ""
+	@echo "→ app/build/app/outputs/flutter-apk/app-release.apk"
+	@echo "  API : $(API_PROD)"
+	@echo "  Signature : clé de debug (voir android/app/build.gradle.kts)."
+	@echo "  Notifications : elles ne partiront que si l'API a sa clé Firebase."
 
 # --- Base de données ---
 
