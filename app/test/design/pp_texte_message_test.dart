@@ -76,11 +76,7 @@ void main() {
     ) async {
       // Sur l'aplat, la couleur ne peut plus signaler le lien : c'est le soulignement
       // qui porte alors seul l'information.
-      await _monter(
-        tester,
-        'voir https://exemple.fr',
-        surAplat: true,
-      );
+      await _monter(tester, 'voir https://exemple.fr', surAplat: true);
 
       expect(
         _styleDe(tester, 'https://exemple.fr')?.decoration,
@@ -232,7 +228,6 @@ void main() {
     });
   });
 }
-
 
 /// Style effectif d'un fragment de texte, mention comprise.
 ///
