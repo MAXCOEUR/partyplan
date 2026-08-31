@@ -2,7 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../core/notifications/bandeau_notification.dart';
+import '../core/notifications/notification_recue.dart';
+import '../core/notifications/regle_affichage_premier_plan.dart';
+import '../core/notifications/zone_visible.dart';
 import '../core/providers.dart';
+import '../design/components/pp_bandeau_notification.dart';
 import '../design/theme.dart';
 import '../l10n/generated/pp_localisations.dart';
 import '../l10n/marque.dart';
@@ -49,6 +54,29 @@ class _PartyPlanAppState extends ConsumerState<PartyPlanApp> {
     service.ecouterRafraichissements();
     // ignore: discarded_futures
     service.ecouterOuvertures(routeur.go);
+    // ignore: discarded_futures
+    service.ecouterPremierPlan(_annoncer);
+  }
+
+  /// Décide du sort d'une notification reçue alors que l'application est ouverte.
+  ///
+  /// Le tri se fait ici, en un seul endroit, plutôt que dans le bandeau : celui-ci
+  /// affiche ce qu'on lui donne, et la règle s'éprouve sans monter d'application.
+  void _annoncer(NotificationRecue recue) {
+    if (!mounted) {
+      return;
+    }
+
+    final zone = ZoneVisible.composer(
+      // `matchedLocation` et non `uri` : la seconde porte les paramètres de requête,
+      // qui feraient échouer toute comparaison de chemin.
+      chemin: ref.read(routeurProvider).state.matchedLocation,
+      publie: ref.read(ongletEvenementProvider),
+    );
+
+    if (RegleAffichagePremierPlan.doitAfficher(recue, zone)) {
+      ref.read(bandeauNotificationProvider.notifier).montrer(recue);
+    }
   }
 
   @override
@@ -63,5 +91,11 @@ class _PartyPlanAppState extends ConsumerState<PartyPlanApp> {
     theme: PpTheme.clair(),
     darkTheme: PpTheme.sombre(),
     routerConfig: ref.watch(routeurProvider),
+    // Posé au-dessus de tous les écrans, une seule fois : une notification peut arriver
+    // n'importe où, et la poser écran par écran en oublierait.
+    builder: (context, enfant) => PpBandeauNotification(
+      aller: ref.read(routeurProvider).go,
+      child: enfant ?? const SizedBox.shrink(),
+    ),
   );
 }

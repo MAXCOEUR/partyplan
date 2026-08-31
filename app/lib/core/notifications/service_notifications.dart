@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 
 import '../network/appareils_api.dart';
 import 'lien_notification.dart';
+import 'notification_recue.dart';
 
 /// Où en est le consentement de cette personne.
 enum EtatNotifications {
@@ -44,6 +45,15 @@ abstract interface class ServiceNotifications {
   /// Déclarée ici dès maintenant, implémentée à la tâche 7 : c'est l'interface que les
   /// écrans voient, et la compléter plus tard casserait toutes les doublures de test.
   Future<void> ecouterOuvertures(void Function(String destination) aller);
+
+  /// Remet les notifications reçues pendant que l'application est ouverte.
+  ///
+  /// Sans cette écoute, elles n'existent pas : au premier plan, le système ne montre
+  /// rien de lui-même et remet le message à l'application. C'est pourtant le moment où
+  /// elles comptent le plus — pendant la soirée, tout le monde a l'application ouverte.
+  Future<void> ecouterPremierPlan(
+    void Function(NotificationRecue recue) montrer,
+  );
 }
 
 /// Implémentation Firebase.
@@ -209,6 +219,30 @@ class ServiceNotificationsFirebase implements ServiceNotifications {
     if (destination != null) {
       aller(destination);
     }
+  }
+
+  @override
+  Future<void> ecouterPremierPlan(
+    void Function(NotificationRecue recue) montrer,
+  ) async {
+    if (!await _initialiser()) {
+      return;
+    }
+
+    FirebaseMessaging.onMessage.listen((message) {
+      // Le titre et le corps viennent du bloc `notification`, celui-là même que le
+      // système afficherait en arrière-plan : au premier plan, il est simplement remis
+      // à l'application au lieu d'être affiché.
+      final recue = NotificationRecue.depuis(
+        message.data,
+        titre: message.notification?.title,
+        corps: message.notification?.body,
+      );
+
+      if (recue != null) {
+        montrer(recue);
+      }
+    });
   }
 
   static String get _plateforme => kIsWeb ? 'web' : 'android';

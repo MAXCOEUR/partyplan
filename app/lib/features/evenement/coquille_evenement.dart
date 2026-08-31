@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/notifications/zone_visible.dart';
 import '../../core/providers.dart';
 import '../../core/temps_reel/ecoute_evenement.dart';
 import '../../core/temps_reel/service_temps_reel.dart';
@@ -42,6 +43,19 @@ class _CoquilleEvenementState extends ConsumerState<CoquilleEvenement> {
   /// écrit trois fois se désynchronise le jour où l'ordre des onglets change.
   static const _ongletDiscussion = 3;
 
+  /// Zone correspondant à chaque rang, dans l'ordre des onglets.
+  ///
+  /// Déclarée à côté d'eux, et non déduite d'un rang recopié ailleurs : la règle
+  /// d'affichage des notifications parle de « la discussion », et c'est ici que se sait
+  /// quel rang la porte.
+  static const _zones = [
+    ZoneEvenement.accueil,
+    ZoneEvenement.courses,
+    ZoneEvenement.depenses,
+    ZoneEvenement.discussion,
+    ZoneEvenement.plus,
+  ];
+
   int _onglet = 0;
 
   EcouteEvenement? _ecoute;
@@ -71,7 +85,29 @@ class _CoquilleEvenementState extends ConsumerState<CoquilleEvenement> {
     //
     // Posée dans initState et non dans build, qui est rappelé à chaque changement
     // d'onglet et rechargerait tout à chaque geste.
-    WidgetsBinding.instance.addPostFrameCallback((_) => _relire());
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _relire();
+      _publierZone(_onglet);
+    });
+  }
+
+  /// Fait savoir quel onglet est ouvert, pour que les notifications de ce qui est déjà
+  /// à l'écran ne soient pas annoncées par-dessus.
+  ///
+  /// Le chemin du routeur ne suffit pas : les onglets vivent dans un `IndexedStack`,
+  /// qui ne change pas d'adresse. Rien n'est effacé en quittant la soirée : la zone
+  /// porte son identifiant, et n'est retenue que si elle porte sur la soirée affichée.
+  void _publierZone(int onglet) {
+    if (mounted) {
+      ref
+          .read(ongletEvenementProvider.notifier)
+          .publier(widget.eventId, _zones[onglet]);
+    }
+  }
+
+  void _changerOnglet(int index) {
+    setState(() => _onglet = index);
+    _publierZone(index);
   }
 
   @override
@@ -240,7 +276,7 @@ class _CoquilleEvenementState extends ConsumerState<CoquilleEvenement> {
         selection: _onglet,
         ongletDePastille: _ongletDiscussion,
         nonLus: nonLus,
-        onSelection: (index) => setState(() => _onglet = index),
+        onSelection: _changerOnglet,
         child: IndexedStack(
           index: _onglet,
           children: [
@@ -270,7 +306,7 @@ class _CoquilleEvenementState extends ConsumerState<CoquilleEvenement> {
           ? null
           : NavigationBar(
               selectedIndex: _onglet,
-              onDestinationSelected: (index) => setState(() => _onglet = index),
+              onDestinationSelected: _changerOnglet,
               destinations: [
                 for (final onglet in onglets)
                   NavigationDestination(
