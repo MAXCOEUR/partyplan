@@ -754,6 +754,22 @@ et les écrans arrivent avec ce lot — voir
     tard naîtrait muette
   - → le message porte désormais sa catégorie et sa soirée dans `data` : sans elles,
     aucune règle de suppression n'était possible
+- [x] **Consentement invisible sur Android**, corrigé le 31/08/2026 — la proposition
+      d'activer les notifications ne s'est jamais affichée sur Android depuis l'origine du
+      lot, et la permission était donc impossible à accorder
+  - → `getPermissions` du greffon Android renvoie 1 si la permission est accordée et 0
+    dans tous les autres cas, traduit en `AuthorizationStatus.denied` : « jamais
+    demandé » et « refusé » arrivent indistinguables, et `notDetermined` n'est jamais
+    émis sur Android
+  - → l'application traduisait donc `denied` en refus, et masquait la carte. Le seul
+    bouton capable d'ouvrir la boîte système était caché par l'absence de la permission
+    qu'il sert à obtenir
+  - → l'application mémorise désormais elle-même d'avoir présenté la boîte
+    (`MemoireConsentement`), et croise ce souvenir avec l'état du système dans une
+    décision isolée et testable (`EtatConsentement`)
+  - → le repli d'un magasin en panne est de **reproposer** : une carte de trop se referme
+    d'un geste, une carte manquante ne se découvre jamais
+  - → constaté sur appareil réel (Redmi, Android 16), corrigé et revérifié par capture
 - [x] `RG-NOT-03` **amendée le 31/08/2026** : la carte de consentement est proposée sur
       l'accueil autant que sur le tableau de bord d'une soirée, tant que la question n'est
       pas tranchée. Ce qui reste interdit est d'ouvrir la boîte système d'autorité — elle

@@ -738,7 +738,10 @@ final appareilsApiProvider = Provider<AppareilsApi>(
 );
 
 final serviceNotificationsProvider = Provider<ServiceNotifications>(
-  (ref) => ServiceNotificationsFirebase(ref.watch(appareilsApiProvider)),
+  (ref) => ServiceNotificationsFirebase(
+    ref.watch(appareilsApiProvider),
+    ref.watch(magasinLocalProvider),
+  ),
 );
 
 // ------------------------------------------------------------ connexion Google ----

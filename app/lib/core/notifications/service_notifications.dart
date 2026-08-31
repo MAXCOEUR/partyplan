@@ -3,6 +3,8 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 
 import '../network/appareils_api.dart';
+import '../storage/magasin_local.dart';
+import 'etat_consentement.dart';
 import 'lien_notification.dart';
 import 'notification_recue.dart';
 
@@ -61,9 +63,14 @@ abstract interface class ServiceNotifications {
 /// Toute opération est sans effet si l'initialisation a échoué : c'est le cas d'un clone
 /// sans `google-services.json`, qui doit rester utilisable (règle 5).
 class ServiceNotificationsFirebase implements ServiceNotifications {
-  ServiceNotificationsFirebase(this._api);
+  ServiceNotificationsFirebase(this._api, MagasinLocal magasin)
+    : _memoire = MemoireConsentement(magasin);
 
   final AppareilsApi _api;
+
+  /// Le souvenir d'avoir présenté la boîte système. La plateforme ne le donne pas :
+  /// sur Android, une question jamais posée et une réponse négative se ressemblent.
+  final MemoireConsentement _memoire;
 
   bool? _disponible;
 
@@ -121,19 +128,28 @@ class ServiceNotificationsFirebase implements ServiceNotifications {
 
   @override
   Future<EtatNotifications> etatCourant() async {
-    if (!await _initialiser()) {
-      return EtatNotifications.indisponible;
+    final disponible = await _initialiser();
+
+    if (!disponible) {
+      return EtatConsentement.resoudre(
+        firebaseDisponible: false,
+        autorise: false,
+        dejaDemande: false,
+      );
     }
 
     final reglages = await FirebaseMessaging.instance.getNotificationSettings();
 
-    return switch (reglages.authorizationStatus) {
-      AuthorizationStatus.authorized ||
-      AuthorizationStatus.provisional => EtatNotifications.accorde,
-      AuthorizationStatus.denied => EtatNotifications.refuse,
-      _ => EtatNotifications.aDemander,
-    };
+    return EtatConsentement.resoudre(
+      firebaseDisponible: true,
+      autorise: _autorise(reglages.authorizationStatus),
+      dejaDemande: await _memoire.dejaDemande(),
+    );
   }
+
+  static bool _autorise(AuthorizationStatus statut) =>
+      statut == AuthorizationStatus.authorized ||
+      statut == AuthorizationStatus.provisional;
 
   @override
   Future<void> demanderEtEnregistrer() async {
@@ -143,8 +159,12 @@ class ServiceNotificationsFirebase implements ServiceNotifications {
 
     final reglages = await FirebaseMessaging.instance.requestPermission();
 
-    if (reglages.authorizationStatus != AuthorizationStatus.authorized &&
-        reglages.authorizationStatus != AuthorizationStatus.provisional) {
+    // Mémorisé quelle que soit la réponse, et avant tout départ anticipé : c'est le fait
+    // d'avoir posé la question qui compte, pas la réponse obtenue. Android ne
+    // représentera jamais cette boîte.
+    await _memoire.marquerDemande();
+
+    if (!_autorise(reglages.authorizationStatus)) {
       return;
     }
 
