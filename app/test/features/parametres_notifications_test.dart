@@ -190,6 +190,38 @@ void main() {
       },
     );
 
+    testWidgets(
+      'une catégorie simple affiche une erreur quand l’écriture échoue',
+      (tester) async {
+        await _monter(tester);
+        _api.categoriesEnEchec.add('invitation.answer');
+
+        await tester.tap(find.text('Réponses aux invitations'));
+        await tester.pumpAndSettle();
+
+        expect(find.byType(SnackBar), findsOneWidget);
+      },
+    );
+
+    testWidgets('un échec partiel de la discussion restaure la valeur déjà écrite', (
+      tester,
+    ) async {
+      // Départ « Tout » (message et mention actifs). La mention échoue : le message,
+      // déjà écrit, ne doit pas rester seul à avoir changé.
+      await _monter(tester);
+      _api.categoriesEnEchec.add('discussion.mention');
+
+      await tester.tap(find.text('Rien'));
+      await tester.pumpAndSettle();
+
+      expect(_api.ecrits, contains(('discussion.message', false)));
+      // La dernière écriture réussie restaure le message à sa valeur d'avant le
+      // choix : l'écran n'affiche jamais une combinaison qu'aucun des trois choix
+      // ne représente.
+      expect(_api.ecrits.last, ('discussion.message', true));
+      expect(find.byType(SnackBar), findsOneWidget);
+    });
+
     testWidgets('une erreur réseau propose de réessayer', (tester) async {
       final conteneur = ProviderContainer(
         overrides: [

@@ -87,6 +87,7 @@ class _ParametresNotificationsPageState
             enCours: _enCours,
             reinitialisationEnCours: _reinitialisationEnCours,
             onEcrire: _ecrire,
+            onChoisirDiscussion: _choisirDiscussion,
             onReinitialiser: _reinitialiser,
           ),
         ),
@@ -95,17 +96,94 @@ class _ParametresNotificationsPageState
   }
 
   Future<void> _ecrire(String categorie, bool actif) async {
+    final messager = ScaffoldMessenger.of(context);
+    final l10n = PpL10n.of(context);
+
     setState(() => _enCours.add(categorie));
 
     try {
       await ref
           .read(avisApiProvider)
           .definirPreferenceDeSoiree(widget.evenementId, categorie, actif);
+    } on Exception {
+      if (mounted) {
+        messager.showSnackBar(SnackBar(content: Text(l10n.paramNotifEchec)));
+      }
     } finally {
       ref.invalidate(preferencesDeSoireeProvider(widget.evenementId));
 
       if (mounted) {
         setState(() => _enCours.remove(categorie));
+      }
+    }
+  }
+
+  /// Écrit les deux préférences de la discussion comme un seul geste.
+  ///
+  /// Les deux PATCH sont séquentiels : si le premier passe et le second échoue, un
+  /// silence sur le second laisserait l'écran dans une combinaison qu'aucun des trois
+  /// choix ne représente (`SegmentedButton` n'en propose que trois). En cas d'échec, on
+  /// tente donc de restaurer les deux catégories à leur valeur d'avant le choix, au
+  /// mieux — un échec de cette restauration reste possible si le réseau est
+  /// complètement indisponible, mais l'utilisateur en est alors averti.
+  Future<void> _choisirDiscussion({
+    required bool messageActuel,
+    required bool mentionActuelle,
+    required bool nouveauMessage,
+    required bool nouvelleMention,
+  }) async {
+    final messager = ScaffoldMessenger.of(context);
+    final l10n = PpL10n.of(context);
+
+    setState(() {
+      _enCours
+        ..add(_categorieMessage)
+        ..add(_categorieMention);
+    });
+
+    final api = ref.read(avisApiProvider);
+
+    try {
+      await api.definirPreferenceDeSoiree(
+        widget.evenementId,
+        _categorieMessage,
+        nouveauMessage,
+      );
+      await api.definirPreferenceDeSoiree(
+        widget.evenementId,
+        _categorieMention,
+        nouvelleMention,
+      );
+    } on Exception {
+      try {
+        await api.definirPreferenceDeSoiree(
+          widget.evenementId,
+          _categorieMessage,
+          messageActuel,
+        );
+        await api.definirPreferenceDeSoiree(
+          widget.evenementId,
+          _categorieMention,
+          mentionActuelle,
+        );
+      } on Exception {
+        // Restauration elle-même en échec : le réseau est indisponible pour de bon.
+        // L'état reste potentiellement incohérent côté serveur, mais la personne est
+        // prévenue plutôt que de croire que son choix a été pris en compte.
+      }
+
+      if (mounted) {
+        messager.showSnackBar(SnackBar(content: Text(l10n.paramNotifEchec)));
+      }
+    } finally {
+      ref.invalidate(preferencesDeSoireeProvider(widget.evenementId));
+
+      if (mounted) {
+        setState(() {
+          _enCours
+            ..remove(_categorieMessage)
+            ..remove(_categorieMention);
+        });
       }
     }
   }
@@ -140,6 +218,7 @@ class _Contenu extends ConsumerWidget {
     required this.enCours,
     required this.reinitialisationEnCours,
     required this.onEcrire,
+    required this.onChoisirDiscussion,
     required this.onReinitialiser,
   });
 
@@ -148,6 +227,13 @@ class _Contenu extends ConsumerWidget {
   final Set<String> enCours;
   final bool reinitialisationEnCours;
   final Future<void> Function(String categorie, bool actif) onEcrire;
+  final Future<void> Function({
+    required bool messageActuel,
+    required bool mentionActuelle,
+    required bool nouveauMessage,
+    required bool nouvelleMention,
+  })
+  onChoisirDiscussion;
   final Future<void> Function(List<PreferenceDeSoiree> preferences)
   onReinitialiser;
 
@@ -182,10 +268,14 @@ class _Contenu extends ConsumerWidget {
                   enCours:
                       enCours.contains(_categorieMessage) ||
                       enCours.contains(_categorieMention),
-                  onChoisir: (message, mention) async {
-                    await onEcrire(_categorieMessage, message);
-                    await onEcrire(_categorieMention, mention);
-                  },
+                  onChoisir: (message, mention) => onChoisirDiscussion(
+                    messageActuel:
+                        _valeur(preferences, _categorieMessage)?.actif ?? false,
+                    mentionActuelle:
+                        _valeur(preferences, _categorieMention)?.actif ?? false,
+                    nouveauMessage: message,
+                    nouvelleMention: mention,
+                  ),
                 ),
                 const Divider(height: PpSpacing.xl),
                 for (final preference in simples)

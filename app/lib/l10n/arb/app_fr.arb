@@ -431,6 +431,7 @@
   },
   "paramNotifExplication": "Ces réglages ne valent que pour cette soirée. Les autres soirées suivent tes préférences habituelles.",
   "paramNotifErreur": "Impossible de charger ces réglages",
+  "paramNotifEchec": "Ce réglage n’a pas pu être enregistré.",
   "paramNotifVide": "Aucun réglage disponible pour cette soirée",
   "paramNotifSourdineActive": "Cette soirée est en sourdine. Rien n’arrive, quels que soient ces réglages.",
   "paramNotifSourdineInactive": "Cette soirée n’est pas en sourdine.",

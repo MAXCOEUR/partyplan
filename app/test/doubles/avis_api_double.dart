@@ -13,12 +13,20 @@ class AvisApiDouble implements AvisApi {
   /// un retrait d'écart (« Comme mes réglages habituels »).
   final ecrits = <(String, bool?)>[];
 
+  /// Catégories dont l'écriture échoue systématiquement, pour simuler une coupure
+  /// réseau sur une seule des deux préférences de la discussion.
+  final categoriesEnEchec = <String>{};
+
   @override
   Future<void> definirPreferenceDeSoiree(
     String evenementId,
     String categorie,
     bool? actif,
   ) async {
+    if (categoriesEnEchec.contains(categorie)) {
+      throw Exception('échec simulé pour $categorie');
+    }
+
     ecrits.add((categorie, actif));
   }
 
