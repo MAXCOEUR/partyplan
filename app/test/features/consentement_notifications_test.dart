@@ -147,4 +147,7 @@ class _ServiceDouble implements ServiceNotifications {
   Future<void> ecouterPremierPlan(
     void Function(NotificationRecue recue) montrer,
   ) async {}
+
+  @override
+  Future<void> reinscrireAppareil() async {}
 }

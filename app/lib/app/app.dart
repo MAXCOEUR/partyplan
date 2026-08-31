@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -41,21 +43,29 @@ class _PartyPlanAppState extends ConsumerState<PartyPlanApp> {
   void initState() {
     super.initState();
 
-    // Posée une seule fois, et non dans build : rappelé à chaque reconstruction, il
+    // Posées une seule fois, et non dans build : rappelé à chaque reconstruction, il
     // empilerait les abonnements, et une notification tapée provoquerait autant de
     // navigations.
-    //
-    // Les Future ne sont pas attendues : l'application ne doit pas retarder son premier
-    // affichage pour une écoute de notifications.
     final service = ref.read(serviceNotificationsProvider);
     final routeur = ref.read(routeurProvider);
 
-    // ignore: discarded_futures
-    service.ecouterRafraichissements();
-    // ignore: discarded_futures
-    service.ecouterOuvertures(routeur.go);
-    // ignore: discarded_futures
-    service.ecouterPremierPlan(_annoncer);
+    _sansBruit(service.ecouterRafraichissements);
+    _sansBruit(() => service.ecouterOuvertures(routeur.go));
+    _sansBruit(() => service.ecouterPremierPlan(_annoncer));
+    // Réinscription à chaque lancement : un appareil inconnu du serveur ne reçoit rien,
+    // et rien ne le signale.
+    _sansBruit(service.reinscrireAppareil);
+  }
+
+  /// Lance une tâche de notification sans l'attendre et sans la laisser remonter.
+  ///
+  /// Deux raisons, et les deux comptent. L'application ne doit pas retarder son premier
+  /// affichage pour une écoute de notifications ; et une tâche lancée sans être attendue
+  /// fait remonter son échec jusqu'au gestionnaire d'erreurs global, où il devient une
+  /// erreur de l'application entière. Rien de ce qui touche aux notifications ne doit
+  /// aller jusque-là : perdre l'avis vaut mieux que salir le démarrage.
+  static void _sansBruit(Future<void> Function() tache) {
+    unawaited(tache().catchError((Object _) {}));
   }
 
   /// Décide du sort d'une notification reçue alors que l'application est ouverte.

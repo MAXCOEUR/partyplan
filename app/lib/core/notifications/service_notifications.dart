@@ -42,6 +42,15 @@ abstract interface class ServiceNotifications {
   /// périmé est une personne qui ne reçoit plus rien, sans erreur visible.
   Future<void> ecouterRafraichissements();
 
+  /// Réinscrit l'appareil au lancement, si la permission est accordée.
+  ///
+  /// Sans elle, le jeton ne part qu'une fois, à l'instant où la permission est accordée.
+  /// Un envoi manqué ce jour-là — réseau coupé, session expirée, API indisponible — ne
+  /// serait jamais rattrapé : l'appareil resterait inconnu du serveur et la personne
+  /// n'aurait plus jamais de notification, sans le moindre message. L'inscription est
+  /// idempotente côté serveur, la répéter ne coûte rien.
+  Future<void> reinscrireAppareil();
+
   /// Ouvre la destination portée par une notification tapée.
   ///
   /// Déclarée ici dès maintenant, implémentée à la tâche 7 : c'est l'interface que les
@@ -172,6 +181,23 @@ class ServiceNotificationsFirebase implements ServiceNotifications {
   }
 
   @override
+  Future<void> reinscrireAppareil() async {
+    if (!await _initialiser()) {
+      return;
+    }
+
+    final reglages = await FirebaseMessaging.instance.getNotificationSettings();
+
+    // Rien n'est envoyé sans permission : `getToken` la réclamerait, et la réclamer hors
+    // d'un geste explicite est exactement ce que RG-NOT-03 interdit.
+    if (!_autorise(reglages.authorizationStatus)) {
+      return;
+    }
+
+    await _envoyerJeton();
+  }
+
+  @override
   Future<void> ecouterRafraichissements() async {
     if (!await _initialiser()) {
       return;
@@ -210,8 +236,8 @@ class ServiceNotificationsFirebase implements ServiceNotifications {
         await _api.enregistrer(jeton, plateforme: _plateforme);
       }
     } on Exception {
-      // Sans effet visible : la personne a accordé la permission, le jeton repartira au
-      // prochain lancement.
+      // Sans effet visible, et rattrapé : `reinscrireAppareil` renvoie le jeton à chaque
+      // lancement.
     }
   }
 
