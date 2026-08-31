@@ -40,7 +40,7 @@ GOOGLE_ANDROID_CLIENT_ID := $(shell grep -E '^GOOGLE_ANDROID_CLIENT_ID=' .env 2>
 
 .PHONY: aide init up down restart logs ps api app web test test-api test-app \
         migration migrate reset-db seed mail openapi frontieres fmt lint verif clean \
-        android apk emulateur lan devices inotify stop-api variables
+        android apk aab emulateur lan devices inotify stop-api variables
 
 aide: ## Affiche cette aide
 	@echo "PartyPlan — cibles disponibles :"
@@ -147,6 +147,20 @@ web: ## Compile l'application Flutter Web en production, en local
 # `http://localhost:5080`, qui depuis un téléphone désigne le téléphone lui-même.
 # L'application s'installe, s'ouvre, et rien ne charge — sans message expliquant pourquoi.
 API_PROD ?= https://api.partyplan.maxencecoeur.fr
+
+aab: ## Construit l'App Bundle signé, à déposer sur Google Play
+	@# Google Play n'accepte pas d'APK pour une nouvelle application : il exige un
+	@# App Bundle, dont il dérive lui-même un APK par appareil.
+	@test -f app/android/key.properties || { \
+	  echo "key.properties absent : le bundle serait signé avec la clé de débogage,"; \
+	  echo "et Google Play le refuserait. Voir docs/publication-play-store.md."; \
+	  exit 1; }
+	cd app && flutter build appbundle --release \
+	  --dart-define=API_BASE_URL=$(API_PROD) \
+	  --dart-define=GOOGLE_CLIENT_ID=$(GOOGLE_CLIENT_ID)
+	@echo ""
+	@echo "→ app/build/app/outputs/bundle/release/app-release.aab"
+	@echo "  API : $(API_PROD)"
 
 apk: ## Construit l'APK de production à installer sur un téléphone Android
 	cd app && flutter build apk --release \

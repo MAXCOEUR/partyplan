@@ -1,9 +1,26 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("kotlin-android")
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
     id("dev.flutter.flutter-gradle-plugin")
 }
+
+// Clé de publication, lue depuis `android/key.properties`, hors dépôt.
+//
+// Absente, la compilation retombe sur la clé de débogage : un clone frais doit pouvoir
+// produire un release installable sans détenir la clé du magasin (règle 5). Ce repli est
+// le comportement voulu en développement, et interdit en publication — d'où
+// l'avertissement, et non le silence.
+val proprietesCle = Properties().apply {
+    val fichier = rootProject.file("key.properties")
+    if (fichier.exists()) {
+        fichier.inputStream().use { load(it) }
+    }
+}
+
+val cleDePublication = proprietesCle.getProperty("storeFile") != null
 
 // Le greffon Google Services n'est appliqué que si google-services.json est présent.
 //
@@ -40,21 +57,41 @@ android {
     }
 
     defaultConfig {
-        // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
         applicationId = "fr.maxencecoeur.partyplan"
-        // You can update the following values to match your application needs.
-        // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
+        // Tirés de `version:` dans pubspec.yaml. Google Play refuse un versionCode déjà
+        // publié : il s'incrémente à chaque dépôt, y compris pour une correction.
         versionCode = flutter.versionCode
         versionName = flutter.versionName
     }
 
+    signingConfigs {
+        if (cleDePublication) {
+            create("publication") {
+                storeFile = file(proprietesCle.getProperty("storeFile"))
+                storePassword = proprietesCle.getProperty("storePassword")
+                keyAlias = proprietesCle.getProperty("keyAlias")
+                keyPassword = proprietesCle.getProperty("keyPassword")
+            }
+        }
+    }
+
     buildTypes {
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
-            signingConfig = signingConfigs.getByName("debug")
+            signingConfig = if (cleDePublication) {
+                signingConfigs.getByName("publication")
+            } else {
+                // Avertissement et non information : « lifecycle » est filtré par la
+                // sortie de flutter build, et un bundle signé en débogage est refusé par
+                // Google Play — sans que rien ne l'ait annoncé à la compilation.
+                logger.warn(
+                    "key.properties absent : release signé avec la clé de DÉBOGAGE. " +
+                        "Installable en direct, refusé par Google Play. " +
+                        "Voir docs/publication-play-store.md."
+                )
+                signingConfigs.getByName("debug")
+            }
         }
     }
 }
