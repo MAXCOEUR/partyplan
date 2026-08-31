@@ -241,20 +241,27 @@ services:
       Google__IosClientId: ${GOOGLE_IOS_CLIENT_ID}
 
       # ---------- Notifications poussées ----------
-      # Vide : les notifications sont journalisées et rien ne part (NF-DEV-04).
+      # Un seul geste : déposer la clé de compte de service Firebase dans
+      # `secrets/firebase.json`, à côté de ce compose. Elle reste hors dépôt
+      # (.gitignore) et se transfère par scp, jamais par git.
       #
-      # Pour les activer, deux gestes et aucune retouche de ce fichier :
-      #   1. déposer la clé de compte de service Firebase dans `secrets/firebase.json`,
-      #      à côté de ce compose — elle reste hors dépôt (.gitignore) et se transfère
-      #      par scp, jamais par git ;
-      #   2. mettre FIREBASE_SERVICE_ACCOUNT_PATH=/run/secrets/firebase.json dans .env.
+      # Le chemin ci-dessous est celui du fichier **vu de l'intérieur du conteneur**, et
+      # c'est le montage juste en dessous qui l'y place. Les deux se répondent : les
+      # séparer dans deux fichiers, comme le faisait la variable d'environnement, permet
+      # de monter la clé sans la déclarer — l'API retombe alors sur la console, la
+      # notification part dans le journal, et rien ne dit pourquoi. C'est exactement la
+      # panne constatée le 31/08/2026 sur le NAS, où l'orchestrateur ne lisait pas le
+      # `.env` attendu. La variable reste acceptée pour un déploiement qui range sa clé
+      # ailleurs, mais elle n'est plus nécessaire. Un tiret seul et non « :- » : la
+      # valeur par défaut comble une variable **non définie**, tandis qu'une variable
+      # explicitement vidée garde le silence, pour une instance qui ne veut pas de
+      # notifications.
       #
-      # Le montage ci-dessous porte sur le **répertoire** et non sur le fichier, et il
-      # n'est plus commenté. Monter un fichier absent fait créer un répertoire à sa
-      # place par Docker, ce qui obligeait à respecter un ordre — donc à se tromper un
-      # jour. Un répertoire absent, lui, est créé vide : l'API n'y trouve aucune clé et
-      # retombe sur la console, ce qui est exactement le comportement voulu.
-      Push__FirebaseServiceAccountPath: ${FIREBASE_SERVICE_ACCOUNT_PATH}
+      # Le montage porte sur le **répertoire** et non sur le fichier : monter un fichier
+      # absent fait créer un répertoire à sa place par Docker, ce qui obligeait à
+      # respecter un ordre — donc à se tromper un jour. Un répertoire absent, lui, est
+      # créé vide, l'API n'y trouve aucune clé et le dit au démarrage.
+      Push__FirebaseServiceAccountPath: ${FIREBASE_SERVICE_ACCOUNT_PATH-/run/secrets/firebase.json}
     volumes:
       - ${DATA_PATH:-./donnees}/media:/var/lib/partyplan/media
       - ./secrets:/run/secrets:ro
