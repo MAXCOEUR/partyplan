@@ -665,11 +665,14 @@ serveur. Les systèmes mobiles offrent tous un mode « ne pas déranger », mieu
 déjà réglé par la personne ; le dupliquer côté serveur retardait en outre les
 notifications d'une soirée jusqu'au lendemain matin, quand elles ne servaient plus.
 
-**RG-NOT-02** — Les notifications d'activité ne sont pas regroupées par le serveur. Elles
-portent une clé de groupe par événement, et c'est l'appareil qui les empile sous un seul
-bandeau. Sur le Web, la notion équivalente remplace au lieu d'empiler : le navigateur
-montre la dernière. *Amendée le 30/08/2026 ; le plafond d'une notification par quart
-d'heure retardait la discussion au-delà de la conversation qu'elle annonçait.*
+**RG-NOT-02** — Les notifications d'activité ne sont pas regroupées par le serveur. Chaque
+message porte une clé de groupe par événement (`event:{id}`), destinée à l'empilement sous
+un seul bandeau sur l'appareil. **Cet empilement reste à construire côté application** :
+aucun code n'y lit aujourd'hui cette clé, et l'émetteur envoie un message de notification,
+pas un message de données — voir `docs/roadmap.md`. Sur le Web, la notion équivalente
+remplacera au lieu d'empiler, une fois construite : le navigateur montrera la dernière.
+*Amendée le 30/08/2026 ; le plafond d'une notification par quart d'heure retardait la
+discussion au-delà de la conversation qu'elle annonçait.*
 
 **RG-NOT-03** — Le consentement aux notifications poussées est demandé au moment où
 il devient utile, jamais au premier lancement.

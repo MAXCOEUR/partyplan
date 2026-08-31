@@ -697,7 +697,7 @@ et les écrans arrivent avec ce lot — voir
   - → la clé de déduplication porte le statut : répondre deux fois « oui » ne prévient
     qu'une fois, changer d'avis prévient de nouveau
 - [x] `EF-NOT-02` Modification de date ou de lieu
-- [x] `EF-NOT-03` Rappel de non-réponse à J-3 et J-1
+- [x] `EF-NOT-03` Rappel de non-réponse à J-7, J-3 et J-1
 - [x] `EF-NOT-04` Articles non attribués à J-1, à l'organisateur
 - [x] `EF-NOT-05` Rappel de début d'événement à 2 heures
 - [x] `EF-NOT-06` Montant dû, au lendemain de l'événement — le montant vient du calcul de
@@ -706,13 +706,12 @@ et les écrans arrivent avec ce lot — voir
 - [x] `EF-NOT-08` Mise en sourdine d'un événement
 - [x] **`EF-NOT-10` ajoutée au cahier des charges** — `RG-NOT-02` plafonnait une
       notification d'activité qu'aucune exigence ne créait
-- [x] `RG-NOT-01` Silence entre 22 h et 8 h, hors rappel de début
-  - → appliqué à l'envoi et non à l'inscription : la file porte l'intention, et un
-    changement de fuseau ne rend pas un horaire déjà négocié faux
-  - → dans le fuseau du destinataire (`users.timezone`, `EF-USR-07`) ; un fuseau
-    introuvable retombe sur `Europe/Paris` plutôt que de priver la personne
+- [x] `RG-NOT-01` Silence entre 22 h et 8 h, hors rappel de début — **retirée le
+      30/08/2026** (voir plus bas) : dupliquait le mode « ne pas déranger » du téléphone
+      et retardait au matin des notifications de soirée qui ne servaient plus
 - [x] `RG-NOT-02` Regroupement : une notification d'activité par événement, par
-      destinataire et par quart d'heure
+      destinataire et par quart d'heure — **amendée le 30/08/2026** (voir plus bas) : le
+      plafond retardait la discussion au-delà de la conversation qu'elle annonçait
 - [x] `RG-NOT-03` Consentement demandé au moment utile, pas au premier lancement
 - [x] Ouverture du lien profond au tap, application déjà lancée ou démarrée par la
       notification
@@ -739,6 +738,11 @@ et les écrans arrivent avec ce lot — voir
   - → réglage par soirée sur onze catégories, écran dédié affichant aussi l'état de
     sourdine à côté des catégories
   - → rappel de non-réponse ajouté à J-7, en plus de J-3 et J-1
+- [ ] **Empilement des notifications d'activité sur l'appareil** (`RG-NOT-02`) — la clé de
+      groupe (`event:{id}`) part bien dans `data.groupe` de chaque message, mais rien ne
+      la lit côté application aujourd'hui, et l'émetteur envoie un message de
+      notification, pas un message de données : sans handler client, l'empilement promis
+      par la règle n'existe pas encore
 - [ ] `EF-NOT-09` Repli par courriel — `P1`, hors périmètre de ce lot
 - [ ] **Recette sur un appareil réel, avec une vraie clé FCM** — la chaîne est vérifiée
       avec l'émetteur en repli console (règle 5). Qu'une notification s'affiche sur un
