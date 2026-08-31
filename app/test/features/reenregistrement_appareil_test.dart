@@ -98,8 +98,9 @@ class _ServiceDouble implements ServiceNotifications {
   Future<void> ecouterRafraichissements() async => rafraichissements++;
 
   @override
-  Future<void> ecouterOuvertures(void Function(String destination) aller) async =>
-      ouvertures++;
+  Future<void> ecouterOuvertures(
+    void Function(String destination) aller,
+  ) async => ouvertures++;
 
   @override
   Future<void> ecouterPremierPlan(

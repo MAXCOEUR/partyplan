@@ -102,7 +102,8 @@ class _MagasinDouble implements MagasinLocal {
   Future<String?> lire(String cle) async => _valeurs[cle];
 
   @override
-  Future<void> ecrire(String cle, String valeur) async => _valeurs[cle] = valeur;
+  Future<void> ecrire(String cle, String valeur) async =>
+      _valeurs[cle] = valeur;
 
   @override
   Future<void> supprimer(String cle) async => _valeurs.remove(cle);

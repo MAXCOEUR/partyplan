@@ -30,9 +30,7 @@ abstract final class EtatConsentement {
 
     // Demandé, et toujours pas autorisé : c'est un refus. Reproposer donnerait un bouton
     // sans effet, Android ne représentant jamais la boîte système.
-    return dejaDemande
-        ? EtatNotifications.refuse
-        : EtatNotifications.aDemander;
+    return dejaDemande ? EtatNotifications.refuse : EtatNotifications.aDemander;
   }
 }
 
