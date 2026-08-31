@@ -76,6 +76,15 @@ public sealed class EnvoiNotifications(
 
         var envoyees = 0;
 
+        // Le journal dit ce que la passe a trouvé avant de dire ce qu'elle en a fait :
+        // une file pleine sans aucun appareil inscrit et une file vide se ressemblent
+        // trop dans un journal qui ne compte que les envois réussis.
+        logger.LogInformation(
+            "{Dues} notification(s) due(s), {Appareils} appareil(s) inscrit(s) pour {Destinataires} destinataire(s).",
+            dues.Count,
+            appareils.Count,
+            destinataires.Count);
+
         foreach (var notification in dues)
         {
             var destinataire = notification.UserId!.Value;
@@ -84,12 +93,35 @@ public sealed class EnvoiNotifications(
             {
                 // Horodatée sans partir : la personne a demandé le silence, et laisser la
                 // ligne en file la ferait réexaminer à chaque réveil pour rien.
+                logger.LogInformation(
+                    "Notification {Categorie} écartée pour {Destinataire} : catégorie coupée ou soirée en sourdine.",
+                    notification.Category,
+                    destinataire);
                 notification.SentAt = maintenant;
                 continue;
             }
 
-            foreach (var appareil in appareils.Where(d => d.UserId == destinataire))
+            var sesAppareils = appareils.Where(d => d.UserId == destinataire).ToList();
+
+            // Le cas le plus silencieux de toute la chaîne, et le plus fréquent en
+            // production : la notification est produite, autorisée, horodatée — et ne
+            // part nulle part faute d'appareil inscrit. Rien ne le disait.
+            if (sesAppareils.Count == 0)
             {
+                logger.LogWarning(
+                    "Notification {Categorie} sans destination : aucun appareil actif inscrit pour {Destinataire}.",
+                    notification.Category,
+                    destinataire);
+            }
+
+            foreach (var appareil in sesAppareils)
+            {
+                logger.LogInformation(
+                    "Envoi de {Categorie} vers {Plateforme} pour {Destinataire}.",
+                    notification.Category,
+                    appareil.Platform,
+                    destinataire);
+
                 await emetteur
                     .SendAsync(
                         MessagePousse.Depuis(notification, appareil.Token),
@@ -106,10 +138,10 @@ public sealed class EnvoiNotifications(
 
         await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
-        if (envoyees > 0)
-        {
-            logger.LogInformation("{Nombre} notification(s) envoyée(s).", envoyees);
-        }
+        logger.LogInformation(
+            "Passe terminée : {Nombre} notification(s) traitée(s) sur {Dues} due(s).",
+            envoyees,
+            dues.Count);
 
         return envoyees;
     }

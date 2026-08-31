@@ -37,6 +37,16 @@ public static class PushSenderFactory
             logger.LogInformation(
                 "Aucune clé Firebase configurée : les notifications sont journalisées (NF-DEV-04).");
         }
+        else
+        {
+            // Le succès s'écrit, et nomme le projet servi. Sans cette ligne, « clé
+            // chargée » et « configuration jamais lue » laissent la même trace dans le
+            // journal — aucune — et une instance distante devient indiagnosticable.
+            logger.LogInformation(
+                "Notifications poussées actives : projet Firebase {ProjectId}, compte de service {Compte}.",
+                cle.ProjectId,
+                cle.ClientEmail);
+        }
 
         return cle;
     }

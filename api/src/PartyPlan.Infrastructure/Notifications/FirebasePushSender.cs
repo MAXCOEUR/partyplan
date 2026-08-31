@@ -50,6 +50,13 @@ public sealed class FirebasePushSender(
 
             if (reponse.IsSuccessStatusCode)
             {
+                // Le succès s'écrit aussi. Un journal qui ne retient que les échecs ne
+                // permet pas de distinguer « FCM a accepté, le téléphone n'a rien montré »
+                // de « rien n'est jamais parti » — deux pannes très différentes.
+                logger.LogInformation(
+                    "FCM a accepté la notification {Categorie} pour {Appareil}.",
+                    message.Category ?? "sans catégorie",
+                    Tronquer(message.DeviceToken));
                 return;
             }
 

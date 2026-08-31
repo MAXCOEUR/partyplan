@@ -1,6 +1,7 @@
 namespace PartyPlan.Modules.Notifications.Application;
 
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using PartyPlan.Modules.Notifications.Domain;
 using PartyPlan.Modules.Notifications.Persistence;
 using PartyPlan.SharedKernel.Abstractions;
@@ -19,7 +20,8 @@ public sealed class DeviceService(
     INotificationsDbContext db,
     ICurrentUser currentUser,
     IClock clock,
-    IIdGenerator ids) : IPushDeviceRegistry
+    IIdGenerator ids,
+    ILogger<DeviceService> logger) : IPushDeviceRegistry
 {
     /// <summary>Plateformes acceptées. iOS arrivera avec le portage, en V1.2.</summary>
     private static readonly string[] Plateformes = ["android", "web"];
@@ -71,6 +73,13 @@ public sealed class DeviceService(
 
         if (existant is null)
         {
+            // Première inscription : la ligne qui manquait pour savoir, depuis le
+            // journal, si un téléphone s'est bien annoncé au serveur.
+            logger.LogInformation(
+                "Appareil {Plateforme} inscrit pour {Utilisateur}.",
+                plateforme,
+                utilisateur);
+
             db.PushDevices.Add(new PushDevice
             {
                 Id = ids.NewId(),
@@ -83,6 +92,11 @@ public sealed class DeviceService(
         }
         else
         {
+            logger.LogInformation(
+                "Appareil {Plateforme} déjà connu, réinscrit pour {Utilisateur}.",
+                plateforme,
+                utilisateur);
+
             existant.UserId = utilisateur;
             existant.Platform = plateforme;
             existant.LastSeenAt = clock.UtcNow;

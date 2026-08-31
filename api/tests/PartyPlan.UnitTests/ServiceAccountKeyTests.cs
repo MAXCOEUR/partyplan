@@ -192,6 +192,30 @@ public sealed class ServiceAccountKeyTests
         journal.Informations.ShouldNotBeEmpty();
     }
 
+    [Fact]
+    public void Une_cle_valide_annonce_le_projet_servi()
+    {
+        // Le succès doit s'écrire, et nommer le projet. Sans cette ligne, « clé chargée »
+        // et « configuration jamais lue » ont exactement la même trace dans le journal :
+        // aucune. C'est ce silence qui rend une instance de production indiagnosticable
+        // à distance.
+        var chemin = EcrireCleValide();
+        var journal = new JournalDeTest();
+
+        try
+        {
+            var cle = PushSenderFactory.CleUtilisable(chemin, journal);
+
+            cle.ShouldNotBeNull();
+            journal.Avertissements.ShouldBeEmpty();
+            journal.Informations.ShouldContain(m => m.Contains("partyplan-test"));
+        }
+        finally
+        {
+            File.Delete(chemin);
+        }
+    }
+
     // ------------------------------------------------------------------ aides ----
 
     /// <summary>Écrit une clé de service valide, avec une paire RSA engendrée sur place.</summary>
