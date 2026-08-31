@@ -52,9 +52,25 @@ class _PartyPlanAppState extends ConsumerState<PartyPlanApp> {
     _sansBruit(service.ecouterRafraichissements);
     _sansBruit(() => service.ecouterOuvertures(routeur.go));
     _sansBruit(() => service.ecouterPremierPlan(_annoncer));
-    // Réinscription à chaque lancement : un appareil inconnu du serveur ne reçoit rien,
-    // et rien ne le signale.
-    _sansBruit(service.reinscrireAppareil);
+  }
+
+  /// Inscrit l'appareil dès qu'une session existe, et à chaque fois qu'elle revient.
+  ///
+  /// Adossé à l'état de session, et non au lancement : sur une installation neuve,
+  /// l'application démarre sans session, présente l'écran de connexion, et n'est
+  /// connectée qu'ensuite. Un jeton envoyé au lancement partait donc avant toute
+  /// session, se faisait refuser en silence, et rien ne le rattrapait avant le
+  /// lancement suivant — une personne qui installe puis se connecte n'avait aucune
+  /// notification de toute sa première session.
+  /// Une session déjà ouverte au lancement est captée elle aussi : l'état passe par
+  /// « en cours de détermination » avant d'être connu, ce qui est bien un changement.
+  void _inscrireQuandConnecte() {
+    ref.listen(sessionProvider, (precedent, etat) {
+      if (etat.value == EtatSession.connecte &&
+          precedent?.value != EtatSession.connecte) {
+        _sansBruit(ref.read(serviceNotificationsProvider).reinscrireAppareil);
+      }
+    });
   }
 
   /// Lance une tâche de notification sans l'attendre et sans la laisser remonter.
@@ -90,22 +106,26 @@ class _PartyPlanAppState extends ConsumerState<PartyPlanApp> {
   }
 
   @override
-  Widget build(BuildContext context) => MaterialApp.router(
-    title: PpMarque.nom,
-    debugShowCheckedModeBanner: false,
-    // Le français est la seule langue livrée ; les délégués sont posés dès maintenant
-    // pour que les libellés de Material soient traduits eux aussi.
-    localizationsDelegates: PartyPlanApp.delegues,
-    supportedLocales: PartyPlanApp.languesPrisesEnCharge,
-    locale: const Locale('fr'),
-    theme: PpTheme.clair(),
-    darkTheme: PpTheme.sombre(),
-    routerConfig: ref.watch(routeurProvider),
-    // Posé au-dessus de tous les écrans, une seule fois : une notification peut arriver
-    // n'importe où, et la poser écran par écran en oublierait.
-    builder: (context, enfant) => PpBandeauNotification(
-      aller: ref.read(routeurProvider).go,
-      child: enfant ?? const SizedBox.shrink(),
-    ),
-  );
+  Widget build(BuildContext context) {
+    _inscrireQuandConnecte();
+
+    return MaterialApp.router(
+      title: PpMarque.nom,
+      debugShowCheckedModeBanner: false,
+      // Le français est la seule langue livrée ; les délégués sont posés dès maintenant
+      // pour que les libellés de Material soient traduits eux aussi.
+      localizationsDelegates: PartyPlanApp.delegues,
+      supportedLocales: PartyPlanApp.languesPrisesEnCharge,
+      locale: const Locale('fr'),
+      theme: PpTheme.clair(),
+      darkTheme: PpTheme.sombre(),
+      routerConfig: ref.watch(routeurProvider),
+      // Posé au-dessus de tous les écrans, une seule fois : une notification peut arriver
+      // n'importe où, et la poser écran par écran en oublierait.
+      builder: (context, enfant) => PpBandeauNotification(
+        aller: ref.read(routeurProvider).go,
+        child: enfant ?? const SizedBox.shrink(),
+      ),
+    );
+  }
 }
