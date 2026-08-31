@@ -12,7 +12,7 @@ using Shouldly;
 using Xunit;
 
 /// <summary>
-/// Passe d'envoi (RG-NOT-01, EF-NOT-07, EF-NOT-08).
+/// Passe d'envoi (EF-NOT-07, EF-NOT-08).
 /// <para>
 /// L'horodatage est le fil conducteur : une notification écartée pour de bon est
 /// horodatée, une notification reportée ne l'est pas. Confondre les deux donne soit une

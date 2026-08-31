@@ -124,8 +124,7 @@ public sealed class ReveilNotificationsTests
 /// </summary>
 public sealed class ReveilPile : WebApplicationFactory<Program>
 {
-    /// <summary>18 h à Paris : hors plage de silence (RG-NOT-01), pour ne jamais reporter
-    /// l'envoi que ce test attend.</summary>
+    /// <summary>18 h à Paris.</summary>
     public static readonly DateTimeOffset Maintenant = new(2026, 9, 12, 16, 0, 0, TimeSpan.Zero);
 
     private readonly PostgreSqlContainer _database = new PostgreSqlBuilder("postgres:16-alpine")
@@ -198,8 +197,8 @@ public sealed class ReveilPile : WebApplicationFactory<Program>
 
         builder.ConfigureServices(services =>
         {
-            // Horloge figée en plein jour : la vraie horloge ferait échouer ce test la
-            // nuit, en reportant l'envoi pour cause de plage de silence (RG-NOT-01).
+            // Horloge figée : le test attend un envoi immédiat, indépendant du moment
+            // réel d'exécution.
             services.RemoveAll<IClock>();
             services.AddSingleton<IClock>(new HorlogeFixe(Maintenant));
 

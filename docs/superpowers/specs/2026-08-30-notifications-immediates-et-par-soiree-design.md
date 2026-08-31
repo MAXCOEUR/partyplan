@@ -138,8 +138,11 @@ pour toutes ses applications — le dupliquer côté serveur, c'est décider à 
 Le second : la règle retardait à 8 h du matin des notifications de soirée qui ne servent
 plus à rien à cette heure-là.
 
-Le drapeau « immédiat » des catégories survit : il ne sert plus à contourner un silence,
-mais à décider si l'envoi est réveillé après validation ou attend le tour d'horloge.
+*Corrigé le 31/08/2026* : le drapeau « immédiat » n'a finalement pas survécu comme
+mécanisme partagé. Chaque module qui vient d'agir décide lui-même de réveiller la passe
+d'envoi (`reveil.Reveiller()`), sans consulter une fonction commune.
+`NotificationCategories.EstImmediate` n'a jamais eu d'appelant en production ; elle est
+retirée.
 
 **`RG-NOT-02` — le regroupement par quart d'heure disparaît**, remplacé par une clé de
 groupe par soirée sur l'appareil. Android empile les notifications d'une même clé sous un
@@ -189,7 +192,8 @@ trois états à écrire pour la discussion, dont l'un est « comme d'habitude »
 - la sourdine l'emporte sur un écart qui autorise ;
 - une transaction en échec ne laisse aucune notification ;
 - le réveil ne déclenche pas la passe de planification ;
-- une notification immédiate part à 23 h ; un rappel planifié à 23 h est reporté à 8 h ;
+- une notification part quelle que soit l'heure, aucune plage horaire n'étant appliquée
+  par le serveur (`RG-NOT-01` retirée le 30/08/2026) ;
 - une dépense ne notifie que les porteurs d'une part.
 
 Les deux derniers valent d'être écrits en premier : ce sont les changements de règle, et

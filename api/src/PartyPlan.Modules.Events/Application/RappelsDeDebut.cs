@@ -11,11 +11,6 @@ using PartyPlan.SharedKernel.Enums;
 /// Aux seuls membres comptés présents : rappeler une soirée à quelqu'un qui a dit non
 /// est au mieux inutile, au pire vexant.
 /// </para>
-/// <para>
-/// C'est la seule notification qui traverse la plage de silence (<c>RG-NOT-01</c>). Une
-/// soirée qui commence à 23 h se rappelle à 21 h ; se taire ici rendrait le rappel
-/// inutile précisément quand il sert.
-/// </para>
 /// </summary>
 public sealed class RappelsDeDebut(
     IEventsDbContext db,

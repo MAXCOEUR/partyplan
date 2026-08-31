@@ -12,9 +12,7 @@ namespace PartyPlan.SharedKernel.Contracts;
 /// <param name="DisplayName">Nom affiché.</param>
 /// <param name="AvatarUrl">Photo de profil, ou nul.</param>
 /// <param name="Timezone">
-/// Fuseau horaire déclaré du compte (EF-USR-07), <c>Europe/Paris</c> par défaut. Porté
-/// ici parce que RG-NOT-01 interdit d'envoyer entre 22 h et 8 h « heure locale du
-/// destinataire » : sans le fuseau, la règle est inapplicable.
+/// Fuseau horaire déclaré du compte (EF-USR-07), <c>Europe/Paris</c> par défaut.
 /// </param>
 public sealed record UserIdentity(
     Guid Id,

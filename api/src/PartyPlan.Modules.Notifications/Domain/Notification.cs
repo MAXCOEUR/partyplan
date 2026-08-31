@@ -22,7 +22,7 @@ public sealed class Notification
     /// <summary>Route applicative ouverte au clic, par exemple <c>/events/{id}/expenses</c>.</summary>
     public string? DeepLink { get; set; }
 
-    /// <summary>Instant d'envoi souhaité. Décalé pour respecter la plage de silence (RG-NOT-01).</summary>
+    /// <summary>Instant d'envoi souhaité.</summary>
     public DateTimeOffset ScheduledFor { get; set; }
 
     public DateTimeOffset? SentAt { get; set; }

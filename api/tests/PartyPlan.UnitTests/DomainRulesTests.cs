@@ -71,19 +71,6 @@ public sealed class DomainRulesTests
     }
 
     [Fact]
-    public void Les_categories_immediates_sont_celles_declenchees_par_un_geste_humain()
-    {
-        NotificationCategories.EstImmediate(NotificationCategories.DiscussionMessage).ShouldBeTrue();
-        NotificationCategories.EstImmediate(NotificationCategories.DiscussionMention).ShouldBeTrue();
-        NotificationCategories.EstImmediate(NotificationCategories.PollNew).ShouldBeTrue();
-        NotificationCategories.EstImmediate(NotificationCategories.ExpenseNew).ShouldBeTrue();
-        NotificationCategories.EstImmediate(NotificationCategories.Activity).ShouldBeTrue();
-
-        NotificationCategories.EstImmediate(NotificationCategories.EventStartingSoon).ShouldBeFalse();
-        NotificationCategories.EstImmediate(NotificationCategories.BalanceDue).ShouldBeFalse();
-    }
-
-    [Fact]
     public void Toute_categorie_est_declaree_dans_All()
     {
         // `All` sert l'écran des préférences : une catégorie absente devient invisible

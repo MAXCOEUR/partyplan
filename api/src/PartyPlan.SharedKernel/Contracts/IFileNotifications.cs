@@ -7,10 +7,7 @@ namespace PartyPlan.SharedKernel.Contracts;
 /// <param name="Title">Titre affiché sur l'appareil.</param>
 /// <param name="Body">Corps du message.</param>
 /// <param name="DeepLink">Route applicative ouverte au tap. Nulle si aucune.</param>
-/// <param name="ScheduledFor">
-/// Instant souhaité. La plage de silence (RG-NOT-01) n'est <b>pas</b> appliquée ici : la
-/// file porte l'intention, et c'est l'envoi qui la respecte.
-/// </param>
+/// <param name="ScheduledFor">Instant d'envoi souhaité.</param>
 /// <param name="DedupKey">
 /// Clé d'unicité. Deux notifications de même clé ne coexistent jamais.
 /// </param>
@@ -81,16 +78,4 @@ public static class NotificationCategories
         PollNew,
         ExpenseNew,
     ];
-
-    /// <summary>
-    /// La catégorie part-elle sans attendre le tour d'horloge ?
-    /// <para>
-    /// Vrai lorsqu'un humain vient d'agir : la notification annonce un geste que son
-    /// auteur croit déjà connu des autres. Faux pour un rappel calculé, que personne
-    /// n'a demandé à cet instant — d'où le silence nocturne qui ne vaut que pour lui
-    /// (RG-NOT-01, amendée le 30/08/2026).
-    /// </para>
-    /// </summary>
-    public static bool EstImmediate(string categorie) => categorie is
-        DiscussionMessage or DiscussionMention or PollNew or ExpenseNew or Activity;
 }

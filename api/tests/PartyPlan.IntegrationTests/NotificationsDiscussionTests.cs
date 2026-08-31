@@ -23,7 +23,7 @@ using Xunit;
 [Collection(ApiTestSuite.Name)]
 public sealed class NotificationsDiscussionTests(PartyPlanApiFixture fixture) : IAsyncLifetime
 {
-    /// <summary>18 h à Paris : hors plage de silence, comme dans les tests de la passe d'envoi.</summary>
+    /// <summary>18 h à Paris.</summary>
     private static readonly DateTimeOffset SoireeAParis = new(2026, 9, 12, 16, 0, 0, TimeSpan.Zero);
 
     private Guid _evenement;

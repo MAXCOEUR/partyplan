@@ -209,7 +209,7 @@ public sealed class NotificationService(
             .ToListAsync(cancellationToken)
             .ConfigureAwait(false);
 
-        // Les sept catégories sont toujours rendues, même sans ligne en base : une
+        // Les onze catégories sont toujours rendues, même sans ligne en base : une
         // préférence absente vaut « activée », et l'écran doit pouvoir afficher
         // l'ensemble sans savoir lesquelles ont déjà été touchées.
         return NotificationCategories.All

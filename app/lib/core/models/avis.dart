@@ -106,11 +106,11 @@ class PreferenceAvis {
 
 /// Réglage résolu d'une catégorie pour une soirée donnée (`EF-NOT-09`).
 ///
-/// [actif] porte la valeur déjà résolue côté serveur — sourdine, écart de soirée,
-/// préférence globale, valeur d'usine — et non le seul écart : l'écran ne doit pas
-/// rejouer cette résolution de son côté, sous peine de diverger un jour de la règle
-/// serveur. [estUnEcart] distingue une ligne posée pour cette soirée d'une valeur
-/// simplement héritée.
+/// [actif] porte la valeur déjà résolue côté serveur — écart de soirée, préférence
+/// globale, valeur d'usine — et non le seul écart : l'écran ne doit pas rejouer cette
+/// résolution de son côté, sous peine de diverger un jour de la règle serveur.
+/// [estUnEcart] distingue une ligne posée pour cette soirée d'une valeur simplement
+/// héritée. La sourdine n'entre pas dans [actif] : elle est exposée à part.
 class PreferenceDeSoiree {
   const PreferenceDeSoiree({
     required this.categorie,
