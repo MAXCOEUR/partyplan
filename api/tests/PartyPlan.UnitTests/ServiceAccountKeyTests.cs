@@ -216,6 +216,64 @@ public sealed class ServiceAccountKeyTests
         }
     }
 
+    [Fact]
+    public void Sans_chemin_configure_la_cle_conventionnelle_est_lue()
+    {
+        // Le chemin du fichier dans le conteneur est fixé par le montage du compose :
+        // le redemander en configuration crée deux moitiés qu'il faut accorder à la
+        // main, et une clé montée sans chemin déclaré donne une API muette qui retombe
+        // sur la console sans que rien ne l'explique. C'est la panne du 31/08/2026.
+        var chemin = EcrireCleValide("partyplan-convention");
+        var journal = new JournalDeTest();
+
+        try
+        {
+            var cle = PushSenderFactory.CleUtilisable(null, journal, chemin);
+
+            cle.ShouldNotBeNull();
+            cle.ProjectId.ShouldBe("partyplan-convention");
+            journal.Avertissements.ShouldBeEmpty();
+        }
+        finally
+        {
+            File.Delete(chemin);
+        }
+    }
+
+    [Fact]
+    public void Un_chemin_explicite_l_emporte_sur_la_convention()
+    {
+        var explicite = EcrireCleValide("partyplan-explicite");
+        var convention = EcrireCleValide("partyplan-convention");
+        var journal = new JournalDeTest();
+
+        try
+        {
+            PushSenderFactory.CleUtilisable(explicite, journal, convention)!
+                .ProjectId.ShouldBe("partyplan-explicite");
+        }
+        finally
+        {
+            File.Delete(explicite);
+            File.Delete(convention);
+        }
+    }
+
+    [Fact]
+    public void Sans_chemin_ni_fichier_conventionnel_rien_n_est_avertit()
+    {
+        // Le poste de développement, où aucun fichier n'est monté : informer, jamais
+        // avertir (règle 5).
+        var journal = new JournalDeTest();
+
+        PushSenderFactory
+            .CleUtilisable(null, journal, "/chemin/qui/n/existe/pas/cle.json")
+            .ShouldBeNull();
+
+        journal.Avertissements.ShouldBeEmpty();
+        journal.Informations.ShouldNotBeEmpty();
+    }
+
     // ------------------------------------------------------------------ aides ----
 
     /// <summary>Écrit une clé de service valide, avec une paire RSA engendrée sur place.</summary>

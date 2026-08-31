@@ -148,6 +148,11 @@ if (app.Logger.IsEnabled(LogLevel.Information))
         string.Join(", ", modules.Select(m => m.Name)));
 }
 
+// Résolue ici et non à la première notification : l'état des notifications poussées
+// appartient au journal de démarrage, là où on le cherche quand rien n'arrive. La
+// construction du singleton écrit d'elle-même le verdict, dans un sens ou dans l'autre.
+_ = app.Services.GetRequiredService<PartyPlan.Infrastructure.Notifications.CleFirebase>();
+
 await app.RunAsync().ConfigureAwait(false);
 
 /// <summary>

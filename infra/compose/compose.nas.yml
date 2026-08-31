@@ -245,23 +245,20 @@ services:
       # `secrets/firebase.json`, à côté de ce compose. Elle reste hors dépôt
       # (.gitignore) et se transfère par scp, jamais par git.
       #
-      # Le chemin ci-dessous est celui du fichier **vu de l'intérieur du conteneur**, et
-      # c'est le montage juste en dessous qui l'y place. Les deux se répondent : les
-      # séparer dans deux fichiers, comme le faisait la variable d'environnement, permet
-      # de monter la clé sans la déclarer — l'API retombe alors sur la console, la
-      # notification part dans le journal, et rien ne dit pourquoi. C'est exactement la
-      # panne constatée le 31/08/2026 sur le NAS, où l'orchestrateur ne lisait pas le
-      # `.env` attendu. La variable reste acceptée pour un déploiement qui range sa clé
-      # ailleurs, mais elle n'est plus nécessaire. Un tiret seul et non « :- » : la
-      # valeur par défaut comble une variable **non définie**, tandis qu'une variable
-      # explicitement vidée garde le silence, pour une instance qui ne veut pas de
-      # notifications.
+      # Rien à déclarer ici : l'API cherche d'elle-même `/run/secrets/firebase.json`,
+      # l'emplacement où le montage ci-dessous la place. Ce chemin décrivait auparavant
+      # un fichier dans le conteneur depuis un `.env` hors du conteneur : deux moitiés
+      # qu'il fallait accorder à la main, et une clé montée sans chemin déclaré donnait
+      # une API qui retombait sur la console sans que rien ne l'explique. C'est la panne
+      # du 31/08/2026 sur ce NAS.
+      #
+      # `Push__FirebaseServiceAccountPath` reste accepté pour une instance qui range sa
+      # clé ailleurs. Ne pas le déclarer est désormais le cas normal.
       #
       # Le montage porte sur le **répertoire** et non sur le fichier : monter un fichier
       # absent fait créer un répertoire à sa place par Docker, ce qui obligeait à
       # respecter un ordre — donc à se tromper un jour. Un répertoire absent, lui, est
       # créé vide, l'API n'y trouve aucune clé et le dit au démarrage.
-      Push__FirebaseServiceAccountPath: ${FIREBASE_SERVICE_ACCOUNT_PATH-/run/secrets/firebase.json}
     volumes:
       - ${DATA_PATH:-./donnees}/media:/var/lib/partyplan/media
       - ./secrets:/run/secrets:ro

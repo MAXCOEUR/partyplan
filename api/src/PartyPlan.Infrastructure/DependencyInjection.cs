@@ -4,7 +4,6 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 using PartyPlan.Infrastructure.Email;
 using PartyPlan.Infrastructure.Identity;
 using PartyPlan.Infrastructure.Media;
@@ -102,15 +101,14 @@ public static class DependencyInjection
             sp.GetRequiredService<PartyPlan.SharedKernel.Abstractions.IClock>(),
             sp.GetRequiredService<ILogger<GoogleAccessTokens>>()));
 
+        // La clé est lue une fois, au démarrage : relue à chaque portée, le fichier était
+        // rouvert et la clé RSA reconstruite à chaque passe d'envoi.
+        services.AddSingleton<CleFirebase>();
+
         // Scoped : l'émetteur Firebase consomme IPushDeviceRegistry, qui est scoped.
         services.AddScoped<PartyPlan.SharedKernel.Contracts.IPushSender>(sp =>
         {
-            var chemin = sp.GetRequiredService<IOptions<PushOptions>>()
-                .Value.FirebaseServiceAccountPath;
-
-            var cle = PushSenderFactory.CleUtilisable(
-                chemin,
-                sp.GetRequiredService<ILogger<GoogleAccessTokens>>());
+            var cle = sp.GetRequiredService<CleFirebase>().Cle;
 
             if (cle is null)
             {
