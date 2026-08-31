@@ -68,7 +68,22 @@ keytool -genkey -v \
   -alias upload
 ```
 
-Réponds aux questions (nom, organisation, pays : `FR`). Retiens les deux mots de passe.
+Réponds aux questions (nom, organisation, pays : `FR`).
+
+`keytool` demande **deux** mots de passe : celui du magasin, puis celui de la clé.
+**Donne-leur la même valeur** — appuie sur Entrée à la seconde question pour reprendre la
+première. Ce n'est pas une facilité : `keytool` crée un magasin au format PKCS12, qui ne
+sait pas gérer deux mots de passe distincts, et il ignore purement et simplement celui de
+la clé en le disant :
+
+```
+Avertissement : les mots de passe de clé et de banque distincts ne sont pas pris en
+charge pour les fichiers de clés d'accès PKCS12. La valeur -keypass spécifiée par
+l'utilisateur est ignorée.
+```
+
+Deux valeurs différentes dans `key.properties` feraient donc échouer la compilation au
+moment d'ouvrir la clé, avec un message qui ne mentionne pas cette cause.
 
 > Sauvegarde le `.jks` ailleurs que sur ton poste. La perdre n'est pas dramatique — Google
 > sait révoquer une clé d'upload et en accepter une nouvelle — mais c'est un échange de
@@ -78,11 +93,16 @@ Réponds aux questions (nom, organisation, pays : `FR`). Retiens les deux mots d
 Déclare-la ensuite dans `app/android/key.properties` — fichier hors dépôt :
 
 ```properties
-storePassword=<mot de passe du magasin>
-keyPassword=<mot de passe de la clé>
+# La même valeur aux deux lignes : voir l'avertissement PKCS12 ci-dessus.
+storePassword=<le mot de passe choisi>
+keyPassword=<le même>
 keyAlias=upload
 storeFile=/home/maxence/cles/partyplan-upload.jks
 ```
+
+`storePassword` protège le magasin — le fichier `.jks`, qui peut contenir plusieurs clés.
+`keyPassword` protège la clé que désigne `keyAlias` à l'intérieur. La distinction a du sens
+sur d'autres formats de magasin ; sur celui-ci, elle n'en a aucune.
 
 Rien d'autre à modifier : `app/android/app/build.gradle.kts` lit ce fichier s'il existe et
 signe le release avec cette clé. Absent, il retombe sur la clé de débogage en le disant —
