@@ -316,13 +316,13 @@ public sealed class ExpenseService(
         // on ne porte aucune part est du bruit, et le bruit fait couper la catégorie
         // entière. Jamais le payeur, jamais un membre sans compte.
         var payeurDisplayName = membres.First(m => m.MemberId == payeur).DisplayName;
-        var montant = depense.Amount.ToString("0.00", CultureInfo.GetCultureInfo("fr-FR"));
+        var montant = Formater(depense.Amount);
 
         foreach (var part in depense.Participants)
         {
             var membre = membres.FirstOrDefault(m => m.MemberId == part.MemberId);
 
-            if (membre is null || membre.MemberId == payeur || membre.UserId is not { } compte)
+            if (membre is null || membre.MemberId == moi.MemberId || membre.UserId is not { } compte)
             {
                 continue;
             }

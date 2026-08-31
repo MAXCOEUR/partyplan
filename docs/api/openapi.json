@@ -5459,7 +5459,7 @@
             "type": "boolean"
           }
         },
-        "description": "Réglage résolu d'une catégorie pour une soirée donnée.\nEnabled porte la valeur déjà résolue par les quatre étapes de\nEnvoiNotifications — sourdine, écart de soirée, préférence globale,\nvaleur d'usine — et non le seul écart : l'écran ne doit pas rejouer cette résolution\nde son côté, sous peine de diverger un jour de la règle serveur. EstUnEcart\ndistingue une ligne posée pour cette soirée d'une valeur simplement héritée."
+        "description": "            Réglage résolu d'une catégorie pour une soirée donnée.\n            Enabled porte la valeur déjà résolue par ResolutionPreference —\n            écart de soirée, puis préférence globale, puis valeur d'usine — et non le seul écart :\n            l'écran ne doit pas rejouer cette résolution de son côté, sous peine de diverger un\n            jour de la règle serveur. EstUnEcart distingue une ligne posée pour cette\n            soirée d'une valeur simplement héritée.La sourdine n'entre pas dans Enabled : voir\nTask&lt;Result&lt;IReadOnlyList&lt;PreferenceDeSoireeView&gt;&gt;&gt; NotificationService.PreferencesDeSoireeAsync(Guid eventId, CancellationToken cancellationToken)."
       },
       "PreferenceView": {
         "required": [

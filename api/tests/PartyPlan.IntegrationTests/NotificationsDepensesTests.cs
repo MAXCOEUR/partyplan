@@ -69,6 +69,24 @@ public sealed class NotificationsDepensesTests(PartyPlanApiFixture fixture) : IA
         notifs.ShouldNotContain(n => n.UserId == _maxence.UserId);
     }
 
+    [Fact]
+    public async Task Une_depense_saisie_pour_un_autre_notifie_le_payeur_pas_l_auteur()
+    {
+        // Lucas saisit une dépense payée par Maxence : c'est Lucas qui a agi, c'est donc
+        // lui qu'il faut exclure, jamais le payeur désigné qui, lui, doit être prévenu.
+        await CreerDepenseAsync(
+            _lucas,
+            "Essence",
+            30m,
+            participants: [_maxence.MemberId, _lucas.MemberId],
+            paidByMemberId: _maxence.MemberId);
+
+        var notifs = await NotificationsAsync();
+
+        notifs.ShouldContain(n => n.UserId == _maxence.UserId);
+        notifs.ShouldNotContain(n => n.UserId == _lucas.UserId);
+    }
+
     // ------------------------------------------------------------------ aides ----
 
     private async Task<Membre> MembreAsync(string displayName, HttpClient client)
@@ -91,10 +109,11 @@ public sealed class NotificationsDepensesTests(PartyPlanApiFixture fixture) : IA
     }
 
     private async Task CreerDepenseAsync(
-        Membre payeur,
+        Membre auteur,
         string label,
         decimal montant,
-        IReadOnlyList<Guid> participants)
+        IReadOnlyList<Guid> participants,
+        Guid? paidByMemberId = null)
     {
         var requete = new HttpRequestMessage(
             HttpMethod.Post,
@@ -106,13 +125,14 @@ public sealed class NotificationsDepensesTests(PartyPlanApiFixture fixture) : IA
                 amount = montant,
                 mode = "Selection",
                 shares = participants.Select(id => new { memberId = id, share = 1 }).ToArray(),
+                paidByMemberId,
             }),
         };
 
         // Les écritures financières exigent une clé d'idempotence (§8.1).
         requete.Headers.Add("Idempotency-Key", Guid.CreateVersion7().ToString());
 
-        var reponse = await payeur.Client.SendAsync(requete);
+        var reponse = await auteur.Client.SendAsync(requete);
 
         reponse.EnsureSuccessStatusCode();
     }
