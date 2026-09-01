@@ -28,6 +28,9 @@ public sealed class NotificationsModule : IModule
 
         // Passe d'envoi, appelée par l'ordonnanceur.
         services.AddScoped<IEnvoiNotifications, EnvoiNotifications>();
+
+        // Purge de l'historique, appelée par l'ordonnanceur elle aussi.
+        services.AddScoped<IPurgeNotifications, PurgeNotifications>();
         services.AddScoped<NotificationService>();
 
         // Contrat public consommé par l'émetteur de l'Infrastructure, qui ne doit pas

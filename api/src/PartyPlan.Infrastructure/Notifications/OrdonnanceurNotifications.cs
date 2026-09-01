@@ -60,6 +60,22 @@ public sealed class OrdonnanceurNotifications(
 {
     private readonly OrdonnanceurOptions _options = options.Value;
 
+    /// <summary>
+    /// Écart minimal entre deux purges de l'historique.
+    /// <para>
+    /// L'ordonnanceur se réveille toutes les minutes. Purger à chaque passe ferait
+    /// 1 440 suppressions par jour pour retirer, au mieux, les lignes d'une seule
+    /// journée. Une fois par jour suffit : la conservation se compte en semaines.
+    /// </para>
+    /// </summary>
+    private static readonly TimeSpan CadenceDePurge = TimeSpan.FromHours(24);
+
+    /// <summary>
+    /// Instant de la dernière purge. En mémoire, et non en base : le rythme n'a pas
+    /// besoin d'être exact, et une purge de plus au redémarrage ne coûte rien.
+    /// </summary>
+    private DateTimeOffset? _dernierePurge;
+
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         if (!_options.Enabled)
@@ -123,6 +139,11 @@ public sealed class OrdonnanceurNotifications(
         using var portee = portees.CreateScope();
         var fournisseur = portee.ServiceProvider;
 
+        // Avant la planification, et non après : la passe s'arrête tôt quand aucune
+        // soirée n'est en vue, et l'historique ne serait purgé que les semaines où
+        // quelqu'un organise quelque chose.
+        await PurgerSiDuAsync(fournisseur, maintenant, cancellationToken).ConfigureAwait(false);
+
         var evenements = await fournisseur.GetRequiredService<IEvenementsAVenir>()
             .ListerAsync(maintenant, _options.Horizon, _options.Retard, cancellationToken)
             .ConfigureAwait(false);
@@ -171,6 +192,34 @@ public sealed class OrdonnanceurNotifications(
         // à l'instant est dû à l'instant, et attendre le réveil suivant lui ferait perdre
         // une minute pour rien.
         await PasseDEnvoiAsync(maintenant, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>Purge l'historique des notifications, au plus une fois par jour.</summary>
+    private async Task PurgerSiDuAsync(
+        IServiceProvider fournisseur,
+        DateTimeOffset maintenant,
+        CancellationToken cancellationToken)
+    {
+        if (_dernierePurge is { } derniere && maintenant - derniere < CadenceDePurge)
+        {
+            return;
+        }
+
+        try
+        {
+            await fournisseur.GetRequiredService<IPurgeNotifications>()
+                .PurgerAsync(maintenant, cancellationToken)
+                .ConfigureAwait(false);
+
+            _dernierePurge = maintenant;
+        }
+        catch (Exception erreur) when (erreur is not OperationCanceledException)
+        {
+            // Journalisée et non propagée : l'entretien de l'historique ne doit pas
+            // priver la passe de sa planification. La date n'est pas avancée, la passe
+            // suivante réessaiera.
+            logger.LogError(erreur, "Purge de l'historique des notifications en échec.");
+        }
     }
 
     /// <summary>
