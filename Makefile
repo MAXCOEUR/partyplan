@@ -107,8 +107,18 @@ api: ## Lance l'API en rechargement à chaud (base et courriel en conteneur)
 	  Media__RootPath=$(MEDIA_DIR) \
 	  Google__ClientId=$(GOOGLE_CLIENT_ID) \
 	  Google__AndroidClientId=$(GOOGLE_ANDROID_CLIENT_ID) \
+	  $(if $(JETON_COURT),Jwt__AccessTokenMinutes=1,) \
 	  $$(./tools/verifier-inotify.sh --env) \
 	  dotnet watch --project $(API_PROJ) run
+
+api-jeton-court: ## Comme `make api`, mais jeton d'accès d'une minute (essai du renouvellement)
+	@# Le jeton d'accès dure quinze minutes en temps normal : vérifier le
+	@# renouvellement à la main demanderait d'attendre un quart d'heure devant
+	@# l'application. Une minute suffit à observer exactement le même parcours.
+	@# Compter quatre-vingt-dix secondes avant le refus, et non soixante : la
+	@# validation tolère trente secondes de dérive d'horloge (AuthenticationSetup).
+	@# La durée de la session, elle, reste à quatre-vingt-dix jours.
+	@$(MAKE) api JETON_COURT=1
 
 app: ## Lance l'application Flutter sur Chrome, en rechargement à chaud
 	@# Le port doit être fixe : sans --web-port, Chrome est servi sur un port
