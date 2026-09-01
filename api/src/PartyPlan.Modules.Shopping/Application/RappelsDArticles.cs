@@ -57,7 +57,7 @@ public sealed class RappelsDArticles(
             orphelins == 1
                 ? "Un article n'est pris en charge par personne, et c'est demain."
                 : $"{orphelins} articles ne sont pris en charge par personne, et c'est demain.",
-            $"/events/{evenement.EventId}/courses",
+            DestinationsNotification.Courses(evenement.EventId),
             maintenant,
             $"{evenement.EventId}:{NotificationCategories.ShoppingUnclaimed}:{evenement.OwnerUserId}:j-1"));
     }

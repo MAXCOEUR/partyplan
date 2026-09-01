@@ -241,7 +241,7 @@ public sealed class PollService(
                 NotificationCategories.PollNew,
                 "Nouveau sondage",
                 sondage.Question,
-                $"/events/{eventId}/sondages",
+                DestinationsNotification.Sondages(eventId),
                 clock.UtcNow,
                 $"{eventId}:{NotificationCategories.PollNew}:{compte}:{sondage.Id}"));
         }

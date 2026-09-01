@@ -360,7 +360,7 @@ public sealed class AttendanceService(
             NotificationCategories.InvitationAnswer,
             "Une réponse est arrivée",
             $"{membre.DisplayName} a répondu {Reponse(statut)}.",
-            $"/events/{eventId}/invites",
+            DestinationsNotification.Invites(eventId),
             clock.UtcNow,
             $"{eventId}:{NotificationCategories.InvitationAnswer}:{membre.Id}:{statut}"));
     }

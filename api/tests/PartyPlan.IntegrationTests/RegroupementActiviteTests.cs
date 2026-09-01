@@ -3,6 +3,7 @@ namespace PartyPlan.IntegrationTests;
 using System.Net.Http.Json;
 using System.Text.Json;
 using PartyPlan.IntegrationTests.Infrastructure;
+using PartyPlan.Modules.Shopping.Application;
 using PartyPlan.SharedKernel.Contracts;
 using Shouldly;
 using Xunit;
@@ -66,8 +67,12 @@ public sealed class RegroupementActiviteTests(PartyPlanApiFixture fixture)
             $"/v1/events/{soiree.EventId}/shopping/{second}/claim"))
             .EnsureSuccessStatusCode();
 
+        // Les prises en charge seulement : depuis que l'ajout notifie lui aussi, compter
+        // toute l'activité mesurerait deux gestes de plus et ne dirait plus rien du
+        // regroupement, qui est le sujet de ce test.
         (await fixture.NotificationsAsync(soiree.EventId, NotificationCategories.Activity))
-            .Count(n => n.UserId == soiree.CompteAlex)
+            .Count(n => n.UserId == soiree.CompteAlex
+                        && n.DedupKey.EndsWith($":{ClesActivite.PriseEnCharge}", StringComparison.Ordinal))
             .ShouldBe(2);
     }
 

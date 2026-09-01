@@ -62,7 +62,7 @@ public sealed class RappelsDeDebut(
                 NotificationCategories.EventStartingSoon,
                 "C'est bientôt",
                 "La soirée commence dans deux heures.",
-                $"/events/{evenement.EventId}",
+                DestinationsNotification.Soiree(evenement.EventId),
                 maintenant,
                 $"{evenement.EventId}:{NotificationCategories.EventStartingSoon}:{destinataire}:debut"));
         }

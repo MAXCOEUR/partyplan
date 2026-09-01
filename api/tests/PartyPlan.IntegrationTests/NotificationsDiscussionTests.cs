@@ -66,6 +66,18 @@ public sealed class NotificationsDiscussionTests(PartyPlanApiFixture fixture) : 
     public Task DisposeAsync() => Task.CompletedTask;
 
     [Fact]
+    public async Task Une_notification_de_message_ouvre_l_onglet_discussion()
+    {
+        // Ouvrir la soirée sur son tableau de bord laisse chercher la conversation qu'on
+        // vient d'être averti de recevoir.
+        await EnvoyerMessageAsync(_auteur, "On se retrouve à 20h.");
+
+        var notifs = await NotificationsAsync();
+
+        notifs.ShouldAllBe(n => n.DeepLink == $"/events/{_evenement}/discussion");
+    }
+
+    [Fact]
     public async Task Un_message_notifie_les_autres_membres_jamais_son_auteur()
     {
         await EnvoyerMessageAsync(_auteur, "On se retrouve à 20h.");

@@ -333,7 +333,9 @@ public sealed class ExpenseService(
                 NotificationCategories.ExpenseNew,
                 "Nouvelle dépense",
                 $"{payeurDisplayName} a ajouté {depense.Label} pour {montant} €.",
-                $"/events/{eventId}",
+                // L'onglet, et non la seule soirée : on tape une notification de dépense
+                // pour voir la dépense, pas le tableau de bord.
+                DestinationsNotification.Depenses(eventId),
                 clock.UtcNow,
                 $"{eventId}:{NotificationCategories.ExpenseNew}:{compte}:{depense.Id}"));
         }

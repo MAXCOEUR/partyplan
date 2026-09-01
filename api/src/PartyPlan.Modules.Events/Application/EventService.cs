@@ -535,7 +535,7 @@ public sealed class EventService(
                 NotificationCategories.EventChanged,
                 evenement.Name,
                 $"{acteur.DisplayName} a modifié {quoi}.",
-                $"/events/{evenement.Id}",
+                DestinationsNotification.Soiree(evenement.Id),
                 instant,
                 $"{evenement.Id}:{NotificationCategories.EventChanged}:"
                 + $"{destinataire}:{instant.ToUnixTimeSeconds()}"));

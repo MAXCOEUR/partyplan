@@ -1,0 +1,9 @@
+[
+  "/events/{eventId}",
+  "/events/{eventId}/courses",
+  "/events/{eventId}/depenses",
+  "/events/{eventId}/discussion",
+  "/events/{eventId}/reglements",
+  "/events/{eventId}/invites",
+  "/events/{eventId}/sondages"
+]

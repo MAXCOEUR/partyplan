@@ -485,7 +485,9 @@ public sealed class MessageService(
                 citee ? NotificationCategories.DiscussionMention : NotificationCategories.DiscussionMessage,
                 citee ? $"{moi.DisplayName} t'a cité" : moi.DisplayName,
                 extrait,
-                $"/events/{eventId}",
+                // L'onglet, et non la seule soirée : ouvrir le tableau de bord laisse
+                // chercher la conversation qu'on vient d'être averti de recevoir.
+                DestinationsNotification.Discussion(eventId),
                 clock.UtcNow,
                 // L'identifiant du message, et non un quart d'heure : chaque message a
                 // sa notification, l'appareil se chargeant de les empiler.

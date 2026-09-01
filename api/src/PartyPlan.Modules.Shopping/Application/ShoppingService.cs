@@ -44,6 +44,9 @@ public sealed record ShoppingList(ShoppingProgress Progress, IReadOnlyList<Shopp
 /// </summary>
 public static class ClesActivite
 {
+    /// <summary>Un article vient d'être posé sur la liste.</summary>
+    public const string Ajout = "add";
+
     /// <summary>Un article vient d'être pris en charge.</summary>
     public const string PriseEnCharge = "claim";
 
@@ -198,6 +201,18 @@ public sealed class ShoppingService(
             moi.DisplayName,
             ActivityKinds.ItemCreated,
             new { libelle = article.Name });
+
+        // Un article posé sur la liste ne prévenait personne : il restait à prendre en
+        // charge parce que personne ne savait qu'il existait. C'est pourtant le geste qui
+        // appelle le plus une réaction — quelqu'un doit s'en charger.
+        await PrevenirDeLActiviteAsync(
+                eventId,
+                moi.MemberId,
+                article.Id,
+                ClesActivite.Ajout,
+                $"{moi.DisplayName} a ajouté {article.Name} à la liste.",
+                cancellationToken)
+            .ConfigureAwait(false);
 
         await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
@@ -568,7 +583,7 @@ public sealed class ShoppingService(
                 NotificationCategories.Activity,
                 "Ça bouge dans la soirée",
                 corps,
-                $"/events/{eventId}/courses",
+                DestinationsNotification.Courses(eventId),
                 instant,
                 ClesActivite.Deduplication(eventId, compte, itemId, geste)));
         }

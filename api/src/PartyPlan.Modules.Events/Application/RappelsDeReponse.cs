@@ -81,7 +81,7 @@ public sealed class RappelsDeReponse(
                     3 => "La soirée est dans trois jours. Dis si tu viens.",
                     _ => "La soirée est dans une semaine. Dis si tu viens.",
                 },
-                $"/events/{evenement.EventId}",
+                DestinationsNotification.Soiree(evenement.EventId),
                 maintenant,
                 Cle(evenement.EventId, destinataire, echeance.Occurrence)));
         }

@@ -79,7 +79,7 @@ public sealed class RappelsDeDette(
                 NotificationCategories.BalanceDue,
                 "Il reste des comptes à solder",
                 $"Tu dois {Montant(-solde.Cents)} pour cette soirée.",
-                $"/events/{evenement.EventId}/reglements",
+                DestinationsNotification.Reglements(evenement.EventId),
                 maintenant,
                 $"{evenement.EventId}:{NotificationCategories.BalanceDue}:{solde.MemberId}:lendemain"));
         }

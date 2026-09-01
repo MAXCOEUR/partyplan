@@ -60,6 +60,18 @@ public sealed class NotificationsDepensesTests(PartyPlanApiFixture fixture) : IA
     }
 
     [Fact]
+    public async Task Une_notification_de_depense_ouvre_l_onglet_des_depenses()
+    {
+        // La destination désigne l'onglet, pas seulement la soirée : on tape une
+        // notification de dépense pour voir la dépense, pas le tableau de bord.
+        await CreerDepenseAsync(_maxence, "Courses", 40m, participants: [_maxence.MemberId, _lucas.MemberId]);
+
+        var notifs = await NotificationsAsync();
+
+        notifs.ShouldAllBe(n => n.DeepLink == $"/events/{_evenement}/depenses");
+    }
+
+    [Fact]
     public async Task Le_payeur_n_est_pas_notifie_de_sa_propre_depense()
     {
         await CreerDepenseAsync(_maxence, "Courses", 40m, participants: [_maxence.MemberId, _lucas.MemberId]);
