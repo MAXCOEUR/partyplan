@@ -379,16 +379,44 @@ GoRouter creerRouteur(Ref ref) => GoRouter(
         evenementId: state.pathParameters['eventId']!,
       ),
     ),
+    // Repli, déclaré **après** toutes les destinations connues d'une soirée : go_router
+    // compare dans l'ordre, et placé plus haut il les capterait toutes.
+    //
+    // Une application installée ne connaît que les routes de sa version, le serveur
+    // avance plus vite qu'elle. Le jour où il enverra une destination que ce téléphone
+    // n'a pas encore, la notification ne doit pas mener à « cet événement n'existe pas,
+    // ou tu n'en fais plus partie » : elle ouvre la soirée, ce qui est vrai et utile. Le
+    // repli est borné aux soirées — tout renvoyer ici masquerait de vraies erreurs.
+    GoRoute(
+      path: '/events/:eventId/:destination',
+      builder: (context, state) =>
+          CoquilleEvenement(eventId: state.pathParameters['eventId']!),
+    ),
   ],
+  // Un cul-de-sac, sans issue, est ce qui obligeait à fermer l'application — voire à
+  // effacer ses données — pour sortir d'un lien qui ne menait nulle part. La barre du
+  // haut n'a pas toujours de quoi dépiler : le bouton, lui, est toujours là.
   errorBuilder: (context, state) => Scaffold(
     appBar: AppBar(),
     body: Center(
       child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Text(
-          PpL10n.of(context).erreurIntrouvable,
-          textAlign: TextAlign.center,
-          style: Theme.of(context).textTheme.bodyLarge,
+        padding: const EdgeInsets.all(PpSpacing.lg),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              PpL10n.of(context).erreurIntrouvable,
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.bodyLarge,
+            ),
+            const SizedBox(height: PpSpacing.lg),
+            FilledButton.icon(
+              key: const Key('erreur-retour-accueil'),
+              onPressed: () => context.go(PpRoutes.accueil),
+              icon: const Icon(Icons.home_rounded),
+              label: Text(PpL10n.of(context).erreurRetourAccueil),
+            ),
+          ],
         ),
       ),
     ),

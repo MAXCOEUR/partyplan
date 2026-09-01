@@ -50,6 +50,42 @@ void main() {
     });
   });
 
+  group('Lien inconnu', () {
+    testWidgets('une destination de soirée inconnue ouvre la soirée', (
+      tester,
+    ) async {
+      // Une application installée ne connaît que les routes de sa version. Le serveur,
+      // lui, avance : le jour où il enverra `/events/{id}/planning`, les téléphones qui
+      // n'ont pas encore la mise à jour ne doivent pas tomber sur « cet événement
+      // n'existe pas » — ils ouvrent la soirée, ce qui est vrai et utile.
+      await _monter(tester, entree: '/events/$_evenementId/pas-encore-connu');
+
+      expect(find.byType(CoquilleEvenement), findsOneWidget);
+      expect(_ongletCourant(tester), _accueil);
+    });
+
+    testWidgets('la page d’erreur offre un retour à l’accueil', (tester) async {
+      // Un cul-de-sac sans issue : c'est ce qui obligeait à fermer l'application, voire
+      // à effacer ses données, pour sortir d'un lien qui ne menait nulle part.
+      await _monter(tester, entree: '/rien-de-connu');
+
+      await tester.tap(find.byKey(const Key('erreur-retour-accueil')));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(AccueilPage), findsOneWidget);
+    });
+
+    testWidgets('une adresse étrangère aux soirées reste introuvable', (
+      tester,
+    ) async {
+      // Le repli est borné aux soirées : tout renvoyer vers une soirée masquerait de
+      // vraies erreurs de navigation.
+      await _monter(tester, entree: '/rien-de-connu');
+
+      expect(find.byType(CoquilleEvenement), findsNothing);
+    });
+  });
+
   group('Retour dans une soirée', () {
     testWidgets('le retour revient à l’onglet précédent', (tester) async {
       await _monter(tester, entree: PpRoutes.versEvenement(_evenementId));
