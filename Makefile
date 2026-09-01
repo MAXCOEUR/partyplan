@@ -183,7 +183,11 @@ apk: ## Construit l'APK de production à installer sur un téléphone Android
 	@echo ""
 	@echo "→ app/build/app/outputs/flutter-apk/app-release.apk"
 	@echo "  API : $(API_PROD)"
-	@echo "  Signature : clé de debug (voir android/app/build.gradle.kts)."
+	@echo "  Signature : clé de key.properties si présente, clé de debug sinon"
+	@echo "              (voir android/app/build.gradle.kts)."
+	@echo "  Attention : Play App Signing resigne les dépôts du Play Store. Un APK"
+	@echo "              signé de la clé d'envoi ne s'installe donc pas par-dessus"
+	@echo "              une version installée depuis le magasin — il faut désinstaller."
 	@echo "  Notifications : elles ne partiront que si l'API a sa clé Firebase."
 
 # --- Base de données ---
