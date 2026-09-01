@@ -27,7 +27,9 @@ class ApiClient {
     FileEcritures? file,
     EtatReseau? etat,
     void Function()? auChangementImpose,
+    void Function()? auSessionPerdue,
   }) : _auChangementImpose = auChangementImpose,
+       _auSessionPerdue = auSessionPerdue,
        _cache = cache,
        _file = file,
        _etat = etat ?? EtatReseau(),
@@ -65,6 +67,9 @@ class ApiClient {
   /// Appelé au premier refus « change ton mot de passe » (RG-ADM-10). Le client ne
   /// connaît pas le routeur : il signale, le provider redirige.
   final void Function()? _auChangementImpose;
+
+  /// Appelé lorsque la session est définitivement perdue.
+  final void Function()? _auSessionPerdue;
 
   final CacheLecture? _cache;
   final FileEcritures? _file;
@@ -362,7 +367,24 @@ class ApiClient {
   /// les revendications du jeton sont figées à son émission.
   Future<bool> renouvelerJeton() => _rafraichir();
 
-  Future<bool> _rafraichir() async {
+  /// Renouvellement en vol, partagé par tous les appels qui se heurtent au même refus.
+  Future<bool>? _renouvellementEnCours;
+
+  /// Renouvelle la session, une seule fois à la fois.
+  ///
+  /// Le partage n'est pas une optimisation, c'est la correction d'un défaut : l'API fait
+  /// tourner le jeton de rafraîchissement à chaque usage, et un jeton présenté deux fois
+  /// est refusé. Au lancement, la liste des soirées et l'inscription de l'appareil
+  /// partent ensemble avec un jeton d'accès vieux de la veille ; sans ce partage, les
+  /// deux présentaient le même jeton de rafraîchissement, la seconde se faisait refuser,
+  /// et effaçait la session que la première venait d'ouvrir.
+  Future<bool> _rafraichir() {
+    return _renouvellementEnCours ??= _renouveler().whenComplete(() {
+      _renouvellementEnCours = null;
+    });
+  }
+
+  Future<bool> _renouveler() async {
     final jeton = await _sessionStore.lireJetonRafraichissement();
     if (jeton == null) {
       return false;
@@ -373,20 +395,33 @@ class ApiClient {
       data: {'refreshToken': jeton},
     );
 
-    if (reponse.statusCode != 200 || reponse.data is! Map<String, dynamic>) {
-      // La session est définitivement perdue : l'effacer évite de retenter à chaque
-      // appel avec un jeton mort.
-      await _sessionStore.effacerSession();
+    final statut = reponse.statusCode ?? 0;
+    final corps = reponse.data;
+
+    if (statut == 200 && corps is Map<String, dynamic>) {
+      await _sessionStore.enregistrerSession(
+        jetonAcces: corps['accessToken'] as String,
+        jetonRafraichissement: corps['refreshToken'] as String,
+      );
+
+      return true;
+    }
+
+    // Une panne du serveur ne dit rien de la session. Effacer sur un 502 du proxy ou un
+    // 503 de redémarrage déconnecterait tout le monde à chaque mise à jour de l'API, et
+    // le jeton, lui, serait resté valable.
+    if (statut < 400 || statut >= 500) {
       return false;
     }
 
-    final corps = reponse.data! as Map<String, dynamic>;
-    await _sessionStore.enregistrerSession(
-      jetonAcces: corps['accessToken'] as String,
-      jetonRafraichissement: corps['refreshToken'] as String,
-    );
+    // Refus définitif : le jeton est révoqué ou expiré. L'effacer évite de retenter à
+    // chaque appel avec un jeton mort, et le signalement conduit à l'écran de connexion —
+    // sans lui, l'application se croit connectée et n'affiche qu'une erreur d'API dont
+    // on ne sort qu'en effaçant les données de l'application.
+    await _sessionStore.effacerSession();
+    _auSessionPerdue?.call();
 
-    return true;
+    return false;
   }
 
   void _verifier(Response<Object?> reponse) {

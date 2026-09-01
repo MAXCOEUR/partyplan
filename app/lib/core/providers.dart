@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
@@ -100,6 +102,7 @@ final apiClientProvider = Provider<ApiClient>(
     file: ref.watch(fileEcrituresProvider),
     auChangementImpose: () =>
         ref.read(motDePasseAChangerProvider.notifier).exiger(),
+    auSessionPerdue: () => ref.read(sessionProvider.notifier).sessionPerdue(),
   ),
 );
 
@@ -205,6 +208,29 @@ class SessionCourante extends AsyncNotifier<EtatSession> {
     // Sans cette remise à zéro, le compte suivant serait conduit vers un formulaire
     // de changement de mot de passe qui ne le concerne pas.
     ref.read(motDePasseAChangerProvider.notifier).satisfait();
+    state = const AsyncData(EtatSession.anonyme);
+  }
+
+  /// Session perdue sans geste de l'utilisateur : jeton de rafraîchissement révoqué,
+  /// expiré, ou compte suspendu.
+  ///
+  /// Signalée par le point de sortie réseau, qui seul voit le refus. Sans ce passage
+  /// par l'état de session, l'application reste convaincue d'être connectée : le
+  /// routeur ne redirige pas, l'accueil affiche son erreur d'API, et la seule sortie
+  /// est d'effacer les données de l'application.
+  ///
+  /// La déconnexion n'est pas réutilisée telle quelle : elle appelle l'API pour révoquer
+  /// la session, ce qui n'a plus de sens ici — le serveur l'a déjà refusée.
+  void sessionPerdue() {
+    ref.read(motDePasseAChangerProvider.notifier).satisfait();
+
+    // Le cache porte le contenu d'événements privés : il est purgé ici comme à la
+    // déconnexion. Sans attendre, et sans laisser remonter l'échec — la conduite vers
+    // l'écran de connexion ne doit dépendre d'aucune écriture sur le magasin local.
+    unawaited(
+      ref.read(cacheLectureProvider).purger().catchError((Object _) {}),
+    );
+
     state = const AsyncData(EtatSession.anonyme);
   }
 }

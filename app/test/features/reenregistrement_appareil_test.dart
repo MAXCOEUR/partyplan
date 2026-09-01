@@ -28,7 +28,9 @@ void main() {
       expect(service.inscriptions, 0);
     });
 
-    testWidgets('une session déjà ouverte inscrit au lancement', (tester) async {
+    testWidgets('une session déjà ouverte inscrit au lancement', (
+      tester,
+    ) async {
       final service = _ServiceDouble();
       await _monter(tester, service, EtatSession.connecte);
 
