@@ -186,6 +186,23 @@ public sealed class AuthenticationService(
             .ConfigureAwait(false);
     }
 
+    /// <summary>
+    /// Renouvelle une session.
+    /// <para>
+    /// <b>Limite connue.</b> La lecture de la session et l'écriture du nouveau condensé
+    /// ne sont pas atomiques. Deux renouvellements simultanés portant le même jeton
+    /// répondent tous deux 200, avec deux jetons différents, alors qu'un seul est
+    /// conservé : celui qui repart avec l'autre a une session morte, et ne l'apprendra
+    /// qu'à son renouvellement suivant. Mesuré : douze cas sur douze.
+    /// </para>
+    /// <para>
+    /// L'application n'y est plus exposée — elle ne renouvelle qu'une fois à la fois,
+    /// voir <c>ApiClient._rafraichir</c> — mais deux onglets du web partagent un même
+    /// jeton et se le retirent l'un à l'autre. Le correctif attendu est une fenêtre de
+    /// grâce : un jeton présenté deux fois en quelques secondes rend le jeton courant au
+    /// lieu d'en émettre un second.
+    /// </para>
+    /// </summary>
     public async Task<Result<SessionTokens>> RefreshAsync(
         string refreshToken,
         IPAddress? ip,

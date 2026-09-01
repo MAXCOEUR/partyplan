@@ -221,6 +221,12 @@ test-api: ## Tests de l'API
 test-app: l10n ## Tests Flutter
 	cd app && flutter test
 
+test-reel: ## Vérifie l'authentification contre l'API locale (exige `make up`)
+	@# Hors de `make verif` : ces tests parlent à un vrai serveur, ce qu'aucune suite
+	@# automatique ne doit supposer. Ils mesurent ce que les faux serveurs ne peuvent
+	@# pas montrer — la rotation du jeton telle que l'API la pratique réellement.
+	cd app && flutter test test_reel
+
 fmt: ## Formate le code
 	dotnet format api/PartyPlan.slnx
 	cd app && dart format lib test
