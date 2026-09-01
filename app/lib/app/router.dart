@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../core/notifications/zone_visible.dart';
 import '../core/providers.dart';
 import '../design/components/pp_image_message.dart';
 import '../design/tokens.dart';
@@ -76,6 +77,13 @@ abstract final class PpRoutes {
   static const apercuParCode = '/rejoindre/:code';
 
   static const evenement = '/events/:eventId';
+
+  /// Onglets de la coquille de soirée, adressables parce que les notifications les
+  /// désignent. Ils ne servent que de point d'entrée : passer d'un onglet à l'autre
+  /// ensuite ne change pas l'adresse.
+  static const evenementCourses = '/events/:eventId/courses';
+  static const evenementDepenses = '/events/:eventId/depenses';
+  static const evenementDiscussion = '/events/:eventId/discussion';
   static const evenementInvites = '/events/:eventId/invites';
   static const evenementInvitation = '/events/:eventId/inviter';
   static const evenementParametres = '/events/:eventId/parametres';
@@ -91,6 +99,12 @@ abstract final class PpRoutes {
   static String versEvenement(String eventId) => '/events/$eventId';
 
   static String versApercuParCode(String code) => '/rejoindre/$code';
+
+  static String versCourses(String eventId) => '/events/$eventId/courses';
+
+  static String versDepenses(String eventId) => '/events/$eventId/depenses';
+
+  static String versDiscussion(String eventId) => '/events/$eventId/discussion';
 
   static String versInvites(String eventId) => '/events/$eventId/invites';
 
@@ -269,6 +283,35 @@ GoRouter creerRouteur(Ref ref) => GoRouter(
       path: PpRoutes.evenement,
       builder: (context, state) =>
           CoquilleEvenement(eventId: state.pathParameters['eventId']!),
+    ),
+    // Les onglets sont adressables parce que les notifications les désignent : une
+    // notification de courses portait déjà `/events/{id}/courses`, sans qu'aucune route
+    // ne l'accueille — le lien tombait sur la page « cet événement n'existe pas ».
+    //
+    // Ce sont des points d'entrée, non un état de navigation : passer d'un onglet à
+    // l'autre ensuite ne change pas l'adresse. La coquille tient une seule connexion
+    // temps réel pour toute la soirée, et une adresse par onglet la ferait rouvrir à
+    // chaque geste.
+    GoRoute(
+      path: PpRoutes.evenementCourses,
+      builder: (context, state) => CoquilleEvenement(
+        eventId: state.pathParameters['eventId']!,
+        ongletInitial: ZoneEvenement.courses,
+      ),
+    ),
+    GoRoute(
+      path: PpRoutes.evenementDepenses,
+      builder: (context, state) => CoquilleEvenement(
+        eventId: state.pathParameters['eventId']!,
+        ongletInitial: ZoneEvenement.depenses,
+      ),
+    ),
+    GoRoute(
+      path: PpRoutes.evenementDiscussion,
+      builder: (context, state) => CoquilleEvenement(
+        eventId: state.pathParameters['eventId']!,
+        ongletInitial: ZoneEvenement.discussion,
+      ),
     ),
     GoRoute(
       path: PpRoutes.evenementInvites,

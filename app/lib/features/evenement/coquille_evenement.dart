@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -30,9 +32,18 @@ import 'tableau_de_bord_page.dart';
 /// libérée par le planning — retiré, la date d'un événement se règle dans ses
 /// paramètres — revient à la discussion.
 class CoquilleEvenement extends ConsumerStatefulWidget {
-  const CoquilleEvenement({required this.eventId, super.key});
+  const CoquilleEvenement({
+    required this.eventId,
+    this.ongletInitial = ZoneEvenement.accueil,
+    super.key,
+  });
 
   final String eventId;
+
+  /// Onglet ouvert à l'arrivée. Sert aux liens de notification, qui désignent un
+  /// onglet précis — une notification de courses doit ouvrir les courses, pas le
+  /// tableau de bord.
+  final ZoneEvenement ongletInitial;
 
   @override
   ConsumerState<CoquilleEvenement> createState() => _CoquilleEvenementState();
@@ -56,7 +67,14 @@ class _CoquilleEvenementState extends ConsumerState<CoquilleEvenement> {
     ZoneEvenement.plus,
   ];
 
-  int _onglet = 0;
+  late int _onglet;
+
+  /// Onglets visités, du premier au dernier. C'est ce que le bouton retour remonte.
+  ///
+  /// Revenir sur un onglet déjà présent **replie** la liste jusqu'à lui au lieu de
+  /// l'allonger : sans ce repli, dix allers-retours entre les courses et les dépenses
+  /// imposeraient dix appuis sur retour pour sortir de la soirée.
+  late List<int> _historique;
 
   EcouteEvenement? _ecoute;
 
@@ -64,9 +82,20 @@ class _CoquilleEvenementState extends ConsumerState<CoquilleEvenement> {
   /// d'utiliser `ref` sur un widget démonté, parce qu'il s'appuie sur le BuildContext.
   ServiceTempsReel? _tempsReel;
 
+  /// Observe le passage en arrière-plan et le retour au premier plan.
+  ///
+  /// Sans lui, un téléphone verrouillé revenait sans temps réel : le système coupe la
+  /// connexion, la reprise automatique de SignalR renonce au bout de quarante-deux
+  /// secondes, et rien ne la relançait. Le temps réel restait mort jusqu'à ce qu'on
+  /// quitte la soirée et qu'on y revienne.
+  AppLifecycleListener? _cycleDeVie;
+
   @override
   void initState() {
     super.initState();
+
+    _onglet = _zones.indexOf(widget.ongletInitial);
+    _historique = [_onglet];
 
     // Le temps réel est branché ici et nulle part ailleurs : c'est l'écran qui borne la
     // durée de vie de la connexion, et une soirée qu'on quitte doit la fermer.
@@ -77,6 +106,11 @@ class _CoquilleEvenementState extends ConsumerState<CoquilleEvenement> {
     tempsReel.connecter(widget.eventId);
 
     _ecoute = EcouteEvenement(invalider: _relire)..demarrer(tempsReel);
+
+    _cycleDeVie = AppLifecycleListener(
+      onPause: _suspendre,
+      onResume: _reprendre,
+    );
     // Relire à chaque ouverture. Riverpod ne rejette pas un FutureProvider.family
     // quand plus personne ne l'écoute : sans cette invalidation, ressortir d'une
     // soirée puis y revenir réaffiche les données de la première visite,
@@ -106,12 +140,72 @@ class _CoquilleEvenementState extends ConsumerState<CoquilleEvenement> {
   }
 
   void _changerOnglet(int index) {
-    setState(() => _onglet = index);
+    setState(() {
+      final deja = _historique.indexOf(index);
+
+      if (deja >= 0) {
+        _historique.removeRange(deja + 1, _historique.length);
+      } else {
+        _historique.add(index);
+      }
+
+      _onglet = index;
+    });
+
     _publierZone(index);
+  }
+
+  /// Recule d'un onglet, ou quitte la soirée s'il n'y a plus d'historique.
+  ///
+  /// Sert au bouton retour du système comme à la flèche de la barre du haut : les deux
+  /// gestes veulent dire « en arrière », et les distinguer serait une surprise.
+  void _reculer() {
+    if (_historique.length > 1) {
+      _historique.removeLast();
+      final precedent = _historique.last;
+
+      setState(() => _onglet = precedent);
+      _publierZone(precedent);
+      return;
+    }
+
+    _quitterLaSoiree();
+  }
+
+  /// Passage en arrière-plan.
+  ///
+  /// La connexion est fermée volontairement plutôt que laissée mourir : le système va la
+  /// couper de toute façon, et tenir un socket pendant que l'écran est éteint n'use que
+  /// la batterie.
+  void _suspendre() {
+    // ignore: discarded_futures
+    _tempsReel?.deconnecter();
+  }
+
+  /// Retour au premier plan.
+  ///
+  /// Rouvre la connexion **et** relit tout : ce qui a été manqué pendant la coupure est
+  /// par définition inconnu, exactement comme après une reconnexion (RG-RT-03).
+  Future<void> _reprendre() async {
+    _relire();
+
+    // Le jeton d'accès ne vit que quinze minutes, et le hub le présente tel quel : une
+    // connexion SignalR n'a pas le rejeu sur 401 qui rattrape les appels REST. Renouvelé
+    // d'abord, et attendu, sinon la reconnexion partirait avec un jeton périmé et se
+    // ferait refuser en silence.
+    await ref.read(apiClientProvider).renouvelerJeton();
+
+    if (!mounted) {
+      return;
+    }
+
+    await _tempsReel?.connecter(widget.eventId);
   }
 
   @override
   void dispose() {
+    _cycleDeVie?.dispose();
+
     // ignore: discarded_futures
     _ecoute?.arreter();
     // ignore: discarded_futures
@@ -151,20 +245,25 @@ class _CoquilleEvenementState extends ConsumerState<CoquilleEvenement> {
     ref.read(filDiscussionProvider(widget.eventId).notifier).rafraichir();
   }
 
-  /// Retour à l'accueil.
+  /// Quitte la soirée, quel que soit l'onglet et quel que soit l'historique.
   ///
-  /// `maybePop` d'abord : venant de l'accueil, on rend la pile telle qu'elle était,
+  /// On dépile d'abord : venant de l'accueil, on rend la pile telle qu'elle était,
   /// position de défilement comprise. Mais après une adhésion par lien, `context.go`
-  /// a vidé la pile — un `BackButton` seul n'avait alors rien à dépiler et enfermait
-  /// la personne dans la soirée. Même cas en ouvrant depuis une notification.
-  Future<void> _revenir() async {
-    if (await Navigator.of(context).maybePop()) {
+  /// a vidé la pile — il n'y a alors rien à dépiler, et sans le repli sur l'accueil la
+  /// personne resterait enfermée dans la soirée. Même cas en ouvrant depuis une
+  /// notification.
+  ///
+  /// `pop` et non `maybePop` : le second consulte le `PopScope` de cet écran, qui
+  /// rappellerait cette méthode — la sortie tournerait en rond.
+  void _quitterLaSoiree() {
+    final navigateur = Navigator.of(context);
+
+    if (navigateur.canPop()) {
+      navigateur.pop();
       return;
     }
 
-    if (mounted) {
-      context.go(PpRoutes.accueil);
-    }
+    context.go(PpRoutes.accueil);
   }
 
   /// Onglets de la navigation d'événement (RG-UI-01).
@@ -220,107 +319,127 @@ class _CoquilleEvenementState extends ConsumerState<CoquilleEvenement> {
     // sépare le geste du regard : la place est alors sur le côté.
     final large = MediaQuery.sizeOf(context).width >= PpBreakpoints.large;
 
-    return Scaffold(
-      appBar: PpBarreApp(
-        bouton: BackButton(
-          key: const Key('retour-evenement'),
-          onPressed: _revenir,
-        ),
-        // Sondages et épingles prolongent la conversation : les chercher sous « Plus »
-        // oblige à quitter le fil pour y revenir. Ils n'apparaissent que sur cet
-        // onglet — ailleurs, ce serait deux icônes de plus dans une barre déjà
-        // chargée.
-        actions: [
-          // Sur navigateur, le RefreshIndicator exige un geste de survol
-          // inatteignable à la souris : sans cette commande, il n'existait aucun
-          // moyen d'actualiser.
-          IconButton(
-            key: const Key('actualiser-evenement'),
-            tooltip: 'Actualiser',
-            icon: const Icon(Icons.refresh_rounded),
-            onPressed: _relire,
+    // `canPop: false` toujours, et la sortie décidée ici : le bouton retour doit
+    // d'abord remonter les onglets, et une soirée ouverte depuis une notification n'a
+    // rien à dépiler — la laisser au Navigator faisait sortir de l'application entière.
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) {
+          _reculer();
+        }
+      },
+      child: Scaffold(
+        appBar: PpBarreApp(
+          bouton: BackButton(
+            key: const Key('retour-evenement'),
+            onPressed: _reculer,
           ),
-          if (_onglet == _ongletDiscussion) ...[
+          // Sondages et épingles prolongent la conversation : les chercher sous « Plus »
+          // oblige à quitter le fil pour y revenir. Ils n'apparaissent que sur cet
+          // onglet — ailleurs, ce serait deux icônes de plus dans une barre déjà
+          // chargée.
+          actions: [
+            // Sur navigateur, le RefreshIndicator exige un geste de survol
+            // inatteignable à la souris : sans cette commande, il n'existait aucun
+            // moyen d'actualiser.
             IconButton(
-              key: const Key('acces-sondages'),
-              tooltip: 'Sondages',
-              icon: const Icon(Icons.how_to_vote_outlined),
-              onPressed: () =>
-                  context.push(PpRoutes.versSondages(widget.eventId)),
+              key: const Key('actualiser-evenement'),
+              tooltip: 'Actualiser',
+              icon: const Icon(Icons.refresh_rounded),
+              onPressed: _relire,
             ),
+            if (_onglet == _ongletDiscussion) ...[
+              IconButton(
+                key: const Key('acces-sondages'),
+                tooltip: 'Sondages',
+                icon: const Icon(Icons.how_to_vote_outlined),
+                onPressed: () =>
+                    context.push(PpRoutes.versSondages(widget.eventId)),
+              ),
+              IconButton(
+                key: const Key('acces-epingles'),
+                tooltip: 'Messages épinglés',
+                icon: const Icon(Icons.push_pin_outlined),
+                onPressed: () =>
+                    context.push(PpRoutes.versEpingles(widget.eventId)),
+              ),
+            ],
+            // Sortie franche, distincte du retour. La flèche recule dans les onglets ;
+            // sans cette croix, quitter une soirée depuis le quatrième onglet visité
+            // demanderait autant d'appuis qu'on a visité d'onglets.
             IconButton(
-              key: const Key('acces-epingles'),
-              tooltip: 'Messages épinglés',
-              icon: const Icon(Icons.push_pin_outlined),
-              onPressed: () =>
-                  context.push(PpRoutes.versEpingles(widget.eventId)),
+              key: const Key('quitter-evenement'),
+              tooltip: 'Quitter la soirée',
+              icon: const Icon(Icons.close_rounded),
+              onPressed: _quitterLaSoiree,
             ),
           ],
-        ],
-        // Le nom de l'événement, pas celui de l'onglet : « Courses » ne dit pas de
-        // quelle soirée il s'agit, et l'on peut être membre de trois événements.
-        titre: Text(evenement?.nom ?? onglets[_onglet].libelle),
-        basDeBarre: evenement == null
+          // Le nom de l'événement, pas celui de l'onglet : « Courses » ne dit pas de
+          // quelle soirée il s'agit, et l'on peut être membre de trois événements.
+          titre: Text(evenement?.nom ?? onglets[_onglet].libelle),
+          basDeBarre: evenement == null
+              ? null
+              : _SousTitreEvenement(
+                  onglet: onglets[_onglet].libelle,
+                  membres: evenement.nombreMembres,
+                  presents: evenement.nombrePresents,
+                ),
+        ),
+        // IndexedStack et non reconstruction : changer d'onglet ne doit ni recharger le
+        // tableau de bord, ni perdre la position de défilement.
+        body: _Corps(
+          large: large,
+          onglets: onglets,
+          selection: _onglet,
+          ongletDePastille: _ongletDiscussion,
+          nonLus: nonLus,
+          onSelection: _changerOnglet,
+          child: IndexedStack(
+            index: _onglet,
+            children: [
+              TableauDeBordPage(evenementId: widget.eventId),
+              CoursesPage(evenementId: widget.eventId),
+              DepensesPage(evenementId: widget.eventId),
+              DiscussionPage(evenementId: widget.eventId),
+              _MenuPlus(evenementId: widget.eventId),
+            ],
+          ),
+        ),
+        floatingActionButtonLocation: const PpFabDansLeRail(),
+        floatingActionButton: switch (_onglet) {
+          1 => FloatingActionButton.extended(
+            onPressed: () => ouvrirFeuilleArticle(context, widget.eventId),
+            icon: const Icon(Icons.add_rounded),
+            label: const Text('Ajouter'),
+          ),
+          2 => FloatingActionButton.extended(
+            onPressed: () => ouvrirFeuilleDepense(context, widget.eventId),
+            icon: const Icon(Icons.add_rounded),
+            label: const Text('Dépense'),
+          ),
+          _ => null,
+        },
+        bottomNavigationBar: large
             ? null
-            : _SousTitreEvenement(
-                onglet: onglets[_onglet].libelle,
-                membres: evenement.nombreMembres,
-                presents: evenement.nombrePresents,
+            : NavigationBar(
+                selectedIndex: _onglet,
+                onDestinationSelected: _changerOnglet,
+                destinations: [
+                  for (final onglet in onglets)
+                    NavigationDestination(
+                      icon: _AvecPastille(
+                        nombre: onglets.indexOf(onglet) == _ongletDiscussion
+                            ? nonLus
+                            : 0,
+                        child: Icon(onglet.icone),
+                      ),
+                      selectedIcon: Icon(onglet.icoineActive),
+                      label: onglet.libelle,
+                    ),
+                ],
               ),
       ),
-      // IndexedStack et non reconstruction : changer d'onglet ne doit ni recharger le
-      // tableau de bord, ni perdre la position de défilement.
-      body: _Corps(
-        large: large,
-        onglets: onglets,
-        selection: _onglet,
-        ongletDePastille: _ongletDiscussion,
-        nonLus: nonLus,
-        onSelection: _changerOnglet,
-        child: IndexedStack(
-          index: _onglet,
-          children: [
-            TableauDeBordPage(evenementId: widget.eventId),
-            CoursesPage(evenementId: widget.eventId),
-            DepensesPage(evenementId: widget.eventId),
-            DiscussionPage(evenementId: widget.eventId),
-            _MenuPlus(evenementId: widget.eventId),
-          ],
-        ),
-      ),
-      floatingActionButtonLocation: const PpFabDansLeRail(),
-      floatingActionButton: switch (_onglet) {
-        1 => FloatingActionButton.extended(
-          onPressed: () => ouvrirFeuilleArticle(context, widget.eventId),
-          icon: const Icon(Icons.add_rounded),
-          label: const Text('Ajouter'),
-        ),
-        2 => FloatingActionButton.extended(
-          onPressed: () => ouvrirFeuilleDepense(context, widget.eventId),
-          icon: const Icon(Icons.add_rounded),
-          label: const Text('Dépense'),
-        ),
-        _ => null,
-      },
-      bottomNavigationBar: large
-          ? null
-          : NavigationBar(
-              selectedIndex: _onglet,
-              onDestinationSelected: _changerOnglet,
-              destinations: [
-                for (final onglet in onglets)
-                  NavigationDestination(
-                    icon: _AvecPastille(
-                      nombre: onglets.indexOf(onglet) == _ongletDiscussion
-                          ? nonLus
-                          : 0,
-                      child: Icon(onglet.icone),
-                    ),
-                    selectedIcon: Icon(onglet.icoineActive),
-                    label: onglet.libelle,
-                  ),
-              ],
-            ),
     );
   }
 }
