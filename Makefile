@@ -118,6 +118,10 @@ api-jeton-court: ## Comme `make api`, mais jeton d'accès d'une minute (essai du
 	@# Compter quatre-vingt-dix secondes avant le refus, et non soixante : la
 	@# validation tolère trente secondes de dérive d'horloge (AuthenticationSetup).
 	@# La durée de la session, elle, reste à quatre-vingt-dix jours.
+	@# L'API du conteneur occupe déjà le port : `liberer-port.sh` ne connaît que les
+	@# processus du poste, et Kestrel échouerait sur une adresse déjà utilisée sans
+	@# nommer le conteneur fautif.
+	@$(COMPOSE_DEV) stop api
 	@$(MAKE) api JETON_COURT=1
 
 app: ## Lance l'application Flutter sur Chrome, en rechargement à chaud
